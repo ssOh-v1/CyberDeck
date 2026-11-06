@@ -2,6 +2,14 @@
 
 Кастомное окружение рабочего стола на базе **Hyprland + GTK4 Layer-Shell**, выполненное в единой тактической дизайн-системе Cyber HUD (`#07090f` / `#4c6ef5` / `#22b8cf`).
 
+## Превью окружения
+
+### Фоновый рабочий стол CyberDeck Hub
+![CyberDeck Hub](assets/screenshots/desktop_hub.png)
+
+### Терминал (HUD Rail + Fastfetch) и Btop
+![CyberDeck Terminal & Btop](assets/screenshots/terminal_btop.png)
+
 ## Что входит в окружение
 
 - **Адаптивная сессия `cyberdeck` (`cyberdeck-hw-detect`):** автоматически подстраивается под **ноутбук** (заряд батареи, ватты, профили питания `Баланс / Эко / Турбо`, тачпад, крышка) или **стационарный ПК** (датчик температуры `CPU/GPU °C`, проводной `LAN`, плоский профиль мыши, дискретный GPU и масштаб монитора HiDPI).
