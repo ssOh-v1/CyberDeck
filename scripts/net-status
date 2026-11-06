@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+import os, glob, json, subprocess
+
+def check_vpn():
+    for prefix in ("tun", "wg", "tap", "ppp", "tailscale", "zt"):
+        for p in glob.glob(f"/sys/class/net/{prefix}*"):
+            try:
+                if open(os.path.join(p, "operstate")).read().strip() in ("up", "unknown"): return True
+            except Exception: pass
+    for proc in ("openvpn", "wireguard", "sing-box", "xray", "v2ray", "nekobox", "nekoray", "hiddify"):
+        if subprocess.call(["pgrep", "-fi", proc], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0: return True
+    return False
+
+def get_net():
+    vpn = check_vpn()
+    zapret = subprocess.call(["pgrep", "-x", "nfqws"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    wl_devs = [os.path.basename(p) for p in sorted(glob.glob("/sys/class/net/wl*"))]
+    eth_devs = [os.path.basename(p) for p in sorted(glob.glob("/sys/class/net/en*") + glob.glob("/sys/class/net/eth*"))]
+
+    if wl_devs:
+        dev = wl_devs[0]
+        oper = "down"
+        try: oper = open(f"/sys/class/net/{dev}/operstate").read().strip()
+        except Exception: pass
+        if oper == "up":
+            sig = 75
+            try:
+                for ln in open("/proc/net/wireless"):
+                    if dev + ":" in ln:
+                        sig = min(100, max(0, int(round(float(ln.split()[2].rstrip(".")) * 100.0 / 70.0))))
+            except Exception: pass
+            ssid = dev
+            try:
+                out = subprocess.check_output(["nmcli", "-t", "-f", "GENERAL.CONNECTION", "device", "show", dev], text=True, stderr=subprocess.DEVNULL, timeout=0.7).strip()
+                if ":" in out and out.split(":", 1)[1].strip() != "--": ssid = out.split(":", 1)[1].strip()
+            except Exception: pass
+            ic = "wifi-high.svg" if sig >= 68 else ("wifi-mid.svg" if sig >= 38 else "wifi-low.svg")
+            return {"mode": "wifi", "connected": True, "has_wifi": True, "label": ssid, "signal": sig, "icon": ic, "vpn": vpn, "zapret": zapret}
+
+    for ed in eth_devs:
+        try:
+            if open(f"/sys/class/net/{ed}/operstate").read().strip() == "up":
+                return {"mode": "lan", "connected": True, "has_wifi": bool(wl_devs), "label": f"LAN ({ed})", "signal": 100, "icon": "lan.svg", "vpn": vpn, "zapret": zapret}
+        except Exception: pass
+
+    if wl_devs:
+        radio_on = True
+        try: radio_on = (subprocess.check_output(["nmcli", "radio", "wifi"], text=True, stderr=subprocess.DEVNULL, timeout=0.7).strip() == "enabled")
+        except Exception: pass
+        return {"mode": "wifi", "connected": False, "has_wifi": True, "label": "Нет сети", "signal": 0, "icon": "wifi-low.svg" if radio_on else "wifi-off.svg", "vpn": vpn, "zapret": zapret}
+
+    return {"mode": "lan", "connected": False, "has_wifi": False, "label": "Кабель отключён", "signal": 0, "icon": "lan.svg", "vpn": vpn, "zapret": zapret}
+
+if __name__ == "__main__":
+    print(json.dumps(get_net(), ensure_ascii=False))

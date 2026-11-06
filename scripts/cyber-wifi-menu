@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+import os, re, shutil, subprocess
+
+os.environ.pop("LD_PRELOAD", None)
+HOME = os.path.expanduser("~")
+THEME = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
+ICON_OK = os.path.join(HOME, ".config/hypr/assets/ui/wifi-high.svg")
+ICON_OFF = os.path.join(HOME, ".config/hypr/assets/ui/wifi-off.svg")
+
+def notify(title, body, ok=True):
+    subprocess.Popen([
+        "notify-send", "-a", "cyber-wifi",
+        "-i", ICON_OK if ok else ICON_OFF,
+        "-h", "string:x-canonical-private-synchronous:wifi-state",
+        title, body
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def rofi_pick(prompt, lines, password=False):
+    cmd = ["rofi", "-dmenu", "-i", "-p", prompt, "-theme", THEME]
+    if password:
+        cmd += ["-password", "-lines", "0"]
+    proc = subprocess.run(cmd, input="\n".join(lines), text=True, capture_output=True)
+    return proc.stdout.strip() if proc.returncode == 0 else ""
+
+def bars_for(sig):
+    if sig >= 75: return "▂▄▆█"
+    if sig >= 50: return "▂▄▆_"
+    if sig >= 25: return "▂▄__"
+    return "▂___"
+
+def run_nmcli_menu():
+    radio = subprocess.check_output(["nmcli", "radio", "wifi"], text=True, stderr=subprocess.DEVNULL).strip()
+    if radio != "enabled":
+        ch = rofi_pick("◈ WI-FI ВЫКЛЮЧЕН", ["⚡ Включить модуль Wi-Fi", "✕ Закрыть"])
+        if ch.startswith("⚡"):
+            subprocess.run(["nmcli", "radio", "wifi", "on"], stderr=subprocess.DEVNULL)
+            notify("◈ WI-FI // МОДУЛЬ ВКЛЮЧЕН", "Поиск доступных беспроводных сетей...")
+            subprocess.run(["sleep", "1.5"])
+            subprocess.run(["nmcli", "device", "wifi", "rescan"], stderr=subprocess.DEVNULL)
+        else:
+            return
+
+    saved = set()
+    for ln in subprocess.check_output(["nmcli", "-t", "-f", "TYPE,NAME", "connection", "show"], text=True, stderr=subprocess.DEVNULL).splitlines():
+        if ln.startswith("802-11-wireless:"):
+            saved.add(ln.split(":", 1)[1])
+
+    raw_nets = subprocess.check_output(
+        ["nmcli", "-t", "-f", "IN-USE,SIGNAL,SECURITY,SSID", "device", "wifi", "list", "--rescan", "auto"],
+        text=True, stderr=subprocess.DEVNULL
+    ).splitlines()
+
+    by_ssid = {}
+    cur_ssid, cur_sig = "", 0
+    for ln in raw_nets:
+        parts = ln.split(":", 3)
+        if len(parts) < 4:
+            continue
+        in_use = (parts[0].strip() == "*")
+        try:
+            sig = int(parts[1] or 0)
+        except ValueError:
+            sig = 0
+        sec = parts[2].strip()
+        ssid = parts[3].strip()
+        if not ssid:
+            continue
+        if in_use:
+            cur_ssid, cur_sig = ssid, sig
+        prev = by_ssid.get(ssid)
+        if prev is None or in_use or (not prev["in_use"] and sig > prev["sig"]):
+            by_ssid[ssid] = {"ssid": ssid, "sig": sig, "sec": sec, "in_use": in_use}
+
+    nets = sorted(by_ssid.values(), key=lambda x: (0 if x["in_use"] else 1, -x["sig"], x["ssid"].lower()))
+
+    entries = []
+    actions = {}
+
+    if cur_ssid:
+        lbl_disc = f"🔌 Отключиться от: {cur_ssid} ({cur_sig}%)"
+        entries.append(lbl_disc)
+        actions[lbl_disc] = ("disconnect", cur_ssid, None)
+
+    lbl_scan = "⟳ Сканировать эфир заново"
+    entries.append(lbl_scan)
+    actions[lbl_scan] = ("rescan", "", None)
+
+    lbl_off = "⏻ Выключить модуль Wi-Fi"
+    entries.append(lbl_off)
+    actions[lbl_off] = ("wifi_off", "", None)
+
+    for n in nets:
+        ssid = n["ssid"]
+        sig = n["sig"]
+        sec_str = n["sec"]
+        secured = bool(sec_str and sec_str != "--")
+        lock = "🔒" if secured else "🔓"
+        if n["in_use"]:
+            tag = "   [● АКТИВНА]"
+        elif ssid in saved:
+            tag = "   [★ СОХРАНЕНА]"
+        else:
+            tag = ""
+        row = f"{bars_for(sig)}  {lock}  {ssid}   ({sig}%){tag}"
+        entries.append(row)
+        actions[row] = ("connect", ssid, n)
+
+    choice = rofi_pick("◈ WI-FI MATRIX", entries)
+    if not choice or choice not in actions:
+        return
+
+    act, ssid, meta = actions[choice]
+    if act == "wifi_off":
+        subprocess.run(["nmcli", "radio", "wifi", "off"], stderr=subprocess.DEVNULL)
+        notify("◈ WI-FI // ОТКЛЮЧЕН", "Беспроводной радиомодуль обесточен", ok=False)
+        return
+
+    if act == "rescan":
+        notify("◈ WI-FI // СКАНИРОВАНИЕ", "Обновление списка точек доступа...")
+        subprocess.run(["nmcli", "device", "wifi", "rescan"], stderr=subprocess.DEVNULL)
+        subprocess.run(["sleep", "1.2"])
+        return run_nmcli_menu()
+
+    if act == "disconnect":
+        subprocess.run(["nmcli", "connection", "down", "id", ssid], stderr=subprocess.DEVNULL)
+        notify("◈ WI-FI // РАЗЪЕДИНЕНО", f"Отключено от сети {ssid}", ok=False)
+        return
+
+    if act == "connect":
+        if meta["in_use"]:
+            notify("◈ WI-FI // АКТИВНА", f"Вы уже подключены к {ssid}")
+            return
+
+        secured = bool(meta["sec"] and meta["sec"] != "--")
+        if ssid in saved or not secured:
+            notify("◈ WI-FI // ПОДКЛЮЧЕНИЕ", f"Установка канала с {ssid}...")
+            cmd = ["nmcli", "connection", "up", "id", ssid] if ssid in saved else ["nmcli", "device", "wifi", "connect", ssid]
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            if res.returncode == 0:
+                notify("◈ WI-FI // ПОДКЛЮЧЕНО", f"Активная сеть: {ssid}")
+                return
+            if not secured:
+                notify("◈ WI-FI // СБОЙ", f"Не удалось подключиться к {ssid}", ok=False)
+                return
+
+        pwd = rofi_pick(f"🔑 Ключ сети {ssid}", [], password=True)
+        if not pwd:
+            return
+        notify("◈ WI-FI // АВТОРИЗАЦИЯ", f"Проверка ключа для {ssid}...")
+        if ssid in saved:
+            subprocess.run(["nmcli", "connection", "delete", "id", ssid], stderr=subprocess.DEVNULL)
+        res = subprocess.run(["nmcli", "device", "wifi", "connect", ssid, "password", pwd], capture_output=True, text=True)
+        if res.returncode == 0:
+            notify("◈ WI-FI // ПОДКЛЮЧЕНО", f"Активная сеть: {ssid}")
+        else:
+            notify("◈ WI-FI // ОШИБКА ДОСТУПА", f"Проверьте пароль для {ssid}", ok=False)
+
+def run_iwd_fallback():
+    devs = subprocess.check_output(["iwctl", "device", "list"], text=True, stderr=subprocess.DEVNULL)
+    m = re.search(r"(wlan\d+)", devs)
+    dev = m.group(1) if m else "wlan0"
+    subprocess.run(["iwctl", "station", dev, "scan"], stderr=subprocess.DEVNULL)
+    raw = re.sub(r"\x1b\[[0-9;]*m", "", subprocess.check_output(["iwctl", "station", dev, "get-networks"], text=True, stderr=subprocess.DEVNULL))
+    entries, ssids = [], {}
+    for ln in raw.splitlines()[4:]:
+        s = ln.strip()
+        if not s:
+            continue
+        active = s.startswith(">")
+        s = s.lstrip("> ").strip()
+        parts = re.split(r"\s{2,}", s)
+        if parts:
+            name = parts[0]
+            lbl = f"{'● ' if active else '◈ '}{name}"
+            entries.append(lbl)
+            ssids[lbl] = (name, len(parts) > 1 and "psk" in parts[1].lower())
+    ch = rofi_pick("◈ WI-FI (IWD)", entries)
+    if ch in ssids:
+        name, need_pw = ssids[ch]
+        if need_pw:
+            pw = rofi_pick(f"🔑 Ключ {name}", [], password=True)
+            if not pw:
+                return
+            r = subprocess.run(["iwctl", "--passphrase", pw, "station", dev, "connect", name])
+        else:
+            r = subprocess.run(["iwctl", "station", dev, "connect", name])
+        notify("◈ WI-FI // СТАТУС", f"Сеть: {name}", ok=(r.returncode == 0))
+
+if __name__ == "__main__":
+    if shutil.which("nmcli") and subprocess.call(["systemctl", "is-active", "--quiet", "NetworkManager"]) == 0:
+        run_nmcli_menu()
+    elif shutil.which("iwctl"):
+        run_iwd_fallback()
+    else:
+        notify("◈ WI-FI", "Служба NetworkManager или iwd не активна", ok=False)

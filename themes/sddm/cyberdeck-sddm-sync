@@ -1,0 +1,6 @@
+#!/bin/bash
+CONF="/usr/share/sddm/themes/cyberdeck-sddm/theme.conf"
+if [ -f "$CONF" ] && [ -x /usr/local/bin/cyberdeck-power-status ]; then
+    BSTR=$(/usr/local/bin/cyberdeck-power-status 2>/dev/null || echo "⚡ DESKTOP AC")
+    sed -i "s|^battery=.*|battery=$BSTR|" "$CONF"
+fi

@@ -1,0 +1,97 @@
+configuration {
+    modi: "drun";
+    show-icons: true;
+    icon-theme: "CyberDeck-Icons";
+    display-drun: "◈ LAUNCH";
+    drun-display-format: "{name}";
+}
+
+* {
+    bg:          #080b12;
+    bg-elev:     #101522;
+    bg-card:     #0d111c;
+    bg-sel:      #182338;
+    fg:          #d5dcf0;
+    fg-dim:      #677391;
+    border-col:  #222c44;
+    accent:      #4c6ef5;
+
+    background-color: transparent;
+    text-color: @fg;
+    font: "Noto Sans 12";
+}
+
+window {
+    width: 600px;
+    background-color: @bg;
+    border: 2px;
+    border-color: @border-col;
+    border-radius: 14px;
+    padding: 18px;
+}
+
+mainbox {
+    background-color: transparent;
+    spacing: 14px;
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    background-color: @bg-elev;
+    border: 1px;
+    border-color: @border-col;
+    border-radius: 10px;
+    padding: 10px 14px;
+    spacing: 10px;
+    children: [ prompt, entry ];
+}
+
+prompt {
+    background-color: #16223b;
+    text-color: #74c0fc;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font: "Noto Sans Bold 10";
+}
+
+entry {
+    background-color: transparent;
+    placeholder: "Поиск...";
+    placeholder-color: @fg-dim;
+    text-color: @fg;
+}
+
+listview {
+    background-color: transparent;
+    lines: 8;
+    columns: 1;
+    spacing: 6px;
+    scrollbar: false;
+    fixed-height: true;
+}
+
+element, element normal.normal, element alternate.normal {
+    padding: 9px 12px;
+    spacing: 12px;
+    border-radius: 9px;
+    background-color: @bg-card;
+    text-color: @fg;
+}
+
+element selected.normal {
+    background-color: @bg-sel;
+    border: 1px;
+    border-color: @accent;
+    text-color: #f0f4ff;
+}
+
+element-icon {
+    background-color: transparent;
+    size: 24px;
+}
+
+element-text {
+    background-color: transparent;
+    vertical-align: 0.5;
+    text-color: inherit;
+}

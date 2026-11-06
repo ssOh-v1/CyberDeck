@@ -1,0 +1,6 @@
+#!/bin/bash
+MODE="${1:-cyberdeck}"
+if [ -f /usr/lib/libgtk4-layer-shell.so ]; then
+    LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" exec python3 "$HOME/.local/bin/cyber-intro-anim.py" "$MODE"
+fi
+exec python3 "$HOME/.local/bin/cyber-intro-anim.py" "$MODE"

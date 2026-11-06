@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=cyberdeck
+Comment=CyberDeck Adaptive Session (PC & Laptop)
+Exec=/usr/local/bin/start-cyberdeck
+Type=Application
+DesktopNames=Hyprland

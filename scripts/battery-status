@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+import os, glob, json, sys, subprocess
+
+def read_max_temp():
+    best = 0
+    for p in glob.glob("/sys/class/hwmon/hwmon*/temp*_input"):
+        try:
+            v = int(open(p).read().strip()) // 1000
+            if 20 < v < 115 and v > best: best = v
+        except Exception: pass
+    if best == 0:
+        try:
+            out = subprocess.check_output(["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader,nounits"], text=True, stderr=subprocess.DEVNULL, timeout=0.6).strip()
+            best = int(out.splitlines()[0])
+        except Exception: pass
+    return best
+
+def get_battery():
+    temp_c = read_max_temp()
+    bats = []
+    for p in sorted(glob.glob("/sys/class/power_supply/*")):
+        try:
+            if open(os.path.join(p, "type")).read().strip() != "Battery": continue
+        except Exception: continue
+        scope = ""
+        try: scope = open(os.path.join(p, "scope")).read().strip()
+        except Exception: pass
+        if scope.lower() == "device": continue
+        bats.append(p)
+
+    if not bats:
+        t_str = f" • {temp_c}°C" if temp_c else ""
+        return {"present": False, "pct": 100, "status": "AC", "watts": 0.0, "temp_c": temp_c, "text": f"⚡ DESKTOP AC{t_str}", "short": f"TEMP {temp_c}°C" if temp_c else "⚡ AC 100%"}
+
+    caps, e_now, e_full, p_uw = [], 0.0, 0.0, 0.0
+    status_out = "Discharging"
+    for b in bats:
+        try:
+            st = open(os.path.join(b, "status")).read().strip()
+            if st in ("Charging", "Full"): status_out = st
+        except Exception: pass
+        try: caps.append(int(open(os.path.join(b, "capacity")).read().strip()))
+        except Exception: pass
+        for fn_n, fn_f in [("energy_now", "energy_full"), ("charge_now", "charge_full")]:
+            pn, pf = os.path.join(b, fn_n), os.path.join(b, fn_f)
+            if os.path.isfile(pn) and os.path.isfile(pf):
+                try:
+                    e_now += float(open(pn).read().strip())
+                    e_full += float(open(pf).read().strip())
+                except Exception: pass
+                break
+        pp, cn, vn = os.path.join(b, "power_now"), os.path.join(b, "current_now"), os.path.join(b, "voltage_now")
+        if os.path.isfile(pp):
+            try: p_uw += abs(float(open(pp).read().strip()))
+            except Exception: pass
+        elif os.path.isfile(cn) and os.path.isfile(vn):
+            try: p_uw += abs(float(open(cn).read().strip()) * float(open(vn).read().strip())) / 1e6
+            except Exception: pass
+
+    pct = int(round(min(100.0, max(0.0, (e_now / e_full) * 100.0)))) if e_full > 0 else (int(round(sum(caps) / len(caps))) if caps else 100)
+    watts = p_uw / 1e6
+    w_str = f" • {watts:.1f}W" if watts >= 0.5 else ""
+    icon = "⚡" if (status_out in ("Charging", "Full") or pct >= 99) else "🔋"
+    st_ru = "ЗАРЯДКА" if status_out == "Charging" else ("ПОЛНЫЙ" if status_out == "Full" or pct >= 99 else "БАТАРЕЯ")
+    return {"present": True, "pct": pct, "status": status_out, "watts": round(watts, 1), "temp_c": temp_c, "text": f"{icon} {st_ru}: {pct}%{w_str}", "short": f"{icon} {pct}%{w_str}"}
+
+if __name__ == "__main__":
+    d = get_battery()
+    if "--json" in sys.argv: print(json.dumps(d, ensure_ascii=False))
+    elif "--short" in sys.argv: print(d["short"])
+    else: print(d["text"])

@@ -1,0 +1,13 @@
+#!/bin/bash
+unset LD_PRELOAD
+
+USED=$(hyprctl workspaces -j 2>/dev/null | jq -r '.[] | select(.id > 0 and .windows > 0) | .id')
+FREE_WS=1
+while printf "%s\n" "$USED" | grep -qx "$FREE_WS"; do
+    FREE_WS=$((FREE_WS + 1))
+done
+
+hyprctl dispatch workspace "$FREE_WS" >/dev/null 2>&1
+if [ "$#" -gt 0 ]; then
+    nohup /bin/sh -c "$*" >/dev/null 2>&1 &
+fi

@@ -1,0 +1,20 @@
+#!/bin/bash
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=Hyprland
+export XDG_CURRENT_DESKTOP=Hyprland
+export HYPRLAND_CONFIG="$HOME/.config/hypr/cyberdeck.conf"
+export XCURSOR_THEME="CyberDeck-Cursor"
+export XCURSOR_SIZE=28
+"$HOME/.local/bin/cyberdeck-hw-detect" >/dev/null 2>&1 || true
+"$HOME/.local/bin/cyber-icons-sync" >/dev/null 2>&1 &
+"$HOME/.local/bin/cyber-firefox-sync" >/dev/null 2>&1 &
+gsettings set org.gnome.desktop.interface cursor-theme 'CyberDeck-Cursor' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface cursor-size 28 2>/dev/null || true
+gsettings set org.gnome.desktop.interface icon-theme 'CyberDeck-Icons' 2>/dev/null || true
+command -v powerprofilesctl >/dev/null 2>&1 && powerprofilesctl set balanced 2>/dev/null || true
+cleanup() {
+    pkill -f "cyberdeck-hub-desktop.py" 2>/dev/null || true
+    [ -f "/tmp/cyber_kb_osd_$(id -u).pid" ] && kill "$(cat "/tmp/cyber_kb_osd_$(id -u).pid")" 2>/dev/null || true
+}
+trap cleanup EXIT
+command -v start-hyprland >/dev/null 2>&1 && exec start-hyprland -- -c "$HYPRLAND_CONFIG" || exec Hyprland -c "$HYPRLAND_CONFIG"

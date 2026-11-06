@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+import os, json, subprocess
+
+os.environ.pop("LD_PRELOAD", None)
+THEME = os.path.expanduser("~/.config/hypr/gaming_launcher.rasi")
+
+def pactl_json(kind):
+    try:
+        out = subprocess.check_output(["pactl", "-f", "json", "list", kind], text=True, stderr=subprocess.DEVNULL)
+        return json.loads(out)
+    except Exception:
+        return []
+
+def get_default(cmd_arg):
+    try:
+        return subprocess.check_output(["pactl", cmd_arg], text=True, stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return ""
+
+def main():
+    def_sink = get_default("get-default-sink")
+    def_src = get_default("get-default-source")
+
+    entries = []
+    actions = {}
+
+    for s in pactl_json("sinks"):
+        name = s.get("name", "")
+        desc = s.get("description") or name
+        mark = "● АКТИВЕН" if name == def_sink else "○ Выбрать"
+        label = f"🔊 Вывод: {desc}   [{mark}]"
+        entries.append(label)
+        actions[label] = ("sink", name, desc)
+
+    for s in pactl_json("sources"):
+        name = s.get("name", "")
+        if ".monitor" in name:
+            continue
+        desc = s.get("description") or name
+        mark = "● АКТИВЕН" if name == def_src else "○ Выбрать"
+        label = f"🎤 Микрофон: {desc}   [{mark}]"
+        entries.append(label)
+        actions[label] = ("source", name, desc)
+
+    entries.append("🔇 Отключить / Включить звук (Mute)")
+    actions["🔇 Отключить / Включить звук (Mute)"] = ("mute_sink", "", "")
+    entries.append("🎙 Отключить / Включить микрофон (Mic Mute)")
+    actions["🎙 Отключить / Включить микрофон (Mic Mute)"] = ("mute_src", "", "")
+
+    proc = subprocess.run(
+        ["rofi", "-dmenu", "-i", "-no-show-icons", "-p", "◈ AUDIO DECK", "-theme", THEME],
+        input="\n".join(entries),
+        text=True,
+         capture_output=True,
+    )
+    choice = proc.stdout.strip()
+    if choice not in actions:
+        return
+
+    kind, dev, desc = actions[choice]
+    if kind == "sink":
+        subprocess.run(["pactl", "set-default-sink", dev], stderr=subprocess.DEVNULL)
+        for line in subprocess.check_output(["pactl", "list", "short", "sink-inputs"], text=True, stderr=subprocess.DEVNULL).splitlines():
+            parts = line.split()
+            if parts:
+                subprocess.run(["pactl", "move-sink-input", parts[0], dev], stderr=subprocess.DEVNULL)
+        subprocess.run(["notify-send", "Аудиовыход переключён", desc], stderr=subprocess.DEVNULL)
+    elif kind == "source":
+        subprocess.run(["pactl", "set-default-source", dev], stderr=subprocess.DEVNULL)
+        subprocess.run(["notify-send", "Микрофон переключён", desc], stderr=subprocess.DEVNULL)
+    elif kind == "mute_sink":
+        subprocess.run(["pamixer", "-t"], stderr=subprocess.DEVNULL)
+    elif kind == "mute_src":
+        subprocess.run(["pactl", "set-source-mute", "@DEFAULT_SOURCE@", "toggle"], stderr=subprocess.DEVNULL)
+
+if __name__ == "__main__":
+    main()

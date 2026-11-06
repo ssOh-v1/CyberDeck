@@ -1,0 +1,9 @@
+[SddmGreeterTheme]
+Name=CyberDeck Cyber Deck Pro
+Description=Heavily decorated Cyber HUD SDDM theme with battery telemetry
+Type=sddm-theme
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=cyberdeck-sddm
+Theme-API=2.0
+QtVersion=6

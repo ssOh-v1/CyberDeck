@@ -1,0 +1,8 @@
+#!/bin/bash
+if pgrep -f "cyberdeck-hub-desktop.py" >/dev/null 2>&1; then
+    exec "$HOME/.local/bin/launch-free-ws"
+fi
+if [ -f /usr/lib/libgtk4-layer-shell.so ]; then
+    LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" exec python3 "$HOME/.local/bin/cyberdeck-hub-desktop.py" 2>/tmp/cyberdeck-hub.err
+fi
+exec python3 "$HOME/.local/bin/cyberdeck-hub-desktop.py" 2>/tmp/cyberdeck-hub.err

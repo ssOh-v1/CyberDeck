@@ -1,0 +1,14 @@
+#!/bin/bash
+WIN_JSON=$(hyprctl activewindow -j 2>/dev/null)
+ADDR=$(printf "%s" "$WIN_JSON" | jq -r '.address // empty')
+if [ -n "$ADDR" ]; then
+    TITLE=$(printf "%s" "$WIN_JSON" | jq -r '.class // "Приложение"')
+    hyprctl dispatch movetoworkspacesilent "special:bg,address:$ADDR" >/dev/null 2>&1
+    notify-send "Свёрнуто в фон" "$TITLE доступно на панели фоновых процессов"
+else
+    BG_ADDR=$(hyprctl clients -j 2>/dev/null | jq -r '.[] | select(.workspace.name == "special:bg") | .address' | head -n1)
+    CUR_WS=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // 1')
+    if [ -n "$BG_ADDR" ]; then
+        hyprctl --batch "dispatch movetoworkspace $CUR_WS,address:$BG_ADDR; dispatch focuswindow address:$BG_ADDR" >/dev/null 2>&1
+    fi
+fi

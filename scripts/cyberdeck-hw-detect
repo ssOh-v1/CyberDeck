@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+import os, sys, re, glob, json, math, shutil, subprocess
+
+HOME = os.path.expanduser("~")
+CACHE_DIR = os.path.join(HOME, ".cache/cyberdeck")
+HYPR_DIR = os.path.join(HOME, ".config/hypr")
+os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(HYPR_DIR, exist_ok=True)
+
+def detect_hardware():
+    bats = [
+        p for p in glob.glob("/sys/class/power_supply/*")
+        if os.path.isfile(os.path.join(p, "type"))
+        and open(os.path.join(p, "type")).read().strip() == "Battery"
+        and (not os.path.isfile(os.path.join(p, "scope")) or open(os.path.join(p, "scope")).read().strip().lower() != "device")
+    ]
+    chassis = ""
+    try: chassis = open("/sys/class/dmi/id/chassis_type").read().strip()
+    except Exception: pass
+    is_laptop = bool(bats) or chassis in {"8", "9", "10", "11", "14", "30", "31", "32"}
+
+    vendors = set()
+    for vfile in glob.glob("/sys/class/drm/card*/device/vendor"):
+        try: vendors.add(open(vfile).read().strip().lower())
+        except Exception: pass
+    has_nvidia = ("0x10de" in vendors) or os.path.exists("/proc/driver/nvidia/version")
+    has_igpu = ("0x8086" in vendors) or ("0x1002" in vendors)
+    desktop_nvidia_only = has_nvidia and not has_igpu
+
+    w, h, hz = 1920, 1080, 60
+    try:
+        mons = json.loads(subprocess.check_output(["hyprctl", "monitors", "-j"], text=True, stderr=subprocess.DEVNULL, timeout=1.0))
+        if mons:
+            w, h, hz = int(mons[0].get("width", 1920)), int(mons[0].get("height", 1080)), int(round(float(mons[0].get("refreshRate", 60))))
+    except Exception:
+        for mfile in glob.glob("/sys/class/drm/card*-*/modes"):
+            try:
+                m = re.match(r"(\d+)x(\d+)", open(mfile).readline().strip())
+                if m:
+                    w, h = int(m.group(1)), int(m.group(2))
+                    break
+            except Exception: pass
+
+    scale = 1.0
+    if h >= 2000: scale = 1.5 if is_laptop else 1.25
+    elif h >= 1500 and is_laptop: scale = 1.25
+
+    eff_w, eff_h = int(round(w / scale)), int(round(h / scale))
+    has_wifi = bool(glob.glob("/sys/class/net/wl*"))
+    term = next((t for t in ("foot", "kitty", "alacritty", "wezterm", "ghostty", "konsole", "xterm") if shutil.which(t)), "foot")
+    pwr_backend = "powerprofilesctl" if shutil.which("powerprofilesctl") else ("tlp" if shutil.which("tlp") else "none")
+
+    prof = {
+        "form_factor": "laptop" if is_laptop else "desktop",
+        "has_battery": bool(bats),
+        "has_wifi": has_wifi,
+        "desktop_nvidia_only": desktop_nvidia_only,
+        "power_backend": pwr_backend,
+        "terminal": term,
+        "phys_width": w,
+        "phys_height": h,
+        "width": eff_w,
+        "height": eff_h,
+        "refresh_hz": hz,
+        "scale": scale,
+    }
+    json.dump(prof, open(os.path.join(CACHE_DIR, "hw_profile.json"), "w", encoding="utf-8"), indent=2)
+    return prof
+
+def render_adaptive_bg(w, h, out_path):
+    try: import cairo
+    except Exception: return
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+    cr = cairo.Context(surf)
+    lg = cairo.LinearGradient(0, 0, w, h)
+    lg.add_color_stop_rgb(0.0, 0.024, 0.031, 0.052)
+    lg.add_color_stop_rgb(0.5, 0.030, 0.039, 0.066)
+    lg.add_color_stop_rgb(1.0, 0.020, 0.026, 0.045)
+    cr.set_source(lg); cr.paint()
+    for cx, cy, rad, r, g, b, al in [(w * 0.15, h * 0.12, int(w * 0.34), 0.29, 0.43, 0.96, 0.10), (w * 0.85, h * 0.86, int(w * 0.35), 0.13, 0.72, 0.81, 0.08)]:
+        rg = cairo.RadialGradient(cx, cy, 8, cx, cy, rad)
+        rg.add_color_stop_rgba(0.0, r, g, b, al); rg.add_color_stop_rgba(1.0, r, g, b, 0.0)
+        cr.set_source(rg); cr.paint()
+    cr.set_line_width(1.0); cr.set_source_rgba(0.34, 0.46, 0.78, 0.055)
+    for x in range(96, w, 96): cr.move_to(x, 0); cr.line_to(x, h)
+    for y in range(96, h, 96): cr.move_to(0, y); cr.line_to(w, y)
+    cr.stroke()
+    m, ln = 14, 50
+    cr.set_line_width(2.2); cr.set_source_rgba(0.30, 0.43, 0.96, 0.68)
+    for x1, y1, x2, y2, x3, y3 in [(m, m + ln, m, m, m + ln, m), (w - m - ln, m, w - m, m, w - m, m + ln), (m, h - m - ln, m, h - m, m + ln, h - m), (w - m - ln, h - m, w - m, h - m, w - m, h - m - ln)]:
+        cr.move_to(x1, y1); cr.line_to(x2, y2); cr.line_to(x3, y3)
+    cr.stroke()
+    surf.write_to_png(out_path)
+
+def write_cyberdeck_hypr_conf(prof):
+    scale_str = f"{prof['scale']:.2f}".rstrip("0").rstrip(".")
+    is_lap = (prof["form_factor"] == "laptop")
+    nvidia_env = "env = LIBVA_DRIVER_NAME,nvidia\nenv = NVD_BACKEND,direct\n" if prof["desktop_nvidia_only"] else ""
+    touchpad_block = "\n    touchpad {\n        natural_scroll = true\n        tap-to-click = true\n        disable_while_typing = true\n    }" if is_lap else ""
+    lid_binds = "\nbindl = , switch:on:Lid Switch, exec, hyprlock\nbindl = , switch:off:Lid Switch, exec, hyprctl dispatch dpms on" if is_lap else ""
+
+    conf = f"""monitor = , highrr, auto, {scale_str}
+
+env = XCURSOR_THEME,CyberDeck-Cursor
+env = XCURSOR_SIZE,28
+{nvidia_env}
+exec-once = dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE
+exec-once = hyprctl setcursor CyberDeck-Cursor 28
+exec-once = ~/.local/bin/start-cyber-daemons
+exec-once = ~/.local/bin/cyberdeck-hw-detect --refresh-bg
+exec-once = ~/.local/bin/cyberdeck-hub
+exec-once = ~/.local/bin/cyber-intro cyberdeck
+exec-once = sh -c 'sleep 0.35 && hyprctl dismissnotify >/dev/null 2>&1; sleep 1.2 && hyprctl dismissnotify >/dev/null 2>&1'
+
+input {{
+    kb_layout = us,ru
+    kb_options = grp:alt_shift_toggle
+    follow_mouse = 1
+    accel_profile = {"adaptive" if is_lap else "flat"}{touchpad_block}
+}}
+
+general {{
+    gaps_in = 4
+    gaps_out = 8
+    border_size = 2
+    resize_on_border = true
+    col.active_border = rgba(4c6ef5ff) rgba(22b8cfff) 45deg
+    col.inactive_border = rgba(161d2eff)
+    layout = dwindle
+}}
+
+decoration {{
+    rounding = 10
+    blur {{
+        enabled = false
+    }}
+    shadow {{
+        enabled = false
+    }}
+}}
+
+animations {{
+    enabled = true
+    bezier = cyberSnap, 0.22, 1, 0.36, 1
+    animation = windows, 1, 3, cyberSnap, popin 88%
+    animation = fade, 1, 2, cyberSnap
+    animation = workspaces, 1, 3, cyberSnap, slide
+}}
+
+xwayland {{
+    enabled = true
+    force_zero_scaling = true
+}}
+
+misc {{
+    disable_hyprland_logo = true
+    disable_splash_rendering = true
+    background_color = 0x07090f
+}}
+
+windowrule = float on, center on, match:class ^(floating-btop|hyprpicker)$
+
+bind = SUPER, SPACE, exec, ~/.local/bin/launch-free-ws
+bind = SUPER, RETURN, exec, ~/.local/bin/launch-free-ws {prof['terminal']}
+bind = SUPER, B, exec, ~/.local/bin/cyber-tool btop
+bind = SUPER, S, exec, ~/.local/bin/cyber-tool shot
+bind = SUPER, P, exec, ~/.local/bin/hyprwork-pin-window
+bind = SUPER, H, exec, ~/.local/bin/hyprwork-bg-stash
+bind = SUPER, L, exec, hyprlock
+bind = SUPER, F, fullscreen, 0
+bind = SUPER, V, togglefloating
+bind = SUPER, Q, killactive
+bind = SUPER ALT, K, exec, sh -c 'PID=$(hyprctl activewindow -j | jq -r ".pid // empty"); [ -n "$PID" ] && kill -9 "$PID"'
+bind = SUPER, ESCAPE, exit
+bind = ALT, TAB, cyclenext
+
+bind = SUPER, 1, workspace, 1
+bind = SUPER, 2, workspace, 2
+bind = SUPER, 3, workspace, 3
+bind = SUPER, 4, workspace, 4
+bind = SUPER, 5, workspace, 5
+bind = SUPER, 6, workspace, 6
+bind = SUPER, 7, workspace, 7
+bind = SUPER, 8, workspace, 8
+bind = SUPER, 9, workspace, 9
+bind = SUPER, 0, workspace, 10
+bind = SUPER, right, workspace, r+1
+bind = SUPER, left, workspace, r-1
+bind = SUPER, mouse_down, workspace, r+1
+bind = SUPER, mouse_up, workspace, r-1
+
+bind = SUPER SHIFT, 1, movetoworkspace, 1
+bind = SUPER SHIFT, 2, movetoworkspace, 2
+bind = SUPER SHIFT, 3, movetoworkspace, 3
+bind = SUPER SHIFT, 4, movetoworkspace, 4
+bind = SUPER SHIFT, 5, movetoworkspace, 5
+bind = SUPER SHIFT, 6, movetoworkspace, 6
+bind = SUPER SHIFT, 7, movetoworkspace, 7
+bind = SUPER SHIFT, 8, movetoworkspace, 8
+bind = SUPER SHIFT, 9, movetoworkspace, 9
+bind = SUPER SHIFT, 0, movetoworkspace, 10
+bind = SUPER SHIFT, right, movetoworkspace, r+1
+bind = SUPER SHIFT, left, movetoworkspace, r-1
+
+binde = SUPER CTRL, right, resizeactive, 40 0
+binde = SUPER CTRL, left, resizeactive, -40 0
+binde = SUPER CTRL, up, resizeactive, 0 -40
+binde = SUPER CTRL, down, resizeactive, 0 40
+
+bindm = SUPER, mouse:272, movewindow
+bindm = SUPER, mouse:273, resizewindow
+
+bindel = , XF86AudioRaiseVolume, exec, pamixer -i 5
+bindel = , XF86AudioLowerVolume, exec, pamixer -d 5
+bindl  = , XF86AudioMute, exec, pamixer -t
+bindel = , XF86MonBrightnessUp, exec, brightnessctl set +10%
+bindel = , XF86MonBrightnessDown, exec, brightnessctl set 10%-{lid_binds}
+"""
+    open(os.path.join(HYPR_DIR, "cyberdeck.conf"), "w", encoding="utf-8").write(conf)
+
+if __name__ == "__main__":
+    p = detect_hardware()
+    bg_out = os.path.join(CACHE_DIR, "cyberdeck_hud_bg.png")
+    if "--refresh-bg" in sys.argv or not os.path.isfile(bg_out):
+        render_adaptive_bg(p["width"], p["height"], bg_out)
+    if "--refresh-bg" not in sys.argv:
+        write_cyberdeck_hypr_conf(p)

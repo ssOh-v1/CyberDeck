@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+import json, subprocess
+
+def jcmd(args):
+    try:
+        return json.loads(subprocess.check_output(args, text=True, stderr=subprocess.DEVNULL))
+    except Exception:
+        return None
+
+win = jcmd(["hyprctl", "activewindow", "-j"])
+if not win or not win.get("address"):
+    ws = jcmd(["hyprctl", "activeworkspace", "-j"]) or {}
+    ws_id = ws.get("id", 1)
+    clients = [
+        c for c in (jcmd(["hyprctl", "clients", "-j"]) or [])
+        if c.get("workspace", {}).get("id") == ws_id
+        and c.get("class") not in ("WorkHubDesktop", "GamingHubDesktop")
+    ]
+    win = clients[0] if clients else None
+
+if not win or not win.get("address"):
+    subprocess.run(["notify-send", "◈ ОКНО ПОВЕРХ", "Открой любое окно, чтобы закрепить его"], stderr=subprocess.DEVNULL)
+    raise SystemExit(0)
+
+addr = win["address"]
+title = (win.get("class") or win.get("title") or "Окно")[:26]
+is_pinned = bool(win.get("pinned", False))
+is_floating = bool(win.get("floating", False))
+fs_mode = win.get("fullscreen", 0)
+
+subprocess.run(["hyprctl", "dispatch", "focuswindow", f"address:{addr}"], stderr=subprocess.DEVNULL)
+
+if is_pinned:
+    subprocess.run(["hyprctl", "dispatch", "pin", f"address:{addr}"], stderr=subprocess.DEVNULL)
+    if bool((jcmd(["hyprctl", "activewindow", "-j"]) or {}).get("floating", False)):
+        subprocess.run(["hyprctl", "dispatch", "togglefloating", f"address:{addr}"], stderr=subprocess.DEVNULL)
+    subprocess.run(["notify-send", "◈ ЗАКРЕПЛЕНИЕ СНЯТО", f"{title} возвращено в тайлинг"], stderr=subprocess.DEVNULL)
+else:
+    if fs_mode and fs_mode != 0:
+        subprocess.run(["hyprctl", "dispatch", "fullscreen", "0"], stderr=subprocess.DEVNULL)
+    if not is_floating:
+        subprocess.run(["hyprctl", "dispatch", "togglefloating", f"address:{addr}"], stderr=subprocess.DEVNULL)
+        subprocess.run(["hyprctl", "dispatch", "resizeactive", "exact", "920", "560"], stderr=subprocess.DEVNULL)
+        subprocess.run(["hyprctl", "dispatch", "centerwindow"], stderr=subprocess.DEVNULL)
+    subprocess.run(["hyprctl", "dispatch", "pin", f"address:{addr}"], stderr=subprocess.DEVNULL)
+    subprocess.run(["hyprctl", "dispatch", "alterzorder", f"top,address:{addr}"], stderr=subprocess.DEVNULL)
+    subprocess.run(["notify-send", "◈ ПОВЕРХ ВСЕХ ОКОН", f"{title} • Двигать: SUPER+ЛКМ • Размер: SUPER+ПКМ"], stderr=subprocess.DEVNULL)

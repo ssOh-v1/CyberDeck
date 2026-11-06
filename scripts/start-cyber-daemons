@@ -1,0 +1,15 @@
+#!/bin/bash
+unset LD_PRELOAD
+xrdb -merge "$HOME/.Xresources" 2>/dev/null || true
+
+for rival in dunst swaync fnott xfce4-notifyd; do
+    pkill -x "$rival" 2>/dev/null || true
+done
+
+if pgrep -x mako >/dev/null 2>&1; then
+    makoctl reload >/dev/null 2>&1 || true
+else
+    nohup mako >/dev/null 2>&1 &
+fi
+
+nohup python3 "$HOME/.local/bin/cyber-kb-osd" >/dev/null 2>&1 &

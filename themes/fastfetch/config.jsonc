@@ -1,0 +1,84 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "type": "file",
+    "source": "~/.config/fastfetch/cyber_logo.txt",
+    "color": {
+      "1": "38;2;34;184;207",
+      "2": "38;2;76;110;245",
+      "3": "38;2;229;236;255"
+    },
+    "padding": {
+      "top": 1,
+      "left": 2,
+      "right": 3
+    }
+  },
+  "display": {
+    "separator": "  ⟫  ",
+    "color": {
+      "keys": "38;2;102;217;232",
+      "title": "38;2;229;236;255"
+    }
+  },
+  "modules": [
+    {
+      "type": "custom",
+      "format": "\u001b[38;2;76;110;245m╭──────────── \u001b[38;2;34;184;207m◈ CYBER DECK TELEMETRY\u001b[38;2;76;110;245m ────────────╮\u001b[0m"
+    },
+    {
+      "type": "command",
+      "key": "◈ OPERATOR",
+      "text": "printf 'CYBER-NODE // %s@%s' \"$USER\" \"$(uname -n)\""
+    },
+    {
+      "type": "os",
+      "key": "◈ SYSTEM  "
+    },
+    {
+      "type": "kernel",
+      "key": "◈ KERNEL  "
+    },
+    {
+      "type": "wm",
+      "key": "◈ ENGINE  "
+    },
+    {
+      "type": "terminal",
+      "key": "◈ CONSOLE "
+    },
+    {
+      "type": "cpu",
+      "key": "◈ CPU     "
+    },
+    {
+      "type": "gpu",
+      "key": "◈ GPU     "
+    },
+    {
+      "type": "memory",
+      "key": "◈ MEMORY  "
+    },
+    {
+      "type": "battery",
+      "key": "◈ POWER   "
+    },
+    {
+      "type": "cursor",
+      "key": "◈ CURSOR  "
+    },
+    {
+      "type": "icons",
+      "key": "◈ ICONS   "
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;2;76;110;245m╰────────────────────────────────────────────────╯\u001b[0m"
+    },
+    {
+      "type": "colors",
+      "symbol": "circle",
+      "paddingLeft": 2
+    }
+  ]
+}
