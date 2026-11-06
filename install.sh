@@ -40,6 +40,10 @@ for gdir in ~/.config/gtk-3.0 ~/.config/gtk-4.0; do
 done
 printf "XCURSOR_THEME=CyberDeck-Cursor\nXCURSOR_SIZE=28\n" > ~/.config/environment.d/99-cyberdeck.conf
 
+
+cp "$REPO_ROOT/themes/gtk/gtk3.css" ~/.config/gtk-3.0/gtk.css
+cp "$REPO_ROOT/themes/gtk/gtk4.css" ~/.config/gtk-4.0/gtk.css
+gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" 2>/dev/null || true
 cp "$REPO_ROOT/themes/foot/foot.ini" ~/.config/foot/foot.ini
 cp "$REPO_ROOT/themes/kitty/cyber-deck.conf" ~/.config/kitty/cyber-deck.conf
 touch ~/.config/kitty/kitty.conf

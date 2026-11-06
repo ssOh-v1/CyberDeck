@@ -1,0 +1,79 @@
+/* CyberDeck HUD — GTK3 File Manager Theme (Thunar / Nemo / FileChooser) */
+window.thunar,
+window.nemo-window,
+filechooser,
+dialog {
+    background-color: #07090f;
+    color: #dce3f5;
+}
+
+window.thunar toolbar,
+window.nemo-window toolbar,
+headerbar {
+    background-color: #0b101d;
+    border-bottom: 1px solid #243558;
+    padding: 4px 8px;
+}
+
+window.thunar entry,
+window.nemo-window entry,
+filechooser entry {
+    background-color: #0d1426;
+    color: #e5ecff;
+    border: 1px solid #26385e;
+    border-left: 3px solid #22b8cf;
+    border-radius: 8px;
+    padding: 5px 10px;
+}
+
+window.thunar .sidebar,
+window.thunar treeview.view.sidebar,
+window.nemo-window .sidebar,
+placessidebar {
+    background-color: #090d18;
+    color: #c5d0ea;
+    border-right: 1px solid #1e2b48;
+}
+
+window.thunar .sidebar *:selected,
+window.nemo-window .sidebar *:selected,
+placessidebar row:selected {
+    background-color: #13203b;
+    color: #f0f4ff;
+    border-left: 3px solid #22b8cf;
+}
+
+window.thunar .standard-view,
+window.thunar iconview,
+window.thunar treeview.view,
+window.nemo-window .view {
+    background-color: #07090f;
+    color: #e2e8f8;
+}
+
+window.thunar .standard-view *:selected,
+window.thunar iconview *:selected,
+window.thunar treeview.view:selected,
+window.nemo-window .view:selected {
+    background-color: #152342;
+    color: #f0f4ff;
+    border: 1px solid #22b8cf;
+    border-radius: 7px;
+}
+
+menubar, menu {
+    background-color: #0b101d;
+    color: #dce3f5;
+    border: 1px solid #243558;
+}
+
+menuitem:hover {
+    background-color: #162442;
+    color: #66d9e8;
+}
+
+statusbar {
+    background-color: #0a0e1a;
+    color: #7f8db0;
+    border-top: 1px solid #1c2842;
+}

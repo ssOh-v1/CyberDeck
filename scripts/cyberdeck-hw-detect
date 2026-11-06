@@ -97,7 +97,7 @@ def write_cyberdeck_hypr_conf(prof):
     is_lap = (prof["form_factor"] == "laptop")
     nvidia_env = "env = LIBVA_DRIVER_NAME,nvidia\nenv = NVD_BACKEND,direct\n" if prof["desktop_nvidia_only"] else ""
     touchpad_block = "\n    touchpad {\n        natural_scroll = true\n        tap-to-click = true\n        disable_while_typing = true\n    }" if is_lap else ""
-    lid_binds = "\nbindl = , switch:on:Lid Switch, exec, hyprlock\nbindl = , switch:off:Lid Switch, exec, hyprctl dispatch dpms on" if is_lap else ""
+    lid_binds = "\nbindl = , switch:on:Lid Switch, exec, ~/.local/bin/cyber-lock\nbindl = , switch:off:Lid Switch, exec, hyprctl dispatch dpms on" if is_lap else ""
 
     conf = f"""monitor = , highrr, auto, {scale_str}
 
@@ -162,11 +162,12 @@ windowrule = float on, center on, match:class ^(floating-btop|hyprpicker)$
 
 bind = SUPER, SPACE, exec, ~/.local/bin/launch-free-ws
 bind = SUPER, RETURN, exec, ~/.local/bin/launch-free-ws {prof['terminal']}
+bind = SUPER, E, exec, ~/.local/bin/launch-free-ws ~/.local/bin/cyber-fm
 bind = SUPER, B, exec, ~/.local/bin/cyber-tool btop
 bind = SUPER, S, exec, ~/.local/bin/cyber-tool shot
 bind = SUPER, P, exec, ~/.local/bin/hyprwork-pin-window
 bind = SUPER, H, exec, ~/.local/bin/hyprwork-bg-stash
-bind = SUPER, L, exec, hyprlock
+bind = SUPER, L, exec, ~/.local/bin/cyber-lock
 bind = SUPER, F, fullscreen, 0
 bind = SUPER, V, togglefloating
 bind = SUPER, Q, killactive

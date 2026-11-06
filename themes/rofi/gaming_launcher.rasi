@@ -2,78 +2,122 @@ configuration {
     modi: "drun";
     show-icons: true;
     icon-theme: "CyberDeck-Icons";
-    display-drun: "◈ LAUNCH";
+    display-drun: "◈ APPS";
     drun-display-format: "{name}";
 }
 
 * {
-    bg:          #080b12;
-    bg-elev:     #101522;
-    bg-card:     #0d111c;
-    bg-sel:      #182338;
-    fg:          #d5dcf0;
-    fg-dim:      #677391;
-    border-col:  #222c44;
-    accent:      #4c6ef5;
+    bg:          #070a12;
+    bg-panel:    #0c1221;
+    bg-card:     #0d1323;
+    bg-sel:      #14213d;
+    fg:          #dce3f5;
+    fg-dim:      #6c7a9c;
+    border-col:  #253659;
+    cyan:        #22b8cf;
+    indigo:      #4c6ef5;
 
     background-color: transparent;
     text-color: @fg;
-    font: "Noto Sans 12";
+    font: "Noto Sans 11.5";
 }
 
 window {
-    width: 600px;
+    width: 760px;
     background-color: @bg;
     border: 2px;
-    border-color: @border-col;
-    border-radius: 14px;
+    border-color: @cyan;
+    border-radius: 16px;
     padding: 18px;
 }
 
 mainbox {
-    background-color: transparent;
-    spacing: 14px;
-    children: [ inputbar, listview ];
+    spacing: 12px;
+    children: [ box-header, inputbar, listview, box-footer ];
 }
 
-inputbar {
-    background-color: @bg-elev;
+box-header {
+    orientation: horizontal;
+    expand: false;
+    spacing: 10px;
+    background-color: @bg-panel;
     border: 1px;
     border-color: @border-col;
     border-radius: 10px;
+    padding: 8px 14px;
+    children: [ textbox-hdr-title, textbox-hdr-badge ];
+}
+
+textbox-hdr-title {
+    expand: true;
+    str: "◈ CYBER DECK // APPLICATION MATRIX";
+    text-color: #e5ecff;
+    font: "Noto Sans Bold 11";
+}
+
+textbox-hdr-badge {
+    expand: false;
+    str: "FREE-WS ENGINE // READY";
+    background-color: #102334;
+    text-color: #66d9e8;
+    border: 1px;
+    border-color: #1f5068;
+    border-radius: 6px;
+    padding: 2px 9px;
+    font: "Noto Sans Bold 9.5";
+}
+
+inputbar {
+    background-color: @bg-panel;
+    border: 1px;
+    border-color: @indigo;
+    border-radius: 10px;
     padding: 10px 14px;
-    spacing: 10px;
+    spacing: 12px;
     children: [ prompt, entry ];
 }
 
 prompt {
-    background-color: #16223b;
-    text-color: #74c0fc;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font: "Noto Sans Bold 10";
+    background-color: #13233b;
+    text-color: #66d9e8;
+    border: 1px;
+    border-color: @cyan;
+    padding: 3px 11px;
+    border-radius: 7px;
+    font: "Noto Sans Bold 10.5";
 }
 
 entry {
-    background-color: transparent;
-    placeholder: "Поиск...";
+    placeholder: "Введите название программы, IDE или системной утилиты...";
     placeholder-color: @fg-dim;
-    text-color: @fg;
+    text-color: #f0f4ff;
+    vertical-align: 0.5;
 }
 
 listview {
-    background-color: transparent;
-    lines: 8;
-    columns: 1;
-    spacing: 6px;
-    scrollbar: false;
+    lines: 6;
+    columns: 2;
+    spacing: 9px;
+    scrollbar: true;
     fixed-height: true;
 }
 
+scrollbar {
+    width: 5px;
+    border: 0;
+    handle-color: @cyan;
+    handle-width: 5px;
+    background-color: #101729;
+    border-radius: 4px;
+    padding: 0;
+}
+
 element, element normal.normal, element alternate.normal {
-    padding: 9px 12px;
+    padding: 10px 13px;
     spacing: 12px;
-    border-radius: 9px;
+    border: 1px;
+    border-color: #1c2844;
+    border-radius: 10px;
     background-color: @bg-card;
     text-color: @fg;
 }
@@ -81,17 +125,41 @@ element, element normal.normal, element alternate.normal {
 element selected.normal {
     background-color: @bg-sel;
     border: 1px;
-    border-color: @accent;
+    border-color: @cyan;
     text-color: #f0f4ff;
 }
 
 element-icon {
-    background-color: transparent;
-    size: 24px;
+    size: 30px;
 }
 
 element-text {
-    background-color: transparent;
     vertical-align: 0.5;
     text-color: inherit;
+    font: "Noto Sans Bold 11";
+}
+
+box-footer {
+    orientation: horizontal;
+    expand: false;
+    background-color: #0a0f1c;
+    border: 1px;
+    border-color: #1d2945;
+    border-radius: 9px;
+    padding: 6px 14px;
+    children: [ textbox-ftr-hints, textbox-ftr-node ];
+}
+
+textbox-ftr-hints {
+    expand: true;
+    str: "[▲/▼/◄/►] Навигация   •   [Enter] Открыть на свободном столе   •   [Esc] Закрыть";
+    text-color: #7d89a8;
+    font: "Noto Sans Bold 9.5";
+}
+
+textbox-ftr-node {
+    expand: false;
+    str: "////// HUD_V2";
+    text-color: @cyan;
+    font: "Noto Sans Bold 9.5";
 }

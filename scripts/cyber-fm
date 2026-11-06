@@ -1,0 +1,9 @@
+#!/bin/bash
+unset LD_PRELOAD
+TARGET_DIR="${1:-$HOME}"
+for fm in nautilus thunar nemo pcmanfm pcmanfm-qt dolphin cosmic-files; do
+    if command -v "$fm" >/dev/null 2>&1; then
+        exec "$fm" "$TARGET_DIR"
+    fi
+done
+notify-send "◈ ПРОВОДНИК" "Файловый менеджер не найден"

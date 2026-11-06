@@ -63,3 +63,5 @@ def make_hud_canvas(out_png, grub_card=False):
 make_hud_canvas(os.path.join(ASSETS, "terminal_hud_bg.png"), False)
 make_hud_canvas(os.path.join(CACHE, "sddm_bg.png"), False)
 make_hud_canvas(os.path.join(CACHE, "grub_bg.png"), True)
+
+make_hud_canvas(os.path.join(CACHE, "lock_hud_bg.png"), True)

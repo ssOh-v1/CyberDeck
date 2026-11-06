@@ -1,0 +1,87 @@
+/* CyberDeck HUD — GTK4 / Libadwaita File Manager Theme */
+@define-color window_bg_color #07090f;
+@define-color window_fg_color #dce3f5;
+@define-color view_bg_color #080c16;
+@define-color view_fg_color #e2e8f8;
+@define-color headerbar_bg_color #0b101d;
+@define-color headerbar_fg_color #e5ecff;
+@define-color headerbar_backdrop_color #080c15;
+@define-color headerbar_border_color #243558;
+@define-color sidebar_bg_color #090d18;
+@define-color sidebar_fg_color #c5d0ea;
+@define-color sidebar_backdrop_color #070a12;
+@define-color secondary_sidebar_bg_color #090d18;
+@define-color card_bg_color #0f1628;
+@define-color card_fg_color #e5ecff;
+@define-color dialog_bg_color #0b101d;
+@define-color dialog_fg_color #e5ecff;
+@define-color popover_bg_color #0c1222;
+@define-color popover_fg_color #e5ecff;
+@define-color accent_bg_color #4c6ef5;
+@define-color accent_fg_color #ffffff;
+@define-color accent_color #22b8cf;
+@define-color borders #1f2d4a;
+
+headerbar {
+    background-color: #0b101d;
+    background-image: linear-gradient(90deg, transparent 0%, rgba(76, 110, 245, 0.35) 25%, rgba(34, 184, 207, 0.75) 50%, rgba(76, 110, 245, 0.35) 75%, transparent 100%);
+    background-size: 100% 2px;
+    background-position: bottom center;
+    background-repeat: no-repeat;
+    border-bottom: 1px solid #223254;
+    box-shadow: none;
+}
+
+.navigation-sidebar, placessidebar {
+    background-color: #090d18;
+    border-right: 1px solid #1e2b48;
+}
+
+.navigation-sidebar row, placessidebar row {
+    border-radius: 8px;
+    margin: 2px 6px;
+    border: 1px solid transparent;
+}
+
+.navigation-sidebar row:hover, placessidebar row:hover {
+    background-color: #11192e;
+    border-color: #26385e;
+}
+
+.navigation-sidebar row:selected, placessidebar row:selected {
+    background-color: #13203b;
+    border: 1px solid #36528c;
+    border-left: 3px solid #22b8cf;
+    color: #f0f4ff;
+}
+
+.nautilus-window .view,
+.nautilus-grid-view,
+.nautilus-list-view {
+    background-color: #07090f;
+    background-image:
+        linear-gradient(rgba(76, 110, 245, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(76, 110, 245, 0.04) 1px, transparent 1px);
+    background-size: 64px 64px;
+}
+
+.nautilus-grid-view child:selected,
+.nautilus-list-view row:selected,
+gridview > child:selected {
+    background-color: rgba(20, 32, 60, 0.94);
+    border: 1px solid #22b8cf;
+    border-radius: 10px;
+}
+
+.path-bar-box, #NautilusPathBar {
+    background-color: #0d1324;
+    border: 1px solid #243558;
+    border-left: 3px solid #22b8cf;
+    border-radius: 8px;
+}
+
+popover > contents {
+    background-color: #0c1222;
+    border: 1px solid #2b406b;
+    border-radius: 11px;
+}

@@ -1,0 +1,26 @@
+#!/bin/bash
+if [ "${1:-}" = "--demo" ]; then
+    if [ -f /usr/lib/libgtk4-layer-shell.so ]; then
+        LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" exec python3 "$HOME/.local/bin/cyber-lock-anim.py" demo
+    fi
+    exec python3 "$HOME/.local/bin/cyber-lock-anim.py" demo
+fi
+
+pgrep -x hyprlock >/dev/null 2>&1 && exit 0
+
+if [ -f /usr/lib/libgtk4-layer-shell.so ]; then
+    LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" python3 "$HOME/.local/bin/cyber-lock-anim.py" lock >/dev/null 2>&1 &
+else
+    python3 "$HOME/.local/bin/cyber-lock-anim.py" lock >/dev/null 2>&1 &
+fi
+
+# Дожидаемся смыкания гермостворок (0.50с) и запускаем реальный PAM-экран hyprlock
+sleep 0.50
+hyprlock
+
+# Сразу после разблокировки запускаем анимацию размыкания гермостворок
+if [ -f /usr/lib/libgtk4-layer-shell.so ]; then
+    LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" exec python3 "$HOME/.local/bin/cyber-lock-anim.py" unlock >/dev/null 2>&1
+else
+    exec python3 "$HOME/.local/bin/cyber-lock-anim.py" unlock >/dev/null 2>&1
+fi
