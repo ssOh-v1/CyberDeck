@@ -4,6 +4,11 @@ import os, sys, re, glob, json, shutil, subprocess, datetime, importlib.util
 ORIG_GTK_THEME = os.environ.get("GTK_THEME")
 os.environ["GTK_THEME"] = "Adwaita:dark"
 
+from ctypes import CDLL
+try:
+    CDLL("libgtk4-layer-shell.so")
+except Exception:
+    pass
 import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gdk, GLib, Pango
@@ -155,7 +160,7 @@ class CyberDeckHubApp(Gtk.Application):
         prov = Gtk.CssProvider()
         if hasattr(prov, "load_from_string"): prov.load_from_string(CSS)
         else: prov.load_from_data(CSS.encode("utf-8"))
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 20)
 
         win = Gtk.ApplicationWindow(application=self, title="CyberDeckHubDesktop")
         if HAS_LAYER and Gtk4LayerShell.is_supported():

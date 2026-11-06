@@ -4,7 +4,7 @@
 
 ## 🎬 Полный видеообзор окружения
 
-[![CyberDeck Video Showcase](assets/screenshots/showcase.gif)](assets/showcase.mp4)
+[![CyberDeck Video Showcase](assets/screenshots/showcase.webp)](assets/showcase.mp4)
 
 > ▶ **[Открыть полное видео в 1080p (`assets/showcase.mp4`)](assets/showcase.mp4)** — полный неспешный обзор: загрузчик GRUB ➔ экран входа SDDM ➔ выдвижная бронестворка ➔ рабочий стол CyberDeck Hub ➔ декорированные меню Rofi и Wi-Fi ➔ терминал и кибер-проводник ➔ гермостворки экрана блокировки ➔ HUD-браузер Firefox.
 

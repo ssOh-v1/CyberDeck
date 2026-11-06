@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 import os, sys, math, time, random, datetime, subprocess
+from ctypes import CDLL
+try:
+    CDLL("libgtk4-layer-shell.so")
+except Exception:
+    pass
 import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gdk, GLib
@@ -94,7 +99,7 @@ class LockBlastDoors(Gtk.Application):
         css = "window { background-color: transparent; }"
         if hasattr(prov, "load_from_string"): prov.load_from_string(css)
         else: prov.load_from_data(css.encode())
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 20)
 
         win = Gtk.ApplicationWindow(application=self)
         if HAS_LAYER and Gtk4LayerShell.is_supported():
