@@ -1,6 +1,6 @@
 # ◈ CyberDeck — Adaptive Wayland / Hyprland Environment
 
-Кастомное окружение рабочего стола на базе **Hyprland + GTK4 Layer-Shell**, выполненное в единой тактической дизайн-системе Cyber HUD (`#07090f` / `#4c6ef5` / `#22b8cf`).
+Кастомное окружение рабочего стола на базе **Hyprland + GTK4 Layer-Shell**, выполненное в единой тактической дизайн-системе Cyber HUD.
 
 ## 🎬 Полный видеообзор окружения
 
