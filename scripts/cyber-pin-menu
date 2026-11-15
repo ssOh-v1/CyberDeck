@@ -4,58 +4,65 @@ import os, re, glob, json, subprocess
 os.environ.pop("LD_PRELOAD", None)
 HOME = os.path.expanduser("~")
 PIN_FILE = os.path.join(HOME, ".config/cyberdeck/pinned_work_apps.json")
-ROFI_WIFI = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
+ROFI_T   = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
+os.makedirs(os.path.dirname(PIN_FILE), exist_ok=True)
 
-def load_pins():
+def parse_desktop_entry(path):
     try:
-        if os.path.isfile(PIN_FILE):
-            return set(json.load(open(PIN_FILE, encoding="utf-8")))
+        txt = open(path, "r", encoding="utf-8", errors="ignore").read()
     except Exception:
-        pass
-    return set()
+        return None
+    main_sec = txt.split("\n[Desktop Action")[0]
+    if re.search(r"^NoDisplay\s*=\s*true", main_sec, re.M | re.I) or re.search(r"^Hidden\s*=\s*true", main_sec, re.M | re.I):
+        return None
+    nm_ru = re.search(r"^Name\[ru\]\s*=\s*(.+)$", main_sec, re.M)
+    nm_en = re.search(r"^Name\s*=\s*(.+)$", main_sec, re.M)
+    ex_m  = re.search(r"^Exec\s*=\s*(.+)$", main_sec, re.M)
+    if not (nm_en and ex_m):
+        return None
+    return nm_en.group(1).strip(), (nm_ru.group(1).strip() if nm_ru else nm_en.group(1).strip())
 
-def save_pins(pins):
-    os.makedirs(os.path.dirname(PIN_FILE), exist_ok=True)
-    json.dump(sorted(pins), open(PIN_FILE, "w", encoding="utf-8"), ensure_ascii=False)
+try:
+    pinned = set(json.load(open(PIN_FILE, encoding="utf-8"))) if os.path.isfile(PIN_FILE) else set()
+except Exception:
+    pinned = set()
 
-apps, seen = [], set()
-for ad in (os.path.join(HOME, ".local/share/applications"), "/usr/share/applications"):
-    if not os.path.isdir(ad): continue
+apps = {}
+for ad in (os.path.join(HOME, ".local/share/applications"), "/usr/share/applications", "/var/lib/flatpak/exports/share/applications"):
+    if not os.path.isdir(ad):
+        continue
     for df in sorted(glob.glob(os.path.join(ad, "*.desktop"))):
-        try:
-            txt = open(df, errors="ignore").read()
-            if re.search(r"^NoDisplay=true", txt, re.M) or re.search(r"^Hidden=true", txt, re.M): continue
-            nm = re.search(r"^Name=(.*)$", txt, re.M)
-            if not nm: continue
-            name = nm.group(1).strip()
-            if name not in seen:
-                seen.add(name)
-                apps.append(name)
-        except Exception:
-            pass
+        res = parse_desktop_entry(df)
+        if res and res[0] not in apps:
+            apps[res[0]] = res[1]
 
-pins = load_pins()
-apps.sort(key=lambda x: (0 if x in pins else 1, x.lower()))
+if not pinned:
+    for default_app in ("Firefox", "Foot", "Telegram Desktop", "Steam", "Discord", "Vesktop", "Visual Studio Code", "Thunar"):
+        if default_app in apps:
+            pinned.add(default_app)
 
-lines, name_map = [], {}
-for name in apps:
-    row = f"★ [В ДОКЕ]   {name}" if name in pins else f"☆ [ДОБАВИТЬ] {name}"
-    lines.append(row)
-    name_map[row] = name
+lines = []
+key_map = {}
+for k_en in sorted(apps.keys(), key=lambda x: (x not in pinned, x.lower())):
+    disp = apps[k_en]
+    label = f"󰐃  [ЗАКРЕПЛЕНО]  {k_en}" if k_en in pinned else f"➕  [ДОБАВИТЬ]    {k_en}"
+    if disp != k_en:
+        label += f" ({disp})"
+    lines.append(label)
+    key_map[label] = k_en
 
-cmd = ["rofi", "-dmenu", "-i", "-p", "📌 НАСТРОЙКА НИЖНЕГО ДОКА (ЗАКРЕПЛЕНИЕ)"]
-if os.path.isfile(ROFI_WIFI):
-    cmd += ["-theme", ROFI_WIFI]
+cmd = ["rofi", "-dmenu", "-i", "-p", "▣ ВИДЖЕТ ПРИЛОЖЕНИЙ (ЛКМ — закрепить / открепить)"]
+if os.path.isfile(ROFI_T):
+    cmd += ["-theme", ROFI_T]
 
-proc = subprocess.run(cmd, input="\n".join(lines), text=True, capture_output=True)
-if proc.returncode != 0:
-    raise SystemExit(0)
-
-ch = proc.stdout.strip()
-if ch in name_map:
-    target = name_map[ch]
-    if target in pins:
-        pins.remove(target)
-    else:
-        pins.add(target)
-    save_pins(pins)
+p = subprocess.run(cmd, input="\n".join(lines), text=True, capture_output=True)
+if p.returncode == 0 and p.stdout.strip():
+    sel = p.stdout.strip()
+    target = key_map.get(sel)
+    if target:
+        if target in pinned:
+            pinned.remove(target)
+        else:
+            pinned.add(target)
+        with open(PIN_FILE, "w", encoding="utf-8") as f:
+            json.dump(sorted(list(pinned)), f, ensure_ascii=False, indent=2)

@@ -1,23 +1,38 @@
 #!/usr/bin/python3
-import json, subprocess
+import os, json, hashlib, subprocess
+
+HOME = os.path.expanduser("~")
+HIDDEN_F = os.path.join(HOME, ".config/cyberdeck/hidden_notifications.json")
+
+try:
+    hidden = set(json.load(open(HIDDEN_F, encoding="utf-8"))) if os.path.isfile(HIDDEN_F) else set()
+except Exception:
+    hidden = set()
 
 try:
     modes = subprocess.check_output(["makoctl", "mode"], text=True, stderr=subprocess.DEVNULL).splitlines()
     is_dnd = "do-not-disturb" in modes
-    hist = subprocess.check_output(["makoctl", "history"], text=True, stderr=subprocess.DEVNULL)
-    cnt = hist.count("Notification ")
+
+    raw_hist = subprocess.check_output(["makoctl", "history"], text=True, stderr=subprocess.DEVNULL)
+    raw_list = subprocess.check_output(["makoctl", "list"], text=True, stderr=subprocess.DEVNULL)
+
+    seen_hashes = set()
+    for src in (raw_list, raw_hist):
+        for blk in src.split("Notification "):
+            clean = blk.strip()
+            if not clean:
+                continue
+            lines = [ln.strip() for ln in clean.splitlines() if ln.strip()]
+            sig_text = "\n".join(lines[:3])
+            h = hashlib.md5(sig_text.encode("utf-8", "ignore")).hexdigest()
+            if h not in hidden:
+                seen_hashes.add(h)
+
+    cnt = len(seen_hashes)
     if is_dnd:
-        print(json.dumps({
-            "text": f"󰂛 {cnt}",
-            "class": "dnd",
-            "tooltip": f"Режим «Не беспокоить» активен (в истории: {cnt})\nЛКМ: Центр уведомлений • ПКМ: Включить уведомления"
-        }, ensure_ascii=False))
+        print(json.dumps({"text": f"󰂛 {cnt}", "class": "dnd"}, ensure_ascii=False))
     else:
         ic = "󰂚" if cnt > 0 else "󰂜"
-        print(json.dumps({
-            "text": f"{ic} {cnt}",
-            "class": "normal",
-            "tooltip": f"Уведомлений в истории: {cnt}\nЛКМ: Открыть Центр уведомлений • ПКМ: Режим «Не беспокоить»"
-        }, ensure_ascii=False))
+        print(json.dumps({"text": f"{ic} {cnt}", "class": "normal"}, ensure_ascii=False))
 except Exception:
-    print(json.dumps({"text": "󰂜 0", "class": "normal", "tooltip": "Центр уведомлений"}, ensure_ascii=False))
+    print(json.dumps({"text": "󰂜 0", "class": "normal"}, ensure_ascii=False))
