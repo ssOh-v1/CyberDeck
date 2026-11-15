@@ -1,14 +1,30 @@
-#!/bin/bash
-MODE="balanced"
-[ -f /run/cyberdeck-power-mode ] && MODE=$(cat /run/cyberdeck-power-mode 2>/dev/null)
-case "$MODE" in
-    eco)
-        printf '{"text": "󰾆 ЭКОНОМ", "class": "eco", "tooltip": "Режим: Эконом (максимальное сбережение батареи)\nЛКМ: следующий режим • ПКМ: меню выбора"}\n'
-        ;;
-    performance)
-        printf '{"text": "󰓅 ПРОИЗВ", "class": "perf", "tooltip": "Режим: Производительность (максимум CPU/GPU для игр)\nЛКМ: следующий режим • ПКМ: меню выбора"}\n'
-        ;;
-    *)
-        printf '{"text": "󰗑 БАЛАНС", "class": "bal", "tooltip": "Режим: Баланс (оптимально для работы)\nЛКМ: следующий режим • ПКМ: меню выбора"}\n'
-        ;;
-esac
+#!/usr/bin/python3
+import os, json
+
+mode = "balanced"
+if os.path.isfile("/run/cyberdeck-power-mode"):
+    try:
+        mode = open("/run/cyberdeck-power-mode", "r", encoding="utf-8").read().strip()
+    except Exception:
+        mode = "balanced"
+
+if mode == "eco":
+    out = {
+        "text": "○ ЭКОНОМ",
+        "class": "eco",
+        "tooltip": "Режим: Эконом (максимальное энергосбережение, без Turbo Boost)\nЛКМ: следующий режим • ПКМ: меню выбора"
+    }
+elif mode == "performance":
+    out = {
+        "text": "⚡ ПРОИЗВ",
+        "class": "perf",
+        "tooltip": "Режим: Производительность (максимальные частоты CPU/GPU для игр и работы)\nЛКМ: следующий режим • ПКМ: меню выбора"
+    }
+else:
+    out = {
+        "text": "◈ БАЛАНС",
+        "class": "bal",
+        "tooltip": "Режим: Баланс (оптимальное соотношение скорости и тишины)\nЛКМ: следующий режим • ПКМ: меню выбора"
+    }
+
+print(json.dumps(out, ensure_ascii=False))

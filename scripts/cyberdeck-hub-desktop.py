@@ -9,15 +9,19 @@ import os, sys, re, glob, json, socket, hashlib, urllib.request, urllib.parse, c
 
 HOME = os.path.expanduser("~")
 UID = os.getuid()
-CFG_DIR = os.path.join(HOME, ".config/cyberdeck")
+CFG_DIR     = os.path.join(HOME, ".config/cyberdeck")
+CACHE_DIR   = os.path.join(HOME, ".cache/cyberdeck")
+BG_PNG      = os.path.join(CACHE_DIR, "work_hud_bg.png")
 NOTES_FILE  = os.path.join(CFG_DIR, "studio_notes.txt")
 PIN_FILE    = os.path.join(CFG_DIR, "pinned_work_apps.json")
 STATE_FILE  = os.path.join(CFG_DIR, "widgets_state.json")
 CHAT_FILE   = os.path.join(CFG_DIR, "ai_chat_history.json")
 MODELS_FILE = os.path.join(CFG_DIR, "ai_models.json")
+ROFI_T      = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
 NOTIF_TRIG  = "/tmp/studio_toggle_notif_center"
 ART_CACHE   = "/tmp/studio_art_cache"
 os.makedirs(ART_CACHE, exist_ok=True)
+os.makedirs(CFG_DIR, exist_ok=True)
 
 os.environ["XCURSOR_THEME"] = "GameDev-Cursor-Grey"
 os.environ["XCURSOR_SIZE"] = "28"
@@ -29,30 +33,33 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gtk, Gdk, GLib, Pango, Gtk4LayerShell
+import cairo
 
 os.environ.pop("LD_PRELOAD", None)
 
-_my_pid = os.getpid()
-for _p in os.listdir("/proc"):
-    if _p.isdigit() and int(_p) != _my_pid:
-        try:
-            _cmd = open(f"/proc/{_p}/cmdline", "rb").read().decode("utf-8", "ignore")
-            if "work-hub-desktop.py" in _cmd or "cyberdeck-hub-desktop.py" in _cmd:
-                os.kill(int(_p), 9)
-        except Exception:
-            pass
+SINGLE_PIN_WID = sys.argv[2] if (len(sys.argv) > 2 and sys.argv[1] == "--pin-window") else None
+
+if SINGLE_PIN_WID is None:
+    _my_pid = os.getpid()
+    for _p in os.listdir("/proc"):
+        if _p.isdigit() and int(_p) != _my_pid:
+            try:
+                _cmd = open(f"/proc/{_p}/cmdline", "rb").read().decode("utf-8", "ignore")
+                if ("work-hub-desktop.py" in _cmd or "cyberdeck-hub-desktop.py" in _cmd) and "--pin-window" not in _cmd:
+                    os.kill(int(_p), 9)
+            except Exception:
+                pass
 
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
 DEFAULT_WIDGETS = {
-    "ai":       {"title": "▣ AI STUDIO",  "x": 18,   "y": 46,  "w": 335, "h": 295, "min_w": 250, "min_h": 180, "top": False, "collapsed": False},
-    "notes":    {"title": "▣ ЗАМЕТКИ",    "x": 18,   "y": 352, "w": 285, "h": 185, "min_w": 210, "min_h": 120, "top": False, "collapsed": False},
-    "gamedev":  {"title": "▣ DEV & GIT",  "x": 18,   "y": 548, "w": 285, "h": 145, "min_w": 210, "min_h": 115, "top": False, "collapsed": False},
-    "calendar": {"title": "▣ КАЛЕНДАРЬ",  "x": 1632, "y": 46,  "w": 270, "h": 180, "min_w": 220, "min_h": 155, "top": False, "collapsed": False},
-    "media":    {"title": "▣ МЕДИАПЛЕЕР", "x": 1632, "y": 238, "w": 270, "h": 118, "min_w": 235, "min_h": 108, "top": False, "collapsed": False},
+    "ai":       {"title": "▣ AI STUDIO",  "x": 18,   "y": 46,  "w": 335, "h": 295, "min_w": 250, "min_h": 185, "collapsed": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",    "x": 18,   "y": 352, "w": 285, "h": 185, "min_w": 210, "min_h": 120, "collapsed": False},
+    "gamedev":  {"title": "▣ DEV & GIT",  "x": 18,   "y": 548, "w": 285, "h": 145, "min_w": 210, "min_h": 115, "collapsed": False},
+    "calendar": {"title": "▣ КАЛЕНДАРЬ",  "x": 1632, "y": 46,  "w": 270, "h": 180, "min_w": 220, "min_h": 155, "collapsed": False},
+    "media":    {"title": "▣ МЕДИАПЛЕЕР", "x": 1632, "y": 238, "w": 270, "h": 122, "min_w": 235, "min_h": 110, "collapsed": False},
 }
 
-# Генерируем дефолтную векторную пластинку для обложки, когда ничего не играет
 FALLBACK_ART = os.path.join(ART_CACHE, "fallback_vinyl.svg")
 open(FALLBACK_ART, "w", encoding="utf-8").write("""<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
   <rect width="52" height="52" rx="6" fill="#16181d"/>
@@ -156,27 +163,19 @@ def read_git_projects_status():
         except Exception: pass
     return "\n".join(rows) if rows else "▸ Git-репозитории готовы"
 
-# ==============================================================================
-# ИЗОЛИРОВАННОЕ УПРАВЛЕНИЕ ГРОМКОСТЬЮ ТОЛЬКО ДЛЯ МУЗЫКИ/ВИДЕО + ОБЛОЖКИ ТРЕКОВ
-# ==============================================================================
 def get_media_sink_inputs():
-    # Находит ID аудиопотоков открытых плееров/браузеров в PipeWire/PulseAudio (не трогая системный микшер!)
-    ids = []
-    vols = []
+    ids, vols = [], []
     try:
         raw = subprocess.check_output(["pactl", "-f", "json", "list", "sink-inputs"], text=True, stderr=subprocess.DEVNULL, timeout=0.6)
         data = json.loads(raw)
         for item in data:
             idx = item.get("index")
             props = item.get("properties", {})
-            app_name = (props.get("application.name") or "").lower()
             bin_name = (props.get("application.process.binary") or "").lower()
             media_name = (props.get("media.name") or "").lower()
-            # Исключаем системные звуки уведомлений
             if "speech-dispatcher" in bin_name or "bell" in media_name:
                 continue
             ids.append(idx)
-            # Читаем процент громкости конкретного потока
             v_dict = item.get("volume", {})
             for ch_v in v_dict.values():
                 vp = ch_v.get("value_percent", "100%").replace("%", "").strip()
@@ -197,7 +196,6 @@ def set_media_stream_only_volume(val_pct):
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
     else:
-        # Если поток на паузе и скрыт из sink-inputs, передаём уровень напрямую MPRIS-плееру
         subprocess.Popen(
             ["playerctl", "volume", f"{val_pct / 100.0:.2f}"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -214,7 +212,7 @@ def read_music_and_art():
             parts.append("")
         status, title, artist, art_url = parts[0], parts[1].strip(), parts[2].strip(), parts[3].strip()
         if title:
-            ic = "󰐊" if status == "Playing" else "󰏤"
+            ic = "▶" if status == "Playing" else "⏸"
             art_file = FALLBACK_ART
             if art_url.startswith("file://"):
                 local_p = urllib.parse.unquote(art_url[7:])
@@ -226,7 +224,6 @@ def read_music_and_art():
                 if os.path.isfile(cached_p) and os.path.getsize(cached_p) > 200:
                     art_file = cached_p
                 else:
-                    # Скачиваем обложку видео/трека в фоне
                     subprocess.Popen(
                         ["curl", "-L", "-s", "--max-time", "4", "-o", cached_p, art_url],
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -234,11 +231,8 @@ def read_music_and_art():
             return f"{ic} {title[:22]}", f"{artist[:22] or 'Медиапоток'}", art_file
     except Exception:
         pass
-    return "󰓛 Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART
+    return "⏹ Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART
 
-# ==============================================================================
-# НАДЁЖНЫЙ СЕТЕВОЙ КЛИЕНТ НЕЙРОСЕТЕЙ (ОБЛАКО + OLLAMA + CUSTOM API)
-# ==============================================================================
 def load_ai_models():
     try:
         if os.path.isfile(MODELS_FILE):
@@ -253,14 +247,13 @@ def query_ai_llm(model_meta, messages):
     prov = model_meta.get("provider", "pollinations")
     mod_name = model_meta.get("model", "openai")
 
-    # 1. Локальная нейросеть через Ollama
     if prov == "ollama":
         try:
             if mod_name == "auto":
                 tags = json.loads(urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2.0).read().decode())
                 mlist = [x["name"] for x in tags.get("models", [])]
                 if not mlist:
-                    return "В Ollama пока нет скачанных моделей. Выполните в терминале: ollama run qwen2.5-coder:7b (или выберите облачную модель сверху)."
+                    return "В Ollama нет скачанных моделей. Выполните: ollama run qwen2.5-coder:7b (или выберите облачную модель сверху)."
                 mod_name = mlist[0]
             req = urllib.request.Request(
                 "http://127.0.0.1:11434/api/chat",
@@ -270,14 +263,10 @@ def query_ai_llm(model_meta, messages):
             resp = json.loads(urllib.request.urlopen(req, timeout=60).read().decode("utf-8"))
             return resp.get("message", {}).get("content", "").strip()
         except Exception:
-            return "Локальный сервер Ollama не запущен. Запустите `ollama serve` или выберите облачную модель в списке сверху."
+            return "Локальный сервер Ollama не запущен. Запустите `ollama serve` или переключите модель кнопкой сверху."
 
-    # 2. Пользовательский Custom OpenAI-совместимый API (OpenRouter / LocalAI / vLLM)
     if prov == "custom" and model_meta.get("url"):
         try:
-            hdrs = {"Content-Type": "application/json", "User-Agent": "StudioAI/2.0"}
-            if model_meta.get("key"):
-                hdrs["Authorization"] = f"Bearer {model_meta['key']}"
             payload = {"model": mod_name, "messages": messages[-8:]}
             res = subprocess.run(
                 ["curl", "-s", "-L", "--max-time", "40", "-X", "POST", model_meta["url"],
@@ -291,12 +280,8 @@ def query_ai_llm(model_meta, messages):
         except Exception as e:
             return f"Ошибка пользовательского API: {e}"
 
-    # 3. Встроенные облачные модели (через системный curl с резервным каналом)
-    sys_msg = {"role": "system", "content": "Отвечай чётко, лаконично и по делу на русском языке. При написании кода выдавай рабочий и чистый код."}
-    payload = {
-        "model": mod_name,
-        "messages": [sys_msg] + messages[-6:],
-    }
+    sys_msg = {"role": "system", "content": "Отвечай чётко, лаконично и по делу на русском языке. При написании кода выдавай чистый рабочий код."}
+    payload = {"model": mod_name, "messages": [sys_msg] + messages[-6:]}
     try:
         res = subprocess.run(
             ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "35",
@@ -320,7 +305,6 @@ def query_ai_llm(model_meta, messages):
     except Exception:
         pass
 
-    # Резервный прямой запрос
     try:
         last_q = messages[-1]["content"]
         enc_q = urllib.parse.quote(f"Ответь на русском языке: {last_q}")
@@ -333,35 +317,27 @@ def query_ai_llm(model_meta, messages):
         if res2.returncode == 0 and res2.stdout.strip():
             return res2.stdout.strip()
     except Exception as e:
-        return f"Не удалось получить ответ от сети: {e}"
+        return f"Не удалось получить ответ: {e}"
 
-    return "Сервер модели временно перегружен, попробуйте выбрать другую модель в списке сверху."
+    return "Сервер модели перегружен, переключите модель кнопкой сверху."
 
 # ==============================================================================
-# КЛАСС ПЕРЕМЕЩАЕМОГО И МАСШТАБИРУЕМОГО ВИДЖЕТА С ЗАХВАТОМ ФОКУСА ВВОДА
+# КАРТОЧКА ПЕРЕМЕЩАЕМОГО И МАСШТАБИРУЕМОГО ВИДЖЕТА НА ХОЛСТЕ GTK.FIXED
 # ==============================================================================
-class MovableStudioWidget:
-    def __init__(self, app, wid, state_dict, build_body_fn):
+class CanvasWidgetCard:
+    def __init__(self, app, canvas, wid, state_dict, build_body_fn, is_standalone=False):
         self.app = app
+        self.canvas = canvas
         self.wid = wid
         self.st = state_dict
+        self.is_standalone = is_standalone
         self.m_start_xy = (0, 0)
         self.m_start_cursor = None
         self.r_start_wh = (280, 180)
         self.r_start_cursor = None
 
-        self.win = Gtk.Window(application=app, title=f"StudioWidget-{wid}")
-        Gtk4LayerShell.init_for_window(self.win)
-        Gtk4LayerShell.set_namespace(self.win, f"studio-widget-{wid}")
-        Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.TOP, True)
-        Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.LEFT, True)
-        Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.RIGHT, False)
-        Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.BOTTOM, False)
-        Gtk4LayerShell.set_exclusive_zone(self.win, -1)
-        Gtk4LayerShell.set_keyboard_mode(self.win, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
-
         self.frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self.frame.add_css_class("widget-frame")
+        self.frame.add_css_class("widget-frame-top" if is_standalone else "widget-frame")
 
         hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         hdr.add_css_class("widget-header")
@@ -371,26 +347,30 @@ class MovableStudioWidget:
         drag_lbl = Gtk.Label(label=f"⠿ {self.st[wid].get('title', wid.upper())}", xalign=0, hexpand=True)
         drag_lbl.add_css_class("widget-title")
         drag_box.append(drag_lbl)
-        drag_box.set_tooltip_text("Зажмите ЛКМ и перетащите виджет в любое место")
+        drag_box.set_tooltip_text("Зажмите ЛКМ и перетащите виджет в любое место рабочего стола")
         hdr.append(drag_box)
 
-        move_gest = Gtk.GestureDrag.new()
-        move_gest.set_button(1)
-        move_gest.connect("drag-begin", self.on_move_begin)
-        move_gest.connect("drag-update", self.on_move_update)
-        move_gest.connect("drag-end", self.on_move_end)
-        drag_box.add_controller(move_gest)
+        if not is_standalone:
+            move_gest = Gtk.GestureDrag.new()
+            move_gest.set_button(1)
+            move_gest.connect("drag-begin", self.on_move_begin)
+            move_gest.connect("drag-update", self.on_move_update)
+            move_gest.connect("drag-end", self.on_move_end)
+            drag_box.add_controller(move_gest)
 
-        self.pin_btn = Gtk.Button(label="󰐃")
-        self.pin_btn.set_tooltip_text("Закрепить виджет ПОВЕРХ всех окон / вернуть на стол")
-        self.pin_btn.connect("clicked", self.on_toggle_top)
+        # Кнопка закрепления виджета ПОВЕРХ ВСЕХ ОКОН (открывает плавающее окно Hyprland [float; pin])
+        self.pin_btn = Gtk.Button(label="📌" if not is_standalone else "✕")
+        self.pin_btn.add_css_class("w-pin-active" if is_standalone else "w-hdr-btn")
+        self.pin_btn.set_tooltip_text("Закрепить виджет ПОВЕРХ открытых приложений" if not is_standalone else "Закрыть окно поверх приложений")
+        self.pin_btn.connect("clicked", self.on_toggle_pin_top)
         hdr.append(self.pin_btn)
 
-        col_btn = Gtk.Button(label="—")
-        col_btn.add_css_class("w-hdr-btn")
-        col_btn.set_tooltip_text("Свернуть / развернуть виджет")
-        col_btn.connect("clicked", self.on_toggle_collapse)
-        hdr.append(col_btn)
+        if not is_standalone:
+            col_btn = Gtk.Button(label="—")
+            col_btn.add_css_class("w-hdr-btn")
+            col_btn.set_tooltip_text("Свернуть / развернуть виджет")
+            col_btn.connect("clicked", self.on_toggle_collapse)
+            hdr.append(col_btn)
 
         self.frame.append(hdr)
 
@@ -402,78 +382,34 @@ class MovableStudioWidget:
         content_w.set_vexpand(True); content_w.set_hexpand(True)
         self.body_wrap.append(content_w)
 
-        btm_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        sp = Gtk.Box(); sp.set_hexpand(True); btm_row.append(sp)
-        grip_box = Gtk.Box()
-        grip = Gtk.Label(label="◢")
-        grip.add_css_class("resize-grip")
-        grip_box.append(grip)
-        grip_box.set_tooltip_text("Потяните ЛКМ за уголок для изменения размера")
+        if not is_standalone:
+            btm_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            sp = Gtk.Box(); sp.set_hexpand(True); btm_row.append(sp)
+            grip_box = Gtk.Box()
+            grip = Gtk.Label(label="◢")
+            grip.add_css_class("resize-grip")
+            grip_box.append(grip)
+            grip_box.set_tooltip_text("Потяните ЛКМ за уголок, чтобы изменить размер виджета")
 
-        rsz_gest = Gtk.GestureDrag.new()
-        rsz_gest.set_button(1)
-        rsz_gest.connect("drag-begin", self.on_resize_begin)
-        rsz_gest.connect("drag-update", self.on_resize_update)
-        rsz_gest.connect("drag-end", self.on_resize_end)
-        grip_box.add_controller(rsz_gest)
-        btm_row.append(grip_box)
-        self.body_wrap.append(btm_row)
+            rsz_gest = Gtk.GestureDrag.new()
+            rsz_gest.set_button(1)
+            rsz_gest.connect("drag-begin", self.on_resize_begin)
+            rsz_gest.connect("drag-update", self.on_resize_update)
+            rsz_gest.connect("drag-end", self.on_resize_end)
+            grip_box.add_controller(rsz_gest)
+            btm_row.append(grip_box)
+            self.body_wrap.append(btm_row)
 
         self.frame.append(self.body_wrap)
-        self.win.set_child(self.frame)
-        self.apply_geometry_and_layer()
+        self.apply_geometry()
 
-    def enable_keyboard_focus_on_click(self, interactive_widget):
-        # Гарантирует мгновенный ввод с клавиатуры в полях Entry / TextView на Layer-Shell!
-        click_g = Gtk.GestureClick.new()
-        click_g.set_button(1)
-        def _on_click(*_a):
-            Gtk4LayerShell.set_keyboard_mode(self.win, Gtk4LayerShell.KeyboardMode.EXCLUSIVE)
-            interactive_widget.grab_focus()
-        click_g.connect("pressed", _on_click)
-        interactive_widget.add_controller(click_g)
-
-        f_ctrl = Gtk.EventControllerFocus.new()
-        f_ctrl.connect("leave", lambda *_a: Gtk4LayerShell.set_keyboard_mode(self.win, Gtk4LayerShell.KeyboardMode.ON_DEMAND))
-        interactive_widget.add_controller(f_ctrl)
-
-        k_ctrl = Gtk.EventControllerKey.new()
-        def _on_key(_c, keyval, _code, _state):
-            if keyval == Gdk.KEY_Escape:
-                Gtk4LayerShell.set_keyboard_mode(self.win, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
-                return True
-            return False
-        k_ctrl.connect("key-pressed", _on_key)
-        interactive_widget.add_controller(k_ctrl)
-
-    def apply_geometry_and_layer(self):
+    def apply_geometry(self):
         cfg = self.st[self.wid]
-        x = max(4, min(1840, int(cfg.get("x", 20))))
-        y = max(38, min(1030, int(cfg.get("y", 50))))
-        w = max(int(cfg.get("min_w", 210)), int(cfg.get("w", 280)))
-        h = max(int(cfg.get("min_h", 105)), int(cfg.get("h", 180)))
-        is_top = bool(cfg.get("top", False))
-        is_col = bool(cfg.get("collapsed", False))
-
-        Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.LEFT, x)
-        Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.TOP, y)
-        Gtk4LayerShell.set_layer(self.win, Gtk4LayerShell.Layer.TOP if is_top else Gtk4LayerShell.Layer.BOTTOM)
-
-        self.pin_btn.remove_css_class("w-pin-active")
-        self.pin_btn.remove_css_class("w-hdr-btn")
-        self.pin_btn.add_css_class("w-pin-active" if is_top else "w-hdr-btn")
-
-        self.frame.remove_css_class("widget-frame")
-        self.frame.remove_css_class("widget-frame-top")
-        self.frame.add_css_class("widget-frame-top" if is_top else "widget-frame")
-
+        w = max(int(cfg.get("min_w", 220)), int(cfg.get("w", 280)))
+        h = max(int(cfg.get("min_h", 110)), int(cfg.get("h", 180)))
+        is_col = bool(cfg.get("collapsed", False)) and not self.is_standalone
         self.body_wrap.set_visible(not is_col)
-        if is_col:
-            self.frame.set_size_request(w, 26)
-            self.win.set_default_size(w, 26)
-        else:
-            self.frame.set_size_request(w, h)
-            self.win.set_default_size(w, h)
+        self.frame.set_size_request(w, 26 if is_col else h)
 
     def on_move_begin(self, _g, _x, _y):
         cfg = self.st[self.wid]
@@ -491,8 +427,8 @@ class MovableStudioWidget:
             ny = self.m_start_xy[1] + int(off_y)
         cfg["x"] = max(4, min(1920 - int(cfg["w"]) - 4, nx))
         cfg["y"] = max(38, min(1080 - 36, ny))
-        Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.LEFT, cfg["x"])
-        Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.TOP, cfg["y"])
+        if self.canvas:
+            self.canvas.move(self.frame, cfg["x"], cfg["y"])
 
     def on_move_end(self, _g, _ox, _oy):
         save_widgets_state(self.st)
@@ -511,34 +447,37 @@ class MovableStudioWidget:
         else:
             nw = self.r_start_wh[0] + int(off_x)
             nh = self.r_start_wh[1] + int(off_y)
-        cfg["w"] = max(int(cfg.get("min_w", 210)), min(900, nw))
-        cfg["h"] = max(int(cfg.get("min_h", 105)), min(850, nh))
+        cfg["w"] = max(int(cfg.get("min_w", 220)), min(900, nw))
+        cfg["h"] = max(int(cfg.get("min_h", 110)), min(850, nh))
         self.frame.set_size_request(cfg["w"], cfg["h"])
-        self.win.set_default_size(cfg["w"], cfg["h"])
 
     def on_resize_end(self, _g, _ox, _oy):
         save_widgets_state(self.st)
 
-    def on_toggle_top(self, _b):
+    def on_toggle_pin_top(self, _b):
+        if self.is_standalone:
+            self.app.quit()
+            return
         cfg = self.st[self.wid]
-        cfg["top"] = not bool(cfg.get("top", False))
-        self.apply_geometry_and_layer()
-        save_widgets_state(self.st)
+        x, y, w, h = int(cfg["x"]), int(cfg["y"]), int(cfg["w"]), int(cfg["h"])
+        cmd = f'hyprctl dispatch exec "[float; pin; move {x} {y}; size {w} {h}] /usr/bin/python3 {HOME}/.local/bin/work-hub-desktop.py --pin-window {self.wid}"'
+        self.app.spawn_raw(cmd)
 
     def on_toggle_collapse(self, _b):
         cfg = self.st[self.wid]
         cfg["collapsed"] = not bool(cfg.get("collapsed", False))
-        self.apply_geometry_and_layer()
+        self.apply_geometry()
         save_widgets_state(self.st)
 
 # ==============================================================================
-# ГЛАВНЫЙ ДЕМОН ВИДЖЕТОВ, ДОКА И ЦЕНТРА УВЕДОМЛЕНИЙ
+# ГЛАВНОЕ ПРИЛОЖЕНИЕ РАБОЧЕГО СТОЛА И ВИДЖЕТОВ
 # ==============================================================================
-class StudioWidgetsDaemon(Gtk.Application):
+class StudioDesktopApp(Gtk.Application):
     def __init__(self):
-        super().__init__(application_id="org.alpora.WorkDeckLayer")
+        app_id = f"org.alpora.PinWidget.{SINGLE_PIN_WID}.{os.getpid()}" if SINGLE_PIN_WID else "org.alpora.WorkDeckLayer"
+        super().__init__(application_id=app_id)
         self.st = load_widgets_state()
-        self.widgets = {}
+        self.cards = {}
         self.pinned = self.load_pinned()
         self.last_pin_mtime = 0
         self.last_models_mtime = 0
@@ -551,7 +490,26 @@ class StudioWidgetsDaemon(Gtk.Application):
         now = datetime.date.today()
         self.cal_year, self.cal_month = now.year, now.month
         self.last_art_path = ""
-        self.notif_win = None
+        self.updating_vol_ui = False
+        self.notif_frame = None
+
+        self.bg_surface = None
+        if SINGLE_PIN_WID is None and os.path.isfile(BG_PNG):
+            try:
+                self.bg_surface = cairo.ImageSurface.create_from_png(BG_PNG)
+            except Exception:
+                self.bg_surface = None
+
+    def on_draw_bg(self, _area, cr, w, h, *_args):
+        cr.save()
+        cr.scale(w / 1920.0, h / 1080.0)
+        if self.bg_surface is not None:
+            cr.set_source_surface(self.bg_surface, 0, 0)
+            cr.paint()
+        else:
+            cr.set_source_rgb(0.07, 0.075, 0.086)
+            cr.paint()
+        cr.restore()
 
     def load_pinned(self):
         try: return set(json.load(open(PIN_FILE, encoding="utf-8"))) if os.path.isfile(PIN_FILE) else set()
@@ -567,7 +525,7 @@ class StudioWidgetsDaemon(Gtk.Application):
                 return json.load(open(CHAT_FILE, encoding="utf-8"))[-12:]
         except Exception:
             pass
-        return [{"role": "assistant", "content": "Нейросеть готова! Выберите модель в списке сверху (или нажмите «+ ИИ» для добавления своей) и введите вопрос."}]
+        return [{"role": "assistant", "content": "Нейросеть готова! Нажмите на кнопку модели сверху для выбора ИИ (или «+ ИИ» для добавления своей) и введите запрос ниже."}]
 
     def save_chat_history(self):
         try:
@@ -575,20 +533,25 @@ class StudioWidgetsDaemon(Gtk.Application):
         except Exception:
             pass
 
-    # --- 1. ВИДЖЕТ НЕЙРОСЕТЕЙ С ВЫПАДАЮЩИМ СПИСКОМ И КНОПКОЙ «+ ИИ» ---
-    def build_ai_widget(self, wobj):
+    # --- 1. ВИДЖЕТ НЕЙРОСЕТЕЙ (СПИСОК ДОСТУПНЫХ ИИ + ДОБАВЛЕНИЕ СВОИХ + ЧАТ) ---
+    def build_ai_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
         top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        self.model_str_list = Gtk.StringList.new([m["name"] for m in self.ai_models])
-        self.model_dropdown = Gtk.DropDown(model=self.model_str_list)
-        self.model_dropdown.set_hexpand(True)
-        self.model_dropdown.connect("notify::selected", self.on_dropdown_model_changed)
-        top_row.append(self.model_dropdown)
+        cur_m_name = self.ai_models[self.active_model_idx]["name"] if self.ai_models else "Qwen 2.5 Coder"
+        self.model_sel_btn = Gtk.Button(label=f"🤖 {cur_m_name[:24]} ▾")
+        self.model_sel_btn.add_css_class("mini-btn")
+        self.model_sel_btn.set_hexpand(True)
+        self.model_sel_btn.set_tooltip_text("ЛКМ: Открыть список доступных нейросетей • ПКМ: Следующая модель")
+        self.model_sel_btn.connect("clicked", self.on_open_model_list_rofi)
+        rc_m = Gtk.GestureClick.new(); rc_m.set_button(3)
+        rc_m.connect("pressed", lambda *_a: self.cycle_next_model())
+        self.model_sel_btn.add_controller(rc_m)
+        top_row.append(self.model_sel_btn)
 
         b_manage = Gtk.Button(label="+ ИИ")
         b_manage.add_css_class("mini-btn")
-        b_manage.set_tooltip_text("Добавить свою нейросеть или выбрать из каталога моделей")
+        b_manage.set_tooltip_text("Добавить свою нейросеть или выбрать из каталога")
         b_manage.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/studio-ai-manager"))
         top_row.append(b_manage)
         box.append(top_row)
@@ -606,23 +569,21 @@ class StudioWidgetsDaemon(Gtk.Application):
         in_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self.ai_entry = Gtk.Entry()
         self.ai_entry.add_css_class("compact-entry"); self.ai_entry.set_hexpand(True)
-        self.ai_entry.set_placeholder_text("Кликните и введите запрос (Enter)...")
+        self.ai_entry.set_placeholder_text("Сообщение нейросети (Enter)...")
         self.ai_entry.connect("activate", self.on_send_ai_msg)
-        wobj.enable_keyboard_focus_on_click(self.ai_entry)
         in_row.append(self.ai_entry)
 
         b_send = Gtk.Button(label="➤"); b_send.add_css_class("mini-btn")
-        b_send.set_tooltip_text("Отправить сообщение нейросети")
         b_send.connect("clicked", self.on_send_ai_msg)
         in_row.append(b_send)
 
-        b_copy = Gtk.Button(label="󰆏"); b_copy.add_css_class("mini-btn")
+        b_copy = Gtk.Button(label="📋"); b_copy.add_css_class("mini-btn")
         b_copy.set_tooltip_text("Скопировать последний ответ")
         b_copy.connect("clicked", self.on_copy_last_ai)
         in_row.append(b_copy)
 
-        b_clr = Gtk.Button(label="󰩺"); b_clr.add_css_class("mini-btn")
-        b_clr.set_tooltip_text("Очистить историю чата")
+        b_clr = Gtk.Button(label="🗑"); b_clr.add_css_class("mini-btn")
+        b_clr.set_tooltip_text("Очистить чат")
         b_clr.connect("clicked", self.on_clear_ai_chat)
         in_row.append(b_clr)
 
@@ -630,23 +591,44 @@ class StudioWidgetsDaemon(Gtk.Application):
         self.last_models_mtime = os.path.getmtime(MODELS_FILE) if os.path.isfile(MODELS_FILE) else 0
         return box
 
-    def on_dropdown_model_changed(self, dropdown, _pspec):
-        idx = dropdown.get_selected()
-        if 0 <= idx < len(self.ai_models):
-            self.active_model_idx = idx
+    def cycle_next_model(self):
+        self.ai_models = load_ai_models()
+        if not self.ai_models: return
+        self.active_model_idx = (self.active_model_idx + 1) % len(self.ai_models)
+        cur_m_name = self.ai_models[self.active_model_idx]["name"]
+        self.model_sel_btn.set_label(f"🤖 {cur_m_name[:24]} ▾")
+        self.render_chat_log()
 
-    def reload_models_list_if_needed(self):
-        try:
-            mt = os.path.getmtime(MODELS_FILE) if os.path.isfile(MODELS_FILE) else 0
-            if mt != self.last_models_mtime:
-                self.last_models_mtime = mt
-                self.ai_models = load_ai_models()
-                new_list = Gtk.StringList.new([m["name"] for m in self.ai_models])
-                self.model_dropdown.set_model(new_list)
-                self.active_model_idx = max(0, min(self.active_model_idx, len(self.ai_models) - 1))
-                self.model_dropdown.set_selected(self.active_model_idx)
-        except Exception:
-            pass
+    def on_open_model_list_rofi(self, _b):
+        self.ai_models = load_ai_models()
+        def _pick():
+            lines = []
+            for idx, m in enumerate(self.ai_models):
+                mark = " [● АКТИВНА]" if idx == self.active_model_idx else ""
+                lines.append(f"{idx+1}. 🤖 {m['name']}{mark}")
+            lines.append("➕ Добавить новую нейросеть в список...")
+            cmd = ["rofi", "-dmenu", "-i", "-p", "🤖 ВЫБОР НЕЙРОСЕТИ"]
+            if os.path.isfile(ROFI_T): cmd += ["-theme", ROFI_T]
+            p = subprocess.run(cmd, input="\n".join(lines), text=True, capture_output=True)
+            if p.returncode == 0 and p.stdout.strip():
+                ch = p.stdout.strip()
+                if "Добавить новую" in ch:
+                    subprocess.Popen(["/usr/bin/python3", os.path.join(HOME, ".local/bin/studio-ai-manager")])
+                elif "." in ch:
+                    try:
+                        sel_i = int(ch.split(".", 1)[0]) - 1
+                        if 0 <= sel_i < len(self.ai_models):
+                            GLib.idle_add(self.set_active_model_idx, sel_i)
+                    except Exception:
+                        pass
+        threading.Thread(target=_pick, daemon=True).start()
+
+    def set_active_model_idx(self, idx):
+        self.active_model_idx = idx
+        cur_m_name = self.ai_models[self.active_model_idx]["name"]
+        self.model_sel_btn.set_label(f"🤖 {cur_m_name[:24]} ▾")
+        self.render_chat_log()
+        return False
 
     def render_chat_log(self, thinking=False):
         m_meta = self.ai_models[self.active_model_idx] if self.ai_models else {"name": "AI"}
@@ -671,9 +653,6 @@ class StudioWidgetsDaemon(Gtk.Application):
         q = self.ai_entry.get_text().strip()
         if not q: return
         self.ai_entry.set_text("")
-        # Возвращаем обычный режим клавиатуры после отправки, чтобы хоткеи Hyprland работали свободно
-        Gtk4LayerShell.set_keyboard_mode(self.widgets["ai"].win, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
-
         self.chat_history.append({"role": "user", "content": q})
         self.ai_busy = True
         self.render_chat_log(thinking=True)
@@ -707,11 +686,10 @@ class StudioWidgetsDaemon(Gtk.Application):
         self.render_chat_log()
 
     # --- 2. ВИДЖЕТ ЗАМЕТОК ---
-    def build_notes_widget(self, wobj):
+    def build_notes_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
         tv = Gtk.TextView(); tv.add_css_class("notes-view"); tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        wobj.enable_keyboard_focus_on_click(tv)
         self.notes_buf = tv.get_buffer()
         if os.path.isfile(NOTES_FILE):
             try: self.notes_buf.set_text(open(NOTES_FILE, "r", encoding="utf-8").read())
@@ -724,14 +702,14 @@ class StudioWidgetsDaemon(Gtk.Application):
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         b_add = Gtk.Button(label="+ Задача"); b_add.add_css_class("mini-btn"); b_add.set_hexpand(True)
         b_add.connect("clicked", lambda _b: self.notes_buf.insert(self.notes_buf.get_end_iter(), "\n[ ] "))
-        b_cp = Gtk.Button(label="󰆏 Копировать"); b_cp.add_css_class("mini-btn"); b_cp.set_hexpand(True)
+        b_cp = Gtk.Button(label="📋 Копировать"); b_cp.add_css_class("mini-btn"); b_cp.set_hexpand(True)
         b_cp.connect("clicked", lambda _b: subprocess.run(["wl-copy"], input=self.notes_buf.get_text(self.notes_buf.get_start_iter(), self.notes_buf.get_end_iter(), False), text=True))
         row.append(b_add); row.append(b_cp)
         box.append(row)
         return box
 
     # --- 3. ВИДЖЕТ КАЛЕНДАРЯ ---
-    def build_calendar_widget(self, _wobj):
+    def build_calendar_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         nav = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self.cal_title_lbl = Gtk.Label(label="", xalign=0, hexpand=True, css_classes=["widget-title"])
@@ -776,12 +754,11 @@ class StudioWidgetsDaemon(Gtk.Application):
                 lbl.add_css_class("cal-today" if is_t else "cal-day")
                 self.cal_grid.attach(lbl, c_i, r_i, 1, 1)
 
-    # --- 4. МИНИМАЛИСТИЧНЫЙ ВИДЖЕТ МУЗЫКИ С ОБЛОЖКОЙ И ГРОМКОСТЬЮ ТОЛЬКО ДЛЯ МЕДИА ---
-    def build_media_widget(self, _wobj):
+    # --- 4. МИНИМАЛИСТИЧНЫЙ ВИДЖЕТ МУЗЫКИ (ОБЛОЖКА 52x52 + ГРОМКОСТЬ ТОЛЬКО ДЛЯ МЕДИА) ---
+    def build_media_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
         top_h = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        # Рамка обложки трека / превью видео 52x52
         self.art_pic = Gtk.Picture()
         self.art_pic.set_size_request(52, 52)
         self.art_pic.add_css_class("cover-frame")
@@ -792,7 +769,7 @@ class StudioWidgetsDaemon(Gtk.Application):
 
         meta_v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         meta_v.set_hexpand(True); meta_v.set_valign(Gtk.Align.CENTER)
-        t_s, a_s, art_p = read_music_and_art()
+        t_s, a_s, _ = read_music_and_art()
         self.track_lbl = Gtk.Label(label=t_s, xalign=0, css_classes=["track-title"])
         self.track_lbl.set_ellipsize(Pango.EllipsizeMode.END)
         self.artist_lbl = Gtk.Label(label=a_s, xalign=0, css_classes=["track-artist"])
@@ -800,7 +777,7 @@ class StudioWidgetsDaemon(Gtk.Application):
         meta_v.append(self.track_lbl); meta_v.append(self.artist_lbl)
 
         ctrl_r = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        for lbl, cmd in [("󰒮", "playerctl previous"), ("󰐎", "playerctl play-pause"), ("󰒭", "playerctl next")]:
+        for lbl, cmd in [("⏮", "playerctl previous"), ("⏯", "playerctl play-pause"), ("⏭", "playerctl next")]:
             b = Gtk.Button(label=lbl); b.add_css_class("mini-btn"); b.set_hexpand(True)
             b.connect("clicked", lambda _b, c=cmd: self.spawn_raw(c))
             ctrl_r.append(b)
@@ -808,9 +785,9 @@ class StudioWidgetsDaemon(Gtk.Application):
         top_h.append(meta_v)
         box.append(top_h)
 
-        # Ползунок громкости ТОЛЬКО для музыки/видео (не трогает системный звук!)
+        # Ползунок громкости ТОЛЬКО для музыки/видео (без ползунка яркости!)
         v_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
-        v_row.append(Gtk.Label(label="󰕾 Медиа", css_classes=["mono-sub"]))
+        v_row.append(Gtk.Label(label="🔊 Медиа", css_classes=["mono-sub"]))
         _, cur_mv = get_media_sink_inputs()
         init_v = cur_mv if cur_mv is not None else 85.0
         self.media_vol_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
@@ -824,12 +801,14 @@ class StudioWidgetsDaemon(Gtk.Application):
         return box
 
     def on_media_vol_changed(self, scale):
+        if self.updating_vol_ui:
+            return
         val = int(scale.get_value())
         self.media_vol_lbl.set_label(f"{val}%")
         set_media_stream_only_volume(val)
 
     # --- 5. ВИДЖЕТ РАЗРАБОТКИ ИГР И КОДА ---
-    def build_gamedev_widget(self, _wobj):
+    def build_gamedev_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         self.git_lbl = Gtk.Label(label=read_git_projects_status(), xalign=0, css_classes=["mono-sub"])
         self.ports_lbl = Gtk.Label(label=f"Порты: {scan_dev_ports()}", xalign=0, css_classes=["mono-sub"])
@@ -847,29 +826,18 @@ class StudioWidgetsDaemon(Gtk.Application):
             box.append(r)
         return box
 
-    # --- 6. ВСПЛЫВАЮЩИЙ ВИДЖЕТ ЦЕНТРА УВЕДОМЛЕНИЙ (ПО КЛИКУ НА 󰂚 НА WAYBAR) ---
-    def build_notification_center_popup(self):
-        self.notif_win = Gtk.Window(application=self, title="StudioNotificationCenter")
-        Gtk4LayerShell.init_for_window(self.notif_win)
-        Gtk4LayerShell.set_namespace(self.notif_win, "studio-notif-center")
-        Gtk4LayerShell.set_layer(self.notif_win, Gtk4LayerShell.Layer.TOP)
-        Gtk4LayerShell.set_anchor(self.notif_win, Gtk4LayerShell.Edge.TOP, True)
-        Gtk4LayerShell.set_anchor(self.notif_win, Gtk4LayerShell.Edge.RIGHT, True)
-        Gtk4LayerShell.set_margin(self.notif_win, Gtk4LayerShell.Edge.TOP, 44)
-        Gtk4LayerShell.set_margin(self.notif_win, Gtk4LayerShell.Edge.RIGHT, 14)
-        Gtk4LayerShell.set_exclusive_zone(self.notif_win, -1)
-
+    # --- ЦЕНТР УВЕДОМЛЕНИЙ НА ХОЛСТЕ (ПО КЛИКУ НА 🔔 НА WAYBAR) ---
+    def build_notification_center_card(self):
         frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         frame.add_css_class("widget-frame-top")
-        frame.set_size_request(330, 340)
+        frame.set_size_request(320, 320)
 
         hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         hdr.add_css_class("widget-header")
-        hdr.append(Gtk.Label(label="󰂚 ЦЕНТР УВЕДОМЛЕНИЙ", xalign=0, hexpand=True, css_classes=["widget-title"]))
+        hdr.append(Gtk.Label(label="🔔 ЦЕНТР УВЕДОМЛЕНИЙ", xalign=0, hexpand=True, css_classes=["widget-title"]))
 
-        b_dnd = Gtk.Button(label="󰂛 DND")
+        b_dnd = Gtk.Button(label="DND")
         b_dnd.add_css_class("w-hdr-btn")
-        b_dnd.set_tooltip_text("Включить / выключить режим «Не беспокоить»")
         b_dnd.connect("clicked", lambda _b: self.spawn_raw("makoctl mode -t do-not-disturb"))
         hdr.append(b_dnd)
 
@@ -880,7 +848,7 @@ class StudioWidgetsDaemon(Gtk.Application):
 
         b_close = Gtk.Button(label="✕")
         b_close.add_css_class("w-hdr-btn")
-        b_close.connect("clicked", lambda _b: self.notif_win.set_visible(False))
+        b_close.connect("clicked", lambda _b: frame.set_visible(False))
         hdr.append(b_close)
         frame.append(hdr)
 
@@ -891,12 +859,11 @@ class StudioWidgetsDaemon(Gtk.Application):
         sc.set_child(self.notif_list_box)
         body.append(sc)
         frame.append(body)
-
-        self.notif_win.set_child(frame)
-        self.notif_win.set_visible(False)
+        frame.set_visible(False)
+        return frame
 
     def refresh_notif_list(self):
-        if not self.notif_win: return
+        if not self.notif_frame: return
         while True:
             c = self.notif_list_box.get_first_child()
             if c is None: break
@@ -924,31 +891,8 @@ class StudioWidgetsDaemon(Gtk.Application):
                 card.append(Gtk.Label(label=ln.strip()[:44], xalign=0, css_classes=["track-artist"]))
             self.notif_list_box.append(card)
 
-    def build_bottom_dock(self):
-        self.dock_win = Gtk.Window(application=self, title="StudioBottomDock")
-        Gtk4LayerShell.init_for_window(self.dock_win)
-        Gtk4LayerShell.set_namespace(self.dock_win, "studio-bottom-dock")
-        Gtk4LayerShell.set_layer(self.dock_win, Gtk4LayerShell.Layer.BOTTOM)
-        Gtk4LayerShell.set_anchor(self.dock_win, Gtk4LayerShell.Edge.BOTTOM, True)
-        Gtk4LayerShell.set_margin(self.dock_win, Gtk4LayerShell.Edge.BOTTOM, 10)
-        Gtk4LayerShell.set_exclusive_zone(self.dock_win, -1)
-
-        wrap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        wrap.add_css_class("bottom-dock")
-        self.dock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        wrap.append(self.dock_box)
-
-        add_b = Gtk.Button(label="+")
-        add_b.add_css_class("dock-item")
-        add_b.set_tooltip_text("Закрепить / открепить приложения в доке")
-        add_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
-        wrap.append(add_b)
-
-        self.dock_win.set_child(wrap)
-        self.populate_dock()
-        self.dock_win.present()
-
     def populate_dock(self):
+        if not hasattr(self, "dock_box"): return
         items, seen = [], set()
         for ad in (os.path.join(HOME, ".local/share/applications"), "/usr/share/applications"):
             if not os.path.isdir(ad): continue
@@ -999,25 +943,84 @@ class StudioWidgetsDaemon(Gtk.Application):
             "calendar": self.build_calendar_widget,
             "media":    self.build_media_widget,
         }
-        for wid, b_fn in builders.items():
-            wobj = MovableStudioWidget(self, wid, self.st, b_fn)
-            self.widgets[wid] = wobj
-            wobj.win.present()
 
-        self.build_bottom_dock()
-        self.build_notification_center_popup()
-        GLib.timeout_add(400, self.tick_fast)
+        # Если запущено отдельное закреплённое окно поверх всех приложений (--pin-window <wid>)
+        if SINGLE_PIN_WID in builders:
+            cfg = self.st[SINGLE_PIN_WID]
+            pwin = Gtk.ApplicationWindow(application=self, title=f"Pinned-{SINGLE_PIN_WID}")
+            pwin.set_default_size(int(cfg["w"]), int(cfg["h"]))
+            card = CanvasWidgetCard(self, None, SINGLE_PIN_WID, self.st, builders[SINGLE_PIN_WID], is_standalone=True)
+            pwin.set_child(card.frame)
+            pwin.present()
+            GLib.timeout_add(600, self.tick_fast)
+            return
+
+        # Основной полноэкранный слой рабочего стола с Gtk.Fixed холстом для свободного перемещения виджетов
+        win = Gtk.ApplicationWindow(application=self, title="WorkHubDesktop")
+        win.set_default_size(1920, 1080)
+        Gtk4LayerShell.init_for_window(win)
+        Gtk4LayerShell.set_namespace(win, "work-hub-wallpaper")
+        Gtk4LayerShell.set_layer(win, Gtk4LayerShell.Layer.BACKGROUND)
+        for edge in (Gtk4LayerShell.Edge.TOP, Gtk4LayerShell.Edge.BOTTOM, Gtk4LayerShell.Edge.LEFT, Gtk4LayerShell.Edge.RIGHT):
+            Gtk4LayerShell.set_anchor(win, edge, True)
+        Gtk4LayerShell.set_exclusive_zone(win, -1)
+        Gtk4LayerShell.set_keyboard_mode(win, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
+
+        overlay = Gtk.Overlay()
+
+        bg_area = Gtk.DrawingArea()
+        bg_area.set_hexpand(True); bg_area.set_vexpand(True)
+        bg_area.set_size_request(1920, 1080)
+        bg_area.set_draw_func(self.on_draw_bg)
+        overlay.set_child(bg_area)
+
+        # Холст свободного перемещения и изменения размеров виджетов
+        self.canvas = Gtk.Fixed()
+        self.canvas.set_hexpand(True); self.canvas.set_vexpand(True)
+
+        for wid, b_fn in builders.items():
+            card = CanvasWidgetCard(self, self.canvas, wid, self.st, b_fn, is_standalone=False)
+            self.cards[wid] = card
+            self.canvas.put(card.frame, int(self.st[wid]["x"]), int(self.st[wid]["y"]))
+
+        # Всплывающий виджет Центра уведомлений под правой частью Waybar
+        self.notif_frame = self.build_notification_center_card()
+        self.canvas.put(self.notif_frame, 1580, 44)
+
+        overlay.add_overlay(self.canvas)
+
+        # Нижний док закреплённых приложений
+        dock_align = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        dock_align.set_valign(Gtk.Align.END); dock_align.set_halign(Gtk.Align.CENTER)
+        dock_align.set_margin_bottom(12)
+        dock_wrap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        dock_wrap.add_css_class("bottom-dock")
+        self.dock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        dock_wrap.append(self.dock_box)
+
+        add_b = Gtk.Button(label="+")
+        add_b.add_css_class("dock-item")
+        add_b.set_tooltip_text("Закрепить / открепить приложения в доке")
+        add_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
+        dock_wrap.append(add_b)
+        dock_align.append(dock_wrap)
+        overlay.add_overlay(dock_align)
+
+        win.set_child(overlay)
+        self.populate_dock()
+        win.present()
+
+        GLib.timeout_add(450, self.tick_fast)
         GLib.timeout_add_seconds(4, self.tick_slow)
 
     def tick_fast(self):
-        # Проверяем сигнал открытия Центра уведомлений с Waybar
         if os.path.exists(NOTIF_TRIG):
             try: os.remove(NOTIF_TRIG)
             except Exception: pass
-            if self.notif_win:
-                vis = not self.notif_win.get_visible()
+            if self.notif_frame:
+                vis = not self.notif_frame.get_visible()
                 if vis: self.refresh_notif_list()
-                self.notif_win.set_visible(vis)
+                self.notif_frame.set_visible(vis)
 
         try:
             mt = os.path.getmtime(PIN_FILE) if os.path.isfile(PIN_FILE) else 0
@@ -1026,28 +1029,37 @@ class StudioWidgetsDaemon(Gtk.Application):
                 self.populate_dock()
         except Exception: pass
 
-        self.reload_models_list_if_needed()
+        try:
+            mt_m = os.path.getmtime(MODELS_FILE) if os.path.isfile(MODELS_FILE) else 0
+            if mt_m != self.last_models_mtime:
+                self.last_models_mtime = mt_m
+                self.ai_models = load_ai_models()
+                self.active_model_idx = max(0, min(self.active_model_idx, len(self.ai_models) - 1))
+                if hasattr(self, "model_sel_btn") and self.ai_models:
+                    self.model_sel_btn.set_label(f"🤖 {self.ai_models[self.active_model_idx]['name'][:24]} ▾")
+        except Exception: pass
 
-        t_s, a_s, art_p = read_music_and_art()
-        if self.track_lbl.get_label() != t_s: self.track_lbl.set_label(t_s)
-        if self.artist_lbl.get_label() != a_s: self.artist_lbl.set_label(a_s)
-        if art_p != self.last_art_path and os.path.isfile(art_p):
-            self.last_art_path = art_p
-            self.art_pic.set_filename(art_p)
+        if hasattr(self, "track_lbl"):
+            t_s, a_s, art_p = read_music_and_art()
+            if self.track_lbl.get_label() != t_s: self.track_lbl.set_label(t_s)
+            if self.artist_lbl.get_label() != a_s: self.artist_lbl.set_label(a_s)
+            if art_p != self.last_art_path and os.path.isfile(art_p):
+                self.last_art_path = art_p
+                self.art_pic.set_filename(art_p)
 
-        # Синхронизируем ползунок громкости медиапотока (без влияния на системный звук)
-        _, mv = get_media_sink_inputs()
-        if mv is not None and abs(self.media_vol_scale.get_value() - mv) > 2.0:
-            self.media_vol_scale.handler_block_by_func(self.on_media_vol_changed)
-            self.media_vol_scale.set_value(mv)
-            self.media_vol_lbl.set_label(f"{int(mv)}%")
-            self.media_vol_scale.handler_unblock_by_func(self.on_media_vol_changed)
+            _, mv = get_media_sink_inputs()
+            if mv is not None and abs(self.media_vol_scale.get_value() - mv) > 2.0:
+                self.updating_vol_ui = True
+                self.media_vol_scale.set_value(mv)
+                self.media_vol_lbl.set_label(f"{int(mv)}%")
+                self.updating_vol_ui = False
 
         return True
 
     def tick_slow(self):
-        self.git_lbl.set_label(read_git_projects_status())
-        self.ports_lbl.set_label(f"Порты: {scan_dev_ports()}")
+        if hasattr(self, "git_lbl"):
+            self.git_lbl.set_label(read_git_projects_status())
+            self.ports_lbl.set_label(f"Порты: {scan_dev_ports()}")
         return True
 
     def spawn_raw(self, cmd):
@@ -1056,4 +1068,4 @@ class StudioWidgetsDaemon(Gtk.Application):
         subprocess.Popen(["/bin/sh", "-c", cmd], env=clean_env, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 if __name__ == "__main__":
-    StudioWidgetsDaemon().run(None)
+    StudioDesktopApp().run(None)
