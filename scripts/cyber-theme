@@ -13,155 +13,95 @@ os.makedirs(CFG_DIR, exist_ok=True)
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 THEMES = {
-    # ================= РАБОЧИЕ ОКРУЖЕНИЯ (HYPRWORK) =================
-    "cyber-tactical": {
-        "session": "work",
-        "layout":  "tactical",
-        "cursor_shape": "wing",
-        "title": "◈ 1. CyberDeck Tactical OS // Командная дека + Радар проектов и портов",
-        "short": "Tactical",
-        "badge": "TACTICAL OS",
-        "game_badge": "APEX DECK",
+    "cyberdeck": {
+        "layout": "cyberdeck",
+        "cursor_shape": "cyber",
+        "title": "◈ 1. CyberDeck Classic // Тактическая дека + Радар портов и проектов",
+        "short": "CyberDeck",
+        "badge": "CYBERDECK // V2",
         "symbol": "◈",
-        "arch": "tactical",
         "primary": "#4c6ef5",
         "accent":  "#22b8cf",
         "soft":    "#66d9e8",
         "bg":      "#07090f",
         "bg_alt":  "#0e1526",
         "fg":      "#dce3f5",
-        "card_bg": "rgba(13, 18, 30, 0.95)",
-        "deck_bg": "rgba(11, 15, 26, 0.96)",
+        "card_bg": "rgba(13, 18, 30, 0.94)",
+        "deck_bg": "rgba(10, 14, 24, 0.96)",
         "radius":  12,
         "hypr_round": 10,
     },
-    "ronin-os": {
-        "session": "work",
-        "layout":  "ronin",
-        "cursor_shape": "mecha",
-        "title": "❖ 2. Arasaka Ronin OS // 3-колоночный кокпит (Без верхней панели) + Категории + Pomodoro",
-        "short": "Ronin",
-        "badge": "RONIN // OS",
-        "game_badge": "RONIN // WAR",
-        "symbol": "❖",
-        "arch": "ronin",
-        "primary": "#e03131",
-        "accent":  "#fcc419",
-        "soft":    "#ff8787",
-        "bg":      "#0a0507",
-        "bg_alt":  "#190b10",
-        "fg":      "#f7e8ea",
-        "card_bg": "rgba(22, 10, 14, 0.96)",
-        "deck_bg": "rgba(15, 7, 10, 0.97)",
-        "radius":  3,
-        "hypr_round": 3,
+    "dungeon-of-god": {
+        "layout": "dungeon",
+        "cursor_shape": "dagger",
+        "title": "⚔ 2. The Dungeon of God (by ssOh-v1) // Живые обои + RPG HUD + Карточки артефактов",
+        "short": "DungeonOfGod",
+        "badge": "DUNGEON OF GOD",
+        "symbol": "⚔",
+        "primary": "#d93829",
+        "accent":  "#f5b82e",
+        "soft":    "#ff9e66",
+        "bg":      "#0b0706",
+        "bg_alt":  "#1a100e",
+        "fg":      "#f7ebd9",
+        "card_bg": "rgba(22, 13, 11, 0.94)",
+        "deck_bg": "rgba(16, 9, 8, 0.96)",
+        "radius":  4,
+        "hypr_round": 4,
     },
-    "netrunner-os": {
-        "session": "work",
-        "layout":  "netrunner",
-        "cursor_shape": "reticle",
-        "title": "⌬ 3. Netrunner Construct // 3-панельный TUI-мейнфрейм + Живая консоль на столе",
-        "short": "Netrunner",
-        "badge": "NET // CONSTRUCT",
-        "game_badge": "NET // MATRIX",
-        "symbol": "⌬",
-        "arch": "matrix",
-        "primary": "#0ca678",
-        "accent":  "#38d9a9",
-        "soft":    "#63e6be",
-        "bg":      "#040907",
-        "bg_alt":  "#0a1711",
-        "fg":      "#d3f9d8",
-        "card_bg": "rgba(7, 19, 14, 0.96)",
-        "deck_bg": "rgba(5, 14, 10, 0.97)",
-        "radius":  6,
-        "hypr_round": 6,
-    },
-    "cryo-studio": {
-        "session": "work",
-        "layout":  "cryo",
-        "cursor_shape": "crystal",
-        "title": "✦ 4. Orbital Cryo Studio // Парящий остров + Круговые кольца CPU/RAM + Док",
-        "short": "CryoStudio",
-        "badge": "CRYO // STUDIO",
-        "game_badge": "CRYO // CORE",
-        "symbol": "✦",
-        "arch": "cryo",
-        "primary": "#1c7ed6",
-        "accent":  "#74c0fc",
-        "soft":    "#a5d8ff",
-        "bg":      "#060b12",
-        "bg_alt":  "#0e1a2b",
-        "fg":      "#e7f5ff",
-        "card_bg": "rgba(12, 23, 38, 0.94)",
-        "deck_bg": "rgba(9, 17, 29, 0.96)",
-        "radius":  16,
+    "forest-stream": {
+        "layout": "forest",
+        "cursor_shape": "leaf",
+        "title": "🌿 3. Лесной Ручей (Forest Stream) // Парящий Waybar + Док + Гармония природы",
+        "short": "ForestStream",
+        "badge": "FOREST // STREAM",
+        "symbol": "🌿",
+        "primary": "#2d6a4f",
+        "accent":  "#74c69d",
+        "soft":    "#b7e4c7",
+        "bg":      "#08130e",
+        "bg_alt":  "#11261c",
+        "fg":      "#e8f7ee",
+        "card_bg": "rgba(14, 30, 22, 0.90)",
+        "deck_bg": "rgba(10, 22, 16, 0.93)",
+        "radius":  18,
         "hypr_round": 14,
     },
-
-    # ================= ИГРОВЫЕ ОКРУЖЕНИЯ (HYPRGAME) =================
-    "game-scanout": {
-        "session": "game",
-        "layout":  "esports",
-        "cursor_shape": "wing",
-        "title": "◈ 1. Apex Direct Scanout // Киберспорт-арена + Калькулятор eDPI + CS2 4:3",
-        "short": "ApexScanout",
-        "badge": "APEX // WORK",
-        "game_badge": "APEX // SCANOUT",
-        "symbol": "◈",
-        "arch": "tactical",
-        "primary": "#3b5bdb",
-        "accent":  "#00f5d4",
-        "soft":    "#66d9e8",
-        "bg":      "#060810",
-        "bg_alt":  "#0d1426",
-        "fg":      "#e5ecff",
-        "card_bg": "rgba(11, 17, 30, 0.95)",
-        "deck_bg": "rgba(9, 13, 24, 0.97)",
+    "impasto-landscape": {
+        "layout": "impasto",
+        "cursor_shape": "brush",
+        "title": "🎨 4. Импасто Пейзаж (Рельефная краска) // Боковой мольберт + Смешивание красок",
+        "short": "ImpastoArt",
+        "badge": "ATELIER // IMPASTO",
+        "symbol": "🎨",
+        "primary": "#e07a5f",
+        "accent":  "#f2cc8f",
+        "soft":    "#f4a261",
+        "bg":      "#161110",
+        "bg_alt":  "#261d1a",
+        "fg":      "#fbf2e3",
+        "card_bg": "rgba(32, 24, 21, 0.92)",
+        "deck_bg": "rgba(24, 18, 16, 0.95)",
         "radius":  10,
         "hypr_round": 8,
     },
-    "game-redline": {
-        "session": "game",
-        "layout":  "redline",
-        "cursor_shape": "mecha",
-        "title": "❖ 2. Redline Overdrive // Боковая башня разгона (Без верхней панели) + Меха-плиты",
-        "short": "Redline",
-        "badge": "REDLINE // OS",
-        "game_badge": "REDLINE // BOOST",
-        "symbol": "❖",
-        "arch": "ronin",
-        "primary": "#f02e3e",
-        "accent":  "#ffb800",
-        "soft":    "#ff8787",
-        "bg":      "#0b0507",
-        "bg_alt":  "#1b0b0f",
-        "fg":      "#fff0f3",
-        "card_bg": "rgba(24, 10, 14, 0.96)",
-        "deck_bg": "rgba(17, 7, 10, 0.97)",
-        "radius":  3,
-        "hypr_round": 3,
-    },
-    "game-arcade": {
-        "session": "game",
-        "layout":  "arcade",
-        "cursor_shape": "delta",
-        "title": "▲ 3. Synth Arcade 2084 // Консольная витрина + Крупные баннеры + Аркадный док",
-        "short": "Arcade2084",
-        "badge": "SYNTH // 2084",
-        "game_badge": "ARCADE // 2084",
-        "symbol": "▲",
-        "arch": "synth",
-        "primary": "#d63384",
-        "accent":  "#00f5d4",
-        "soft":    "#f783ac",
-        "bg":      "#090514",
-        "bg_alt":  "#170d2b",
-        "fg":      "#f3d9fa",
-        "card_bg": "rgba(20, 11, 36, 0.95)",
-        "deck_bg": "rgba(15, 8, 28, 0.97)",
-        "radius":  14,
-        "hypr_round": 12,
+    "gamedev-studio": {
+        "layout": "gamedev",
+        "cursor_shape": "gizmo",
+        "title": "🎮 5. GameDev Engine Studio // Тулбар движка + SceneTree + Инспектор и консоль",
+        "short": "GameDevIDE",
+        "badge": "ENGINE // STUDIO",
+        "symbol": "🎮",
+        "primary": "#478cbf",
+        "accent":  "#63d994",
+        "soft":    "#8ce0ff",
+        "bg":      "#0d1117",
+        "bg_alt":  "#161b22",
+        "fg":      "#e6edf3",
+        "card_bg": "rgba(22, 27, 34, 0.95)",
+        "deck_bg": "rgba(13, 17, 23, 0.97)",
+        "radius":  6,
+        "hypr_round": 6,
     },
 }
 
@@ -178,161 +118,162 @@ def is_gaming_session():
         return True
     return subprocess.call(["pgrep", "-f", "game-hub-desktop.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
 
-def get_session_theme_id(sess_type=None):
-    if sess_type is None:
-        sess_type = "game" if is_gaming_session() else "work"
-    sfile = GAME_STATE if sess_type == "game" else WORK_STATE
-    default_id = "game-scanout" if sess_type == "game" else "cyber-tactical"
-    try:
-        if os.path.isfile(sfile):
-            tid = json.load(open(sfile, encoding="utf-8")).get("id", "")
-            if tid in THEMES:
-                return tid
-    except Exception:
-        pass
-    return default_id
+def load_current():
+    sfile = GAME_STATE if is_gaming_session() else WORK_STATE
+    for f in (sfile, STATE_FILE):
+        if os.path.isfile(f):
+            try:
+                tid = json.load(open(f, encoding="utf-8")).get("id", "")
+                if tid in THEMES:
+                    return tid
+            except Exception:
+                pass
+    return "cyberdeck"
 
 def build_full_theme_css(t):
     p, a, s, bg, bg_alt, fg = t["primary"], t["accent"], t["soft"], t["bg"], t["bg_alt"], t["fg"]
     cbg, dbg = t["card_bg"], t["deck_bg"]
     r = int(t["radius"])
     r_sm = max(2, r - 3)
-    arch = t["arch"]
-
-    if arch == "ronin":
-        deck_border = f"border: 1px solid {p}; border-left: 3px solid {a};"
-        card_border = f"border: 1px solid {p}; border-left: 4px solid {a};"
-    elif arch == "matrix":
-        deck_border = f"border: 1px solid {a};"
-        card_border = f"border: 1px solid {p}; border-left: 3px solid {a};"
-    elif arch == "synth":
-        deck_border = f"border: 1px solid {p}; border-top: 2px solid {a};"
-        card_border = f"border: 1px solid {p}; border-bottom: 2px solid {a};"
-    elif arch == "cryo":
-        deck_border = f"border: 1px solid {a};"
-        card_border = f"border: 1px solid {p};"
-    else:
-        deck_border = f"border: 1px solid {p};"
-        card_border = f"border: 1px solid {p};"
+    lay = t["layout"]
 
     return f"""
-window {{ background-color: {bg}; color: {fg}; }}
+window {{ background-color: transparent; color: {fg}; }}
 scrolledwindow, viewport, flowbox, flowboxchild {{
     background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; padding: 0px;
 }}
 button, entry, textview {{ background-image: none; box-shadow: none; text-shadow: none; outline: none; }}
-.hub-overlay {{ background-color: transparent; padding: 18px 26px; }}
+.hub-overlay {{ background-color: transparent; padding: 16px 24px; }}
 
-.top-deck, .side-rail, .widget-panel, .hero-banner, .bottom-dock, .floating-island, .tui-strip {{
+/* 1. Базовые панели и Waybar-капсулы */
+.top-deck, .side-rail, .widget-panel, .hero-banner, .bottom-dock, .waybar-pill, .rpg-bar, .ide-toolbar, .ide-panel {{
     background-color: {dbg};
-    {deck_border}
+    border: 1px solid {p};
     border-radius: {r}px;
-    padding: 8px 13px;
+    padding: 8px 14px;
 }}
-.side-rail       {{ padding: 16px 14px; }}
-.widget-panel    {{ padding: 14px 16px; }}
-.hero-banner     {{ padding: 16px 22px; }}
-.bottom-dock     {{ padding: 8px 20px; border: 1px solid {a}; }}
-.floating-island {{ padding: 6px 18px; border: 1px solid {a}; border-radius: 99px; }}
-.tui-strip       {{ padding: 6px 14px; border: 1px solid {a}; border-radius: 4px; }}
+.waybar-pill {{
+    border: 1px solid {a};
+    border-radius: 99px;
+    padding: 6px 16px;
+}}
+.bottom-dock {{
+    border: 1px solid {a};
+    border-radius: 22px;
+    padding: 8px 20px;
+}}
+.rpg-bar {{
+    background-color: rgba(16, 9, 8, 0.96);
+    border: 2px solid {a};
+    border-radius: 4px;
+    padding: 8px 14px;
+}}
+.ide-toolbar {{
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-bottom: 2px solid {p};
+    border-radius: 6px;
+    padding: 6px 12px;
+}}
+.ide-panel {{
+    background-color: rgba(18, 23, 30, 0.96);
+    border: 1px solid #30363d;
+    border-top: 2px solid {p};
+    border-radius: 6px;
+    padding: 12px;
+}}
 
 .panel-header {{ font-size: 12px; font-weight: bold; color: {a}; }}
 .panel-sub    {{ font-size: 11px; font-weight: bold; color: {fg}; font-family: monospace; }}
-.big-clock    {{ font-size: 40px; font-weight: bold; color: {fg}; }}
-.big-sub      {{ font-size: 11px; font-weight: bold; color: {a}; }}
-.timer-digits {{ font-size: 28px; font-weight: bold; color: {a}; font-family: monospace; }}
+.big-clock    {{ font-size: 38px; font-weight: bold; color: {fg}; }}
+.big-sub      {{ font-size: 11.5px; font-weight: bold; color: {a}; }}
+.timer-digits {{ font-size: 26px; font-weight: bold; color: {a}; font-family: monospace; }}
 
 .notes-view {{
-    background-color: {bg_alt};
-    color: {fg};
-    border: 1px solid {p};
-    border-radius: {r_sm}px;
-    padding: 10px;
-    font-size: 12px;
-    font-family: monospace;
+    background-color: {bg_alt}; color: {fg}; border: 1px solid {p};
+    border-radius: {r_sm}px; padding: 10px; font-size: 12px; font-family: monospace;
 }}
 
 .brand-pill {{
-    background-color: {bg_alt}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 34px;
+    background-color: {bg_alt}; border: 1px solid {a}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 34px;
 }}
 .brand-dot   {{ color: {a}; font-size: 13px; font-weight: bold; }}
 .brand-title {{ font-size: 13px; font-weight: bold; color: {fg}; }}
 
 button.ws-btn, button.cat-tab {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-radius: {r_sm}px;
-    padding: 0px 10px; min-height: 34px; font-size: 12px; font-weight: bold;
+    padding: 0px 10px; min-height: 32px; font-size: 11.5px; font-weight: bold;
 }}
 button.ws-btn:hover, button.cat-tab:hover {{ background-color: {p}; color: #ffffff; border-color: {a}; }}
 
-button.cat-tab-active {{
-    background-color: {p}; color: #ffffff; border: 1px solid {a}; border-left: 3px solid {a};
-    border-radius: {r_sm}px; padding: 0px 12px; min-height: 34px; font-size: 12px; font-weight: bold;
-}}
-
 button.ws-new-btn {{
     background-color: {bg_alt}; color: {a}; border: 1px solid {a}; border-radius: {r_sm}px;
-    padding: 0px 11px; min-height: 34px; font-size: 12px; font-weight: bold;
+    padding: 0px 11px; min-height: 32px; font-size: 11.5px; font-weight: bold;
 }}
 button.ws-new-btn:hover {{ background-color: {a}; color: {bg}; }}
 
-.telemetry-pod {{
-    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 34px;
-}}
-.pod-sep    {{ background-color: {p}; min-width: 1px; margin: 7px 3px; opacity: 0.45; }}
-.metric-lbl {{ font-size: 11px; font-weight: bold; color: {fg}; }}
-.net-badge  {{ font-size: 11px; font-weight: bold; color: {a}; }}
+/* Полосы HP / MANA / STAMINA для The Dungeon of God и стандартные бары */
+progressbar trough   {{ background-color: {bg_alt}; border-radius: 3px; min-height: 7px; min-width: 48px; }}
+progressbar progress {{ background-color: {p}; border-radius: 3px; min-height: 7px; }}
+progressbar.hp-bar progress      {{ background-color: #e03131; }}
+progressbar.mana-bar progress    {{ background-color: #339af0; }}
+progressbar.stamina-bar progress {{ background-color: #fcc419; }}
+progressbar.gauge-cyan progress  {{ background-color: {a}; }}
+progressbar.bat-good progress    {{ background-color: {a}; }}
 
-progressbar trough   {{ background-color: {bg_alt}; border-radius: 3px; min-height: 5px; min-width: 34px; }}
-progressbar progress {{ background-color: {p}; border-radius: 3px; min-height: 5px; }}
-progressbar.gauge-cyan progress {{ background-color: {a}; }}
-progressbar.bat-good progress   {{ background-color: {a}; }}
-progressbar.bat-warn progress   {{ background-color: #fcc419; }}
-progressbar.bat-crit progress   {{ background-color: #ff6b6b; }}
-
-button.wifi-btn, button.kb-btn {{
-    background-color: {bg_alt}; color: {a}; border: 1px solid {p}; border-radius: {r_sm}px;
-    padding: 0px 9px; min-height: 34px; font-size: 12px; font-weight: bold;
+button.wifi-btn, button.kb-btn, button.ctrl-pill, button.ctrl-pill-perf {{
+    background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-radius: {r_sm}px;
+    padding: 0px 10px; min-height: 32px; font-size: 11.5px; font-weight: bold;
 }}
-button.wifi-btn:hover, button.kb-btn:hover {{ border-color: {a}; background-color: {p}; color: #ffffff; }}
-
-button.ctrl-pill, button.ctrl-pill-perf {{
-    background-color: {bg_alt}; color: {fg}; border: 1px solid {a}; border-radius: {r_sm}px;
-    padding: 0px 11px; min-height: 34px; font-size: 12px; font-weight: bold;
+button.wifi-btn:hover, button.kb-btn:hover, button.ctrl-pill:hover, button.ctrl-pill-perf:hover {{
+    background-color: {p}; border-color: {a}; color: #ffffff;
 }}
-button.ctrl-pill:hover, button.ctrl-pill-perf:hover {{ background-color: {p}; border-color: {a}; }}
+
+/* Playtest кнопки для GameDev Engine Studio */
+button.ide-play-btn {{
+    background-color: #1b3826; color: #63d994; border: 1px solid #2ea043; border-radius: 5px;
+    padding: 0px 14px; min-height: 32px; font-size: 12px; font-weight: bold;
+}}
+button.ide-play-btn:hover {{ background-color: #2ea043; color: #ffffff; }}
+
+button.ide-build-btn {{
+    background-color: #1c2d42; color: #8ce0ff; border: 1px solid #478cbf; border-radius: 5px;
+    padding: 0px 12px; min-height: 32px; font-size: 12px; font-weight: bold;
+}}
+button.ide-build-btn:hover {{ background-color: #478cbf; color: #ffffff; }}
 
 .audio-capsule, .power-capsule {{
-    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 6px; min-height: 34px;
+    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 6px; min-height: 32px;
 }}
 button.audio-icon-btn, button.icon-act-btn {{
-    background-color: transparent; color: {fg}; border: none; border-radius: {max(2, r_sm - 2)}px;
-    padding: 0px 7px; min-height: 28px; font-size: 11px; font-weight: bold;
+    background-color: transparent; color: {fg}; border: none; border-radius: 4px;
+    padding: 0px 6px; min-height: 26px; font-size: 11px; font-weight: bold;
 }}
 button.audio-icon-btn:hover, button.icon-act-btn:hover {{ background-color: {p}; color: #ffffff; }}
 
 button.danger-act-btn {{
-    background-color: transparent; color: #ff8787; border: none; border-radius: {max(2, r_sm - 2)}px;
-    padding: 0px 7px; min-height: 28px; font-size: 11px; font-weight: bold;
+    background-color: transparent; color: #ff8787; border: none; border-radius: 4px;
+    padding: 0px 6px; min-height: 26px; font-size: 11px; font-weight: bold;
 }}
 button.danger-act-btn:hover {{ background-color: #3b141e; }}
-.vol-pct {{ font-size: 11px; font-weight: bold; color: {s}; min-width: 30px; }}
+.vol-pct {{ font-size: 11px; font-weight: bold; color: {s}; min-width: 28px; }}
 
 scale {{ padding: 0px 3px; }}
 scale trough    {{ background-color: {bg_alt}; border-radius: 3px; min-height: 6px; }}
 scale highlight {{ background-color: {a}; border-radius: 3px; }}
 scale slider {{
     background-color: {fg}; border: 2px solid {p}; border-radius: {r_sm}px;
-    min-width: 12px; min-height: 12px; margin: -4px 0px;
+    min-width: 11px; min-height: 11px; margin: -4px 0px;
 }}
 .clock-pill {{
-    background-color: {bg_alt}; border: 1px solid {a}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 34px;
+    background-color: {bg_alt}; border: 1px solid {a}; border-radius: {r_sm}px; padding: 0px 10px; min-height: 32px;
 }}
-.clock-time {{ font-size: 15px; font-weight: bold; color: {fg}; }}
+.clock-time {{ font-size: 14px; font-weight: bold; color: {fg}; }}
 .clock-hz   {{ font-size: 10px; font-weight: bold; color: {a}; }}
 
 entry.search-entry {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-left: 3px solid {a};
-    border-radius: {r}px; padding: 7px 14px; font-size: 13.5px;
+    border-radius: {r}px; padding: 7px 14px; font-size: 13px;
 }}
 entry.search-entry:focus {{ border-color: {a}; }}
 
@@ -344,173 +285,328 @@ button.primary-btn:hover {{ background-color: {p}; border-color: {a}; }}
 
 button.secondary-btn {{
     background-color: {bg_alt}; color: {s}; border: 1px solid {a}; border-radius: {r}px;
-    padding: 7px 13px; font-weight: bold;
+    padding: 7px 12px; font-weight: bold;
 }}
 button.secondary-btn:hover {{ background-color: {a}; color: {bg}; }}
 
-button.hero-tile {{
-    background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-top: 3px solid {a};
-    border-radius: {r}px; padding: 12px 16px; min-height: 70px;
-}}
-button.hero-tile:hover {{ background-color: {p}; border-color: {a}; }}
-
-/* 1. Классические карточки Tactical OS */
+/* Стили карточек для всех 5 миров */
 button.app-card {{
-    background-color: {cbg}; {card_border} border-radius: {r}px;
-    padding: 11px 14px; min-width: 240px; min-height: 86px;
+    background-color: {cbg}; border: 1px solid {p}; border-radius: {r}px;
+    padding: 11px 14px; min-width: 235px; min-height: 84px;
 }}
 button.app-card:hover {{ background-color: {bg_alt}; border-color: {a}; }}
 
-/* 2. Горизонтальные меха-пластины Arasaka Ronin / Redline */
-button.ronin-blade {{
-    background-color: {cbg};
-    border: 1px solid {p};
-    border-left: 5px solid {a};
-    border-radius: 2px;
-    padding: 8px 14px;
-    min-width: 280px;
-    min-height: 54px;
-}}
-button.ronin-blade:hover {{
-    background-color: {bg_alt};
-    border-color: {a};
-}}
-.blade-idx {{ font-family: monospace; font-size: 11px; font-weight: bold; color: {a}; }}
-
-/* 3. Терминальные строки Netrunner Construct */
-button.tui-row {{
-    background-color: rgba(6, 16, 12, 0.92);
-    border: 1px solid {p};
-    border-left: 3px solid {a};
+/* Карточка Артефакта / Оружия (The Dungeon of God) */
+button.dungeon-card-legendary {{
+    background-color: rgba(26, 15, 10, 0.95);
+    border: 2px solid #f5b82e;
+    border-left: 5px solid #ff922b;
     border-radius: 4px;
-    padding: 7px 12px;
-    min-width: 260px;
-    min-height: 44px;
+    padding: 10px 14px;
+    min-width: 255px;
+    min-height: 88px;
 }}
-button.tui-row:hover {{
-    background-color: {bg_alt};
-    border-color: {a};
+button.dungeon-card-epic {{
+    background-color: rgba(20, 12, 18, 0.95);
+    border: 1px solid #d93829;
+    border-left: 4px solid #f5b82e;
+    border-radius: 4px;
+    padding: 10px 14px;
+    min-width: 255px;
+    min-height: 88px;
 }}
-.tui-text {{ font-family: monospace; font-size: 12px; font-weight: bold; color: {fg}; }}
-.tui-tag  {{ font-family: monospace; font-size: 10px; font-weight: bold; color: {a}; }}
+button.dungeon-card-legendary:hover, button.dungeon-card-epic:hover {{
+    background-color: #2b1812;
+    border-color: #ffe066;
+}}
+.rarity-leg  {{ font-size: 9.5px; font-weight: bold; color: #fcc419; font-family: monospace; }}
+.rarity-epic {{ font-size: 9.5px; font-weight: bold; color: #ff8787; font-family: monospace; }}
+.stat-buff   {{ font-size: 10px; font-weight: bold; color: #63e6be; font-family: monospace; }}
 
-/* 4. Крупноиконочные пространственные плитки Cryo Studio */
-button.cryo-tile {{
-    background-color: {cbg};
-    border: 1px solid {p};
-    border-top: 2px solid {a};
-    border-radius: 16px;
-    padding: 14px 12px;
-    min-width: 155px;
-    min-height: 112px;
+/* Карточка Лесного Ручья */
+button.forest-card {{
+    background-color: rgba(13, 28, 21, 0.88);
+    border: 1px solid #40916c;
+    border-radius: 18px;
+    padding: 12px 16px;
+    min-width: 230px;
+    min-height: 86px;
 }}
-button.cryo-tile:hover {{
-    background-color: {bg_alt};
-    border-color: {a};
+button.forest-card:hover {{
+    background-color: rgba(24, 52, 38, 0.95);
+    border-color: #95d5b2;
+}}
+
+/* Карточка Импасто Галереи (мазки краски) */
+button.impasto-card {{
+    background-color: rgba(34, 25, 22, 0.93);
+    border: 2px solid #e07a5f;
+    border-bottom: 4px solid #f2cc8f;
+    border-radius: 10px;
+    padding: 12px 15px;
+    min-width: 245px;
+    min-height: 88px;
+}}
+button.impasto-card:hover {{
+    background-color: #362722;
+    border-color: #f2cc8f;
+}}
+
+/* Нода Игрового Движка (GameDev IDE) */
+button.gamedev-node {{
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-left: 4px solid #478cbf;
+    border-radius: 5px;
+    padding: 9px 12px;
+    min-width: 235px;
+    min-height: 68px;
+}}
+button.gamedev-node:hover {{
+    background-color: #1f2937;
+    border-color: #63d994;
 }}
 
 .stripe-pinned {{ background-color: {a}; border-radius: 3px; min-width: 4px; }}
 .stripe-normal {{ background-color: {p}; border-radius: 3px; min-width: 4px; }}
 .icon-frame    {{ background-color: {bg_alt}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 7px; }}
 .card-title    {{ font-size: 13.5px; font-weight: bold; color: {fg}; }}
-.card-sub      {{ font-size: 10px; font-weight: bold; color: {s}; opacity: 0.78; }}
-.cat-chip      {{ background-color: {bg}; color: {a}; border: 1px solid {p}; border-radius: {max(2, r_sm - 3)}px; padding: 1px 6px; font-size: 9px; font-weight: bold; }}
+.card-sub      {{ font-size: 10px; font-weight: bold; color: {s}; opacity: 0.85; }}
+.cat-chip      {{ background-color: {bg}; color: {a}; border: 1px solid {p}; border-radius: 4px; padding: 1px 6px; font-size: 9px; font-weight: bold; }}
 .launch-glyph  {{ font-size: 14px; font-weight: bold; color: {a}; }}
-
-.footer-bar {{ background-color: {dbg}; {deck_border} border-radius: {r}px; padding: 7px 16px; }}
-.key-badge  {{ background-color: {bg_alt}; color: {a}; border: 1px solid {p}; border-radius: {max(2, r_sm - 2)}px; padding: 2px 7px; font-size: 10.5px; font-weight: bold; }}
-.key-desc   {{ color: #8b9ab8; font-size: 11.5px; margin-right: 10px; }}
+.footer-bar    {{ background-color: {dbg}; border: 1px solid {p}; border-radius: {r}px; padding: 7px 16px; }}
+.key-badge     {{ background-color: {bg_alt}; color: {a}; border: 1px solid {p}; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: bold; }}
+.key-desc      {{ color: #9aa7c2; font-size: 11.5px; margin-right: 10px; }}
 """
 
-def render_environment_wallpaper(t):
+# ==============================================================================
+# ГЕНЕРАТОРЫ ОБОЕВ ДЛЯ ВСЕХ 5 МИРОВ (Включая Лесной Ручей и 3D-бугорки Импасто)
+# ==============================================================================
+def draw_impasto_stroke(cr, x, y, w, h, angle, r, g, b):
+    # Рисует объёмный густой мазок масляной краски с 3D-бугорком (верхний световой блик + нижняя густая тень + бороздки кисти)
+    cr.save()
+    cr.translate(x, y)
+    cr.rotate(angle)
+    # 1. Тень под бугорком краски
+    cr.set_source_rgba(max(0, r*0.32), max(0, g*0.30), max(0, b*0.28), 0.78)
+    cr.rectangle(-w/2 + 2.2, -h/2 + 2.8, w, h)
+    cr.fill()
+    # 2. Световой гребень бугорка (верхняя грань мазка)
+    cr.set_source_rgba(min(1, r*1.28 + 0.08), min(1, g*1.24 + 0.06), min(1, b*1.18 + 0.05), 0.92)
+    cr.rectangle(-w/2 - 1.4, -h/2 - 1.8, w, h * 0.45)
+    cr.fill()
+    # 3. Основное густое тело краски
+    cr.set_source_rgba(r, g, b, 0.96)
+    cr.rectangle(-w/2, -h/2, w, h)
+    cr.fill()
+    # 4. Фактурные бороздки от щетины кисти / мастихина
+    cr.set_line_width(1.1)
+    cr.set_source_rgba(min(1, r*1.35 + 0.10), min(1, g*1.30 + 0.08), min(1, b*1.22 + 0.06), 0.45)
+    for by in (-h*0.28, 0.0, h*0.25):
+        cr.move_to(-w*0.44, by); cr.line_to(w*0.44, by)
+    cr.stroke()
+    cr.restore()
+
+def render_world_wallpaper(t):
     W, H = 1920, 1080
     surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
     cr = cairo.Context(surf)
+    lay = t["layout"]
     PRIM, ACC, BG = hex_rgb(t["primary"]), hex_rgb(t["accent"]), hex_rgb(t["bg"])
-    arch = t["arch"]
 
-    cr.set_source_rgb(*BG); cr.paint()
+    if lay == "forest":
+        # === МИР 3: ЛЕСНОЙ РУЧЕЙ (Многослойные сосны, солнечные лучи в тумане, горный ручей с камнями и бликами) ===
+        sky = cairo.LinearGradient(0, 0, 0, H * 0.65)
+        sky.add_color_stop_rgb(0.0, 0.04, 0.11, 0.09)
+        sky.add_color_stop_rgb(0.5, 0.08, 0.22, 0.17)
+        sky.add_color_stop_rgb(1.0, 0.16, 0.38, 0.28)
+        cr.set_source(sky); cr.paint()
 
-    if arch == "tactical":
+        # Мягкое утреннее солнце и сквозные лучи сквозь кроны
+        sun = cairo.RadialGradient(W * 0.52, H * 0.18, 10, W * 0.52, H * 0.18, 520)
+        sun.add_color_stop_rgba(0.0, 0.78, 0.96, 0.84, 0.35)
+        sun.add_color_stop_rgba(0.5, 0.45, 0.80, 0.62, 0.12)
+        sun.add_color_stop_rgba(1.0, 0, 0, 0, 0)
+        cr.set_source(sun); cr.paint()
+
+        # Дальние лесные склоны и силуэты елей в дымке
+        random.seed(108)
+        for layer_i, (base_y, col_r, col_g, col_b, tree_h) in enumerate([
+            (H * 0.50, 0.09, 0.24, 0.18, 130),
+            (H * 0.58, 0.06, 0.18, 0.13, 175),
+            (H * 0.67, 0.04, 0.12, 0.09, 220),
+        ]):
+            cr.set_source_rgb(col_r, col_g, col_b)
+            cr.move_to(0, H); cr.line_to(0, base_y)
+            for x in range(0, W + 60, 45):
+                ty = base_y - random.randint(20, tree_h)
+                cr.line_to(x - 18, base_y)
+                cr.line_to(x, ty)
+                cr.line_to(x + 18, base_y)
+            cr.line_to(W, H); cr.close_path(); cr.fill()
+
+        # Берега мшистого ущелья
+        cr.set_source_rgb(0.03, 0.09, 0.06)
+        cr.rectangle(0, H * 0.64, W, H * 0.36); cr.fill()
+
+        # Извилистый горный ручей с зеркальной бирюзовой водой
+        stream_pts_l = [(W*0.46, H*0.62), (W*0.38, H*0.73), (W*0.26, H*0.86), (W*0.14, H)]
+        stream_pts_r = [(W*0.56, H*0.62), (W*0.65, H*0.74), (W*0.78, H*0.87), (W*0.88, H)]
+        cr.move_to(*stream_pts_l[0])
+        for p in stream_pts_l[1:]: cr.line_to(*p)
+        for p in reversed(stream_pts_r): cr.line_to(*p)
+        cr.close_path()
+        w_lg = cairo.LinearGradient(0, H * 0.62, 0, H)
+        w_lg.add_color_stop_rgb(0.0, 0.22, 0.58, 0.48)
+        w_lg.add_color_stop_rgb(0.5, 0.14, 0.42, 0.36)
+        w_lg.add_color_stop_rgb(1.0, 0.08, 0.26, 0.24)
+        cr.set_source(w_lg); cr.fill()
+
+        # Водная рябь, пороги и речные валуны
+        cr.set_line_width(2.2)
+        for i in range(28):
+            ry = H * 0.64 + (i / 28.0) * (H * 0.34)
+            spread = 50 + (i / 28.0) * 480
+            rx = W * 0.51 + math.sin(i * 0.55) * 45 + random.uniform(-spread*0.4, spread*0.4)
+            rw = random.uniform(28, 85)
+            cr.set_source_rgba(0.72, 0.96, 0.85, 0.38)
+            cr.move_to(rx - rw/2, ry); cr.line_to(rx + rw/2, ry); cr.stroke()
+
+        # Речные камни и светлячки над водой
+        for bx, by, br in [(W*0.39, H*0.78, 26), (W*0.61, H*0.82, 34), (W*0.32, H*0.91, 42), (W*0.68, H*0.93, 38)]:
+            cr.arc(bx, by, br, math.pi, 2*math.pi)
+            cr.set_source_rgb(0.12, 0.19, 0.16); cr.fill_preserve()
+            cr.set_line_width(1.8); cr.set_source_rgba(0.58, 0.88, 0.74, 0.5); cr.stroke()
+
+        for _ in range(35):
+            fx, fy = random.uniform(120, W - 120), random.uniform(140, H - 100)
+            fg_g = cairo.RadialGradient(fx, fy, 1, fx, fy, 14)
+            fg_g.add_color_stop_rgba(0, 0.80, 1.0, 0.75, 0.65)
+            fg_g.add_color_stop_rgba(1, 0.45, 0.85, 0.60, 0.0)
+            cr.set_source(fg_g); cr.arc(fx, fy, 14, 0, 2*math.pi); cr.fill()
+
+    elif lay == "impasto":
+        # === МИР 4: ИМПАСТО ПЕЙЗАЖ (Густые рельефные мазки масла с физическими бугорками и светотенью) ===
+        random.seed(77)
+        cr.set_source_rgb(0.11, 0.09, 0.08); cr.paint()
+
+        # 1. Небо на закате — вихревые рельефные мазки вокруг золотого солнца (в духе Ван Гога / импасто)
+        sun_x, sun_y = W * 0.64, H * 0.30
+        for y in range(0, int(H * 0.58), 16):
+            for x in range(0, W, 28):
+                dx, dy = x - sun_x, y - sun_y
+                dist = math.hypot(dx, dy)
+                ang = math.atan2(dy, dx) + math.pi / 2.0 + math.sin(x * 0.006) * 0.25
+                if dist < 170:
+                    col = (0.97, 0.84, 0.46)
+                elif dist < 340:
+                    col = (0.91, 0.56, 0.36)
+                elif y < H * 0.26:
+                    col = (0.16, 0.22, 0.38)
+                else:
+                    col = (0.26, 0.31, 0.46)
+                jit = random.uniform(-0.04, 0.04)
+                draw_impasto_stroke(
+                    cr, x + random.uniform(-6, 6), y + random.uniform(-5, 5),
+                    random.uniform(34, 54), random.uniform(13, 20), ang,
+                    min(1, max(0, col[0]+jit)), min(1, max(0, col[1]+jit)), min(1, max(0, col[2]+jit))
+                )
+
+        # 2. Горная гряда — косые рельефные мазки мастихина (терракота, индиго и охра)
+        for x in range(0, W, 24):
+            ridge_top = H * 0.47 + math.sin(x * 0.0045) * 65 + math.cos(x * 0.011) * 30
+            for y in range(int(ridge_top), int(H * 0.72), 15):
+                t_rel = (y - ridge_top) / max(1.0, (H * 0.72 - ridge_top))
+                r = 0.22 + 0.42 * (1.0 - t_rel) + random.uniform(-0.04, 0.04)
+                g = 0.18 + 0.25 * (1.0 - t_rel) + random.uniform(-0.03, 0.03)
+                b = 0.28 + 0.18 * t_rel + random.uniform(-0.03, 0.03)
+                draw_impasto_stroke(cr, x, y, random.uniform(32, 48), random.uniform(14, 21), -0.38 if (x % 48 == 0) else 0.32, r, g, b)
+
+        # 3. Передний план — золотисто-охристые поля и отражения воды густыми горизонтальными бугорками
+        for y in range(int(H * 0.68), H + 10, 14):
+            for x in range(0, W, 26):
+                is_river = abs(x - (W * 0.54 + math.sin(y * 0.02) * 140)) < (80 + (y - H*0.68)*0.6)
+                if is_river:
+                    col = (0.24, 0.46, 0.56) if random.random() > 0.35 else (0.94, 0.78, 0.48)
+                else:
+                    col = (0.78, 0.44, 0.28) if random.random() > 0.45 else (0.88, 0.68, 0.36)
+                draw_impasto_stroke(
+                    cr, x + random.uniform(-5, 5), y,
+                    random.uniform(36, 56), random.uniform(12, 18),
+                    random.uniform(-0.12, 0.12),
+                    col[0] + random.uniform(-0.04, 0.04), col[1] + random.uniform(-0.04, 0.04), col[2] + random.uniform(-0.04, 0.04)
+                )
+
+        # 4. Фактурные кипарисы справа (вертикальные густые мазки тёмного изумруда и бронзы)
+        for tree_x, tree_w, tree_top in [(W * 0.86, 74, H * 0.16), (W * 0.92, 52, H * 0.28)]:
+            for y in range(int(tree_top), int(H * 0.88), 14):
+                w_cur = tree_w * math.sin(((y - tree_top) / (H * 0.88 - tree_top)) * math.pi * 0.85)
+                for x in range(int(tree_x - w_cur/2), int(tree_x + w_cur/2), 14):
+                    draw_impasto_stroke(cr, x, y, 16, 26, -1.45 + random.uniform(-0.2, 0.2), 0.10 + random.uniform(0, 0.08), 0.22 + random.uniform(0, 0.10), 0.15)
+
+    elif lay == "dungeon":
+        # === МИР 2: THE DUNGEON OF GOD (Каменные своды подземелья, алтарь, факелы и руны для SDDM/статичного кэша) ===
+        cr.set_source_rgb(0.04, 0.025, 0.022); cr.paint()
+        # Каменная кладка подземелья
+        for row, y in enumerate(range(0, H, 64)):
+            ox = 48 if (row % 2) else 0
+            for x in range(-48, W, 96):
+                cr.set_source_rgba(0.09, 0.06, 0.05, 0.85)
+                cr.rectangle(x + ox + 2, y + 2, 92, 60); cr.fill_preserve()
+                cr.set_line_width(1.2); cr.set_source_rgba(0.22, 0.14, 0.11, 0.45); cr.stroke()
+
+        # Свет факелов и рунический круг в центре
+        for tx, ty in [(W*0.22, H*0.42), (W*0.78, H*0.42), (W*0.50, H*0.55)]:
+            rg = cairo.RadialGradient(tx, ty, 8, tx, ty, 440)
+            rg.add_color_stop_rgba(0.0, 0.96, 0.58, 0.18, 0.26)
+            rg.add_color_stop_rgba(0.5, 0.85, 0.22, 0.14, 0.10)
+            rg.add_color_stop_rgba(1.0, 0, 0, 0, 0)
+            cr.set_source(rg); cr.paint()
+
+        cx, cy = W * 0.5, H * 0.54
+        cr.set_line_width(2.2); cr.set_source_rgba(0.96, 0.72, 0.20, 0.32)
+        cr.arc(cx, cy, 240, 0, 2*math.pi); cr.stroke()
+        cr.arc(cx, cy, 224, 0, 2*math.pi); cr.stroke()
+
+    elif lay == "gamedev":
+        # === МИР 5: GAMEDEV ENGINE STUDIO (Чертёжный Viewport 2D/3D с осями координат X/Y и пиксельной сеткой) ===
+        cr.set_source_rgb(0.05, 0.065, 0.085); cr.paint()
+        cr.set_line_width(1.0); cr.set_source_rgba(0.28, 0.55, 0.75, 0.06)
+        for x in range(32, W, 32): cr.move_to(x, 0); cr.line_to(x, H)
+        for y in range(32, H, 32): cr.move_to(0, y); cr.line_to(W, y)
+        cr.stroke()
+        cr.set_source_rgba(0.28, 0.55, 0.75, 0.14)
+        for x in range(128, W, 128): cr.move_to(x, 0); cr.line_to(x, H)
+        for y in range(128, H, 128): cr.move_to(0, y); cr.line_to(W, y)
+        cr.stroke()
+        # Главные оси координат сцены (X — красная, Y — зелёная, как в Godot / Unity)
+        cx, cy = W * 0.5, H * 0.52
+        cr.set_line_width(2.0)
+        cr.set_source_rgba(0.92, 0.32, 0.36, 0.45); cr.move_to(0, cy); cr.line_to(W, cy); cr.stroke()
+        cr.set_source_rgba(0.38, 0.85, 0.58, 0.45); cr.move_to(cx, 0); cr.line_to(cx, H); cr.stroke()
+
+    else:
+        # === МИР 1: CYBERDECK CLASSIC ===
+        cr.set_source_rgb(*BG); cr.paint()
         for cx, cy, rad, col, al in [(W*0.15, H*0.14, 620, PRIM, 0.13), (W*0.85, H*0.86, 620, ACC, 0.11)]:
             rg = cairo.RadialGradient(cx, cy, 10, cx, cy, rad)
             rg.add_color_stop_rgba(0, *col, al); rg.add_color_stop_rgba(1, *col, 0)
             cr.set_source(rg); cr.paint()
-        cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.065)
+        cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.068)
         for x in range(96, W, 96): cr.move_to(x, 0); cr.line_to(x, H)
         for y in range(96, H, 96): cr.move_to(0, y); cr.line_to(W, y)
         cr.stroke()
-        for rx, ry, rr in [(W*0.82, H*0.56, 200), (W*0.16, H*0.64, 150)]:
-            cr.set_line_width(1.4); cr.set_source_rgba(*PRIM, 0.18); cr.arc(rx, ry, rr, 0, 2*math.pi); cr.stroke()
-            cr.set_line_width(2.6); cr.set_source_rgba(*ACC, 0.30); cr.arc(rx, ry, rr*1.1, -0.5, 0.6); cr.stroke()
-
-    elif arch == "ronin":
-        # Arasaka Ronin: диагональные карбоновые плиты, шевроны безопасности и центральная геометрия меха
-        rg = cairo.RadialGradient(W*0.52, H*0.5, 20, W*0.52, H*0.5, 760)
-        rg.add_color_stop_rgba(0, *PRIM, 0.16); rg.add_color_stop_rgba(1, 0, 0, 0, 0)
-        cr.set_source(rg); cr.paint()
-        cr.set_line_width(1.5); cr.set_source_rgba(*PRIM, 0.12)
-        for k in range(-H, W + H, 110):
-            cr.move_to(k, 0); cr.line_to(k - H * 0.45, H)
+        m, ln = 14, 52
+        cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.78)
+        for x1, y1, x2, y2, x3, y3 in [(m,m+ln,m,m,m+ln,m),(W-m-ln,m,W-m,m,W-m,m+ln),(m,H-m-ln,m,H-m,m+ln,H-m),(W-m-ln,H-m,W-m,H-m,W-m,H-m-ln)]:
+            cr.move_to(x1, y1); cr.line_to(x2, y2); cr.line_to(x3, y3)
         cr.stroke()
-        cx, cy = W * 0.52, H * 0.50
-        cr.set_line_width(2.2); cr.set_source_rgba(*ACC, 0.26)
-        cr.move_to(cx, cy - 260); cr.line_to(cx + 260, cy); cr.line_to(cx, cy + 260); cr.line_to(cx - 260, cy); cr.close_path(); cr.stroke()
-
-    elif arch == "matrix":
-        # Netrunner Construct: цифровой дождь + гексагональная матрица
-        random.seed(42)
-        cr.set_line_width(1.6)
-        for x in range(48, W, 48):
-            y0 = random.randint(40, H - 360)
-            hlen = random.randint(120, 320)
-            lg = cairo.LinearGradient(x, y0, x, y0 + hlen)
-            lg.add_color_stop_rgba(0, *PRIM, 0.0); lg.add_color_stop_rgba(1, *ACC, 0.32)
-            cr.set_source(lg); cr.move_to(x, y0); cr.line_to(x, y0 + hlen); cr.stroke()
-        cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.07)
-        for x in range(64, W, 64): cr.move_to(x, 0); cr.line_to(x, H)
-        for y in range(64, H, 64): cr.move_to(0, y); cr.line_to(W, y)
-        cr.stroke()
-
-    elif arch == "synth":
-        # Synth Arcade 2084: перспективная сетка горизонта + сегментированное солнце
-        hz_y = H * 0.56
-        rg = cairo.RadialGradient(W*0.5, hz_y, 20, W*0.5, hz_y, 520)
-        rg.add_color_stop_rgba(0, *PRIM, 0.26); rg.add_color_stop_rgba(1, 0, 0, 0, 0)
-        cr.set_source(rg); cr.paint()
-        cr.set_line_width(1.5); cr.set_source_rgba(*PRIM, 0.24)
-        for i in range(-16, 17):
-            cr.move_to(W*0.5 + i * 24, hz_y); cr.line_to(W*0.5 + i * 160, H)
-        for j in range(1, 12):
-            py = hz_y + math.pow(j / 11.0, 2.0) * (H - hz_y)
-            cr.move_to(0, py); cr.line_to(W, py)
-        cr.stroke()
-        cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.52)
-        cr.move_to(0, hz_y); cr.line_to(W, hz_y); cr.stroke()
-
-    elif arch == "cryo":
-        # Orbital Cryo Studio: концентрическая астролябия и ледяное свечение
-        cx, cy = W * 0.5, H * 0.52
-        rg = cairo.RadialGradient(cx, cy, 10, cx, cy, 680)
-        rg.add_color_stop_rgba(0, *PRIM, 0.18); rg.add_color_stop_rgba(1, 0, 0, 0, 0)
-        cr.set_source(rg); cr.paint()
-        for rad, al in [(180, 0.22), (300, 0.28), (420, 0.16)]:
-            cr.set_line_width(1.5); cr.set_source_rgba(*ACC, al); cr.arc(cx, cy, rad, 0, 2*math.pi); cr.stroke()
-
-    m, ln = 14, 52
-    cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.78)
-    for x1, y1, x2, y2, x3, y3 in [
-        (m, m + ln, m, m, m + ln, m), (W - m - ln, m, W - m, m, W - m, m + ln),
-        (m, H - m - ln, m, H - m, m + ln, H - m), (W - m - ln, H - m, W - m, H - m, W - m, H - m - ln),
-    ]:
-        cr.move_to(x1, y1); cr.line_to(x2, y2); cr.line_to(x3, y3)
-    cr.stroke()
 
     for nm in ("work_hud_bg.png", "gaming_hud_bg.png", "cyberdeck_hud_bg.png", "sddm_bg.png", "lock_hud_bg.png"):
         surf.write_to_png(os.path.join(CACHE_DIR, nm))
     surf.write_to_png(os.path.join(HOME, ".config/hypr/assets/terminal_hud_bg.png"))
 
-def rebuild_distinct_cursor(theme_id, t):
+def rebuild_world_cursor(theme_id, t):
     cur_name = f"CyberDeck-Cursor-{theme_id}"
     icons_root = os.path.join(HOME, ".local/share/icons")
     for old_d in glob.glob(os.path.join(icons_root, "CyberDeck-Cursor*")):
@@ -523,8 +619,8 @@ def rebuild_distinct_cursor(theme_id, t):
         f"[Icon Theme]\nName={cur_name}\nComment=CyberDeck {t['short']} Cursor\nInherits=Adwaita\n"
     )
 
-    PRIM, ACC, DARK, FG = hex_rgb(t["primary"]), hex_rgb(t["accent"]), hex_rgb(t["bg"]), hex_rgb(t["fg"])
-    shape = t.get("cursor_shape", "wing")
+    PRIM, ACC, DARK = hex_rgb(t["primary"]), hex_rgb(t["accent"]), hex_rgb(t["bg"])
+    shape = t.get("cursor_shape", "cyber")
 
     def new_surf(sz):
         s = cairo.ImageSurface(cairo.FORMAT_ARGB32, sz, sz)
@@ -533,125 +629,75 @@ def rebuild_distinct_cursor(theme_id, t):
         return s, cr
 
     def draw_arrow(cr):
-        if shape == "mecha":
-            # НОВЫЙ КУРСОР 2-Й ТЕМЫ (ARASAKA MECHA RAZOR):
-            # Строгий гранёный стелс-указатель с раздвоенным хвостом («ласточкин хвост»),
-            # матовым карбоновым корпусом, бритвенно-алой кромкой и золотым энергетическим сердечником внутри
-            outer = [(2.5, 2.0), (2.5, 25.5), (8.2, 19.8), (13.2, 27.2), (16.5, 25.2), (11.8, 17.8), (20.2, 16.2)]
-            cr.save(); cr.translate(1.2, 1.5); cr.move_to(*outer[0])
-            for p in outer[1:]: cr.line_to(*p)
-            cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.55); cr.fill(); cr.restore()
+        if shape == "dagger":
+            # 2. THE DUNGEON OF GOD: Рунический клинок искателя подземелий (тёмная сталь + золотая руна + багровая кромка)
+            pts = [(2.5, 2.0), (4.0, 24.5), (9.5, 19.2), (14.2, 27.2), (17.5, 25.2), (12.8, 17.5), (21.0, 15.0)]
+            cr.save(); cr.translate(1.2, 1.5); cr.move_to(*pts[0])
+            for pt in pts[1:]: cr.line_to(*pt)
+            cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.60); cr.fill(); cr.restore()
 
-            cr.move_to(*outer[0])
-            for pt in outer[1:]: cr.line_to(*pt)
-            cr.close_path()
-            lg = cairo.LinearGradient(2, 2, 18, 26)
-            lg.add_color_stop_rgb(0.0, 0.14, 0.05, 0.07)
-            lg.add_color_stop_rgb(1.0, 0.06, 0.02, 0.03)
-            cr.set_source(lg); cr.fill_preserve()
-            cr.set_line_width(2.0); cr.set_source_rgb(*PRIM); cr.stroke()
-
-            # Внутренний золотой энергетический шеврон и прицельная риска на острие
-            cr.set_line_width(1.6); cr.set_source_rgb(*ACC)
-            cr.move_to(5.2, 6.8); cr.line_to(5.2, 18.5)
-            cr.move_to(5.2, 6.8); cr.line_to(14.5, 14.5)
-            cr.stroke()
-            cr.arc(5.2, 6.8, 1.7, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
-
-        elif shape == "reticle":
-            # NETRUNNER RETICLE: Изумрудный тактический указатель с полукольцом сканера
-            cr.arc(11.5, 11.5, 8.0, 0.35, math.pi * 1.55)
-            cr.set_line_width(1.6); cr.set_source_rgba(*ACC, 0.85); cr.stroke()
-            pts = [(3, 2.5), (3, 23.5), (8.6, 18.8), (12.5, 26.8), (15.8, 25.0), (12.0, 17.2), (19.2, 17.2)]
             cr.move_to(*pts[0])
-            for p in pts[1:]: cr.line_to(*p)
+            for pt in pts[1:]: cr.line_to(*pt)
+            cr.close_path()
+            cr.set_source_rgba(0.12, 0.07, 0.06, 0.97); cr.fill_preserve()
+            cr.set_line_width(2.0); cr.set_source_rgb(*ACC); cr.stroke()
+            # Внутренняя руна огня
+            cr.set_line_width(1.6); cr.set_source_rgb(*PRIM)
+            cr.move_to(5.0, 6.0); cr.line_to(11.0, 16.0); cr.stroke()
+            cr.arc(5.2, 6.2, 1.8, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
+
+        elif shape == "leaf":
+            # 3. ЛЕСНОЙ РУЧЕЙ: Органический изумрудный лист с прожилкой росы
+            pts = [(3.0, 2.5), (3.5, 24.0), (9.0, 19.2), (13.0, 26.8), (16.2, 25.0), (12.2, 17.5), (19.8, 16.5)]
+            cr.move_to(*pts[0])
+            for pt in pts[1:]: cr.line_to(*pt)
+            cr.close_path()
+            cr.set_source_rgba(0.05, 0.14, 0.10, 0.96); cr.fill_preserve()
+            cr.set_line_width(2.0); cr.set_source_rgb(*ACC); cr.stroke()
+            cr.arc(5.5, 6.5, 1.7, 0, 2*math.pi); cr.set_source_rgb(0.85, 1.0, 0.90); cr.fill()
+
+        elif shape == "brush":
+            # 4. ИМПАСТО ПЕЙЗАЖ: Мастихин художника с золотисто-охристым мазком краски на кончике
+            pts = [(3.0, 2.0), (3.5, 24.5), (9.0, 19.0), (13.5, 27.0), (16.8, 25.2), (12.2, 17.2), (20.2, 16.0)]
+            cr.move_to(*pts[0])
+            for pt in pts[1:]: cr.line_to(*pt)
+            cr.close_path()
+            cr.set_source_rgba(0.16, 0.11, 0.09, 0.96); cr.fill_preserve()
+            cr.set_line_width(2.0); cr.set_source_rgb(*PRIM); cr.stroke()
+            cr.arc(5.2, 6.0, 2.1, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
+
+        elif shape == "gizmo":
+            # 5. GAMEDEV ENGINE STUDIO: Инженерный курсор-гизмо с осями X/Y у вершины
+            pts = [(3, 2), (3, 24), (8.8, 19.2), (12.6, 27.5), (16.0, 25.8), (12.2, 17.6), (19.8, 17.6)]
+            cr.move_to(*pts[0])
+            for pt in pts[1:]: cr.line_to(*pt)
+            cr.close_path()
+            cr.set_source_rgba(0.08, 0.11, 0.15, 0.97); cr.fill_preserve()
+            cr.set_line_width(1.9); cr.set_source_rgb(*PRIM); cr.stroke()
+            cr.set_line_width(1.8); cr.set_source_rgb(*ACC)
+            cr.move_to(5.0, 5.5); cr.line_to(5.0, 14.5); cr.move_to(5.0, 5.5); cr.line_to(13.0, 12.0); cr.stroke()
+
+        else:
+            # 1. CYBERDECK CLASSIC
+            pts = [(3,2),(3,24),(8.8,19.2),(12.6,27.5),(16.0,25.8),(12.2,17.6),(19.8,17.6)]
+            cr.move_to(*pts[0])
+            for pt in pts[1:]: cr.line_to(*pt)
             cr.close_path()
             cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
             cr.set_line_width(1.9); cr.set_source_rgb(*ACC); cr.stroke()
-            cr.arc(5.2, 6.0, 1.6, 0, 2*math.pi); cr.set_source_rgb(*PRIM); cr.fill()
-
-        elif shape == "crystal":
-            # CRYO STEALTH LANCE (4-я тема Cryo Studio):
-            # Тёмно-обсидиановый корпус для высокой контрастности, ледяная неоновая кромка и внутренний крио-ромб
-            pts = [(3.0, 2.0), (3.0, 24.5), (8.6, 19.2), (12.8, 27.0), (16.0, 25.2), (11.8, 17.5), (19.8, 16.5)]
-            cr.save(); cr.translate(1.2, 1.5); cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.55); cr.fill(); cr.restore()
-
-            cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path()
-            bg_lg = cairo.LinearGradient(3, 2, 18, 26)
-            bg_lg.add_color_stop_rgba(0.0, 0.04, 0.08, 0.15, 0.97)
-            bg_lg.add_color_stop_rgba(1.0, 0.07, 0.14, 0.26, 0.97)
-            cr.set_source(bg_lg); cr.fill_preserve()
-
-            edge_lg = cairo.LinearGradient(3, 2, 20, 27)
-            edge_lg.add_color_stop_rgb(0.0, *ACC)
-            edge_lg.add_color_stop_rgb(0.55, *PRIM)
-            edge_lg.add_color_stop_rgb(1.0, *ACC)
-            cr.set_source(edge_lg); cr.set_line_width(1.9); cr.stroke()
-
-            # Внутренняя крио-грань и ромбовидное ядро у острия
-            cr.set_line_width(1.3); cr.set_source_rgba(*ACC, 0.85)
-            cr.move_to(5.3, 6.2); cr.line_to(5.3, 17.5)
-            cr.move_to(5.3, 6.2); cr.line_to(14.0, 14.2)
-            cr.stroke()
-            cx, cy, r = 5.3, 6.2, 1.8
-            cr.move_to(cx, cy - r); cr.line_to(cx + r, cy); cr.line_to(cx, cy + r); cr.line_to(cx - r, cy); cr.close_path()
-            cr.set_source_rgb(0.90, 0.98, 1.0); cr.fill()
-
-        elif shape == "delta":
-            # SYNTH DELTA WING: Тёмное неоновое крыло Outrun с контрастным контуром
-            wing = [(3.0, 2.0), (3.0, 24.5), (9.2, 19.0), (13.8, 26.8), (17.0, 25.0), (12.5, 17.2), (20.5, 15.8)]
-            cr.save(); cr.translate(1.2, 1.5); cr.move_to(*wing[0])
-            for pt in wing[1:]: cr.line_to(*pt)
-            cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.55); cr.fill(); cr.restore()
-
-            cr.move_to(*wing[0])
-            for pt in wing[1:]: cr.line_to(*pt)
-            cr.close_path()
-            cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
-            lg = cairo.LinearGradient(3, 2, 21, 26)
-            lg.add_color_stop_rgb(0.0, *ACC)
-            lg.add_color_stop_rgb(0.6, *PRIM)
-            lg.add_color_stop_rgb(1.0, *ACC)
-            cr.set_source(lg); cr.set_line_width(2.0); cr.stroke()
-            cr.arc(5.4, 6.2, 1.6, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
-
-        else:
-            # TACTICAL WING: Базовый тактический курсор CyberDeck
-            pts = [(3,2),(3,24),(8.8,19.2),(12.6,27.5),(16.0,25.8),(12.2,17.6),(19.8,17.6)]
-            cr.save(); cr.translate(1.2, 1.5); cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.50); cr.fill(); cr.restore()
-
-            cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path()
-            cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
-            lg = cairo.LinearGradient(3, 2, 19, 27)
-            lg.add_color_stop_rgb(0.0, *ACC); lg.add_color_stop_rgb(0.65, *PRIM); lg.add_color_stop_rgb(1.0, *ACC)
-            cr.set_source(lg); cr.set_line_width(1.9); cr.stroke()
-            cr.arc(5.2, 5.8, 1.5, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
+            cr.arc(5.2, 5.8, 1.6, 0, 2*math.pi); cr.set_source_rgb(*PRIM); cr.fill()
 
     def draw_pointer(cr):
-        # Чёткий тактический курсор наведения на кнопки и карточки с ромбовидным прицелом на острие
         pts = [(6, 5), (6, 23), (11.2, 18.8), (15.5, 26), (18.5, 24.4), (14.2, 17.2), (21, 17.2)]
-        cr.save(); cr.translate(1.1, 1.4); cr.move_to(*pts[0])
-        for pt in pts[1:]: cr.line_to(*pt)
-        cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.50); cr.fill(); cr.restore()
-
         cr.move_to(*pts[0])
         for pt in pts[1:]: cr.line_to(*pt)
         cr.close_path()
         cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
         cr.set_source_rgb(*ACC); cr.set_line_width(1.9); cr.stroke()
-
-        cx, cy, r = 6.0, 5.0, 3.4
+        cx, cy, r = 6.0, 5.0, 3.2
         cr.move_to(cx, cy - r); cr.line_to(cx + r, cy); cr.line_to(cx, cy + r); cr.line_to(cx - r, cy); cr.close_path()
-        cr.set_source_rgba(*PRIM, 0.96); cr.fill_preserve()
-        cr.set_source_rgb(0.95, 0.98, 1.0); cr.set_line_width(1.3); cr.stroke()
+        cr.set_source_rgb(*PRIM); cr.fill_preserve()
+        cr.set_source_rgb(1, 1, 1); cr.set_line_width(1.2); cr.stroke()
 
     def draw_ibeam(cr):
         cr.set_line_width(2.2); cr.set_source_rgb(*ACC)
@@ -700,7 +746,7 @@ def rebuild_distinct_cursor(theme_id, t):
             subprocess.run(["xcursorgen", cfg, os.path.join(cursors_dir, name)], check=True)
 
         b_static("left_ptr", 3, 2, draw_arrow)
-        b_static("hand2", 3, 2, draw_pointer)
+        b_static("hand2", 6, 5, draw_pointer)
         b_static("xterm", 16, 16, draw_ibeam)
         b_static("crosshair", 16, 16, draw_cross)
         b_static("fleur", 16, 16, lambda cr: (draw_darrow(cr,0), draw_darrow(cr,90)))
@@ -761,6 +807,11 @@ def rebuild_distinct_cursor(theme_id, t):
 def update_terminals(t):
     p_hex, a_hex, s_hex, bg_hex, bg_alt, fg_hex = t["primary"], t["accent"], t["soft"], t["bg"], t["bg_alt"], t["fg"]
     p_c, a_c, s_c, bg_c, bg_ac, fg_c = p_hex.lstrip("#"), a_hex.lstrip("#"), s_hex.lstrip("#"), bg_hex.lstrip("#"), bg_alt.lstrip("#"), fg_hex.lstrip("#")
+    pr, pg, pb = hex_rgb_int(p_hex)
+    ar, ag, ab = hex_rgb_int(a_hex)
+    sr, sg_i, sb = hex_rgb_int(s_hex)
+    sym = t["symbol"]
+    short = t["short"].upper()
 
     open(os.path.join(HOME, ".config/foot/foot.ini"), "w", encoding="utf-8").write(f"""[main]
 font=monospace:size=11.5
@@ -818,22 +869,20 @@ bright7=ffffff
 
 def apply_backend(theme_id, restart_hub=True):
     if theme_id not in THEMES:
-        theme_id = "cyber-tactical"
+        theme_id = "cyberdeck"
     t = THEMES[theme_id]
     p_hex, a_hex, bg_hex = t["primary"], t["accent"], t["bg"]
     cur_name = f"CyberDeck-Cursor-{theme_id}"
 
     state_payload = {"id": theme_id, "cursor_theme": cur_name, **t}
     json.dump(state_payload, open(STATE_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
-    if t["session"] == "game":
-        json.dump(state_payload, open(GAME_STATE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
-    else:
-        json.dump(state_payload, open(WORK_STATE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    json.dump(state_payload, open(WORK_STATE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    json.dump(state_payload, open(GAME_STATE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
     open(os.path.join(CFG_DIR, "active_hub.css"), "w", encoding="utf-8").write(build_full_theme_css(t))
 
-    all_prim = ("#4c6ef5","#3b5bdb","#e03131","#f02e3e","#0ca678","#d63384","#f03e98","#1c7ed6","#339af0","#364fc7")
-    all_acc  = ("#22b8cf","#00f5d4","#fcc419","#ffb800","#38d9a9","#40f99b","#20c997","#74c0fc","#99e9f2","#66d9e8")
+    all_prim = ("#4c6ef5","#3b5bdb","#e03131","#d93829","#f02e3e","#0ca678","#2d6a4f","#e07a5f","#478cbf","#d63384","#f03e98","#1c7ed6","#339af0","#364fc7")
+    all_acc  = ("#22b8cf","#00f5d4","#fcc419","#f5b82e","#ffb800","#38d9a9","#74c69d","#f2cc8f","#63d994","#40f99b","#20c997","#74c0fc","#99e9f2","#66d9e8")
 
     for svg_f in glob.glob(os.path.join(HOME, ".config/hypr/assets/ui/*.svg")):
         stxt = open(svg_f, "r", encoding="utf-8").read()
@@ -849,9 +898,9 @@ def apply_backend(theme_id, restart_hub=True):
     subprocess.run(["/usr/bin/python3", os.path.join(HOME, ".local/bin/cyber-icons-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(["/usr/bin/python3", os.path.join(HOME, ".local/bin/cyber-firefox-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    render_environment_wallpaper(t)
+    render_world_wallpaper(t)
     update_terminals(t)
-    rebuild_distinct_cursor(theme_id, t)
+    rebuild_world_cursor(theme_id, t)
 
     for rasi_p in (os.path.join(HOME, ".config/hypr/gaming_launcher.rasi"), os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")):
         if os.path.isfile(rasi_p):
@@ -908,22 +957,16 @@ def apply_backend(theme_id, restart_hub=True):
             time.sleep(0.05)
 
 def show_menu():
-    in_game = is_gaming_session()
-    sess_filter = "game" if in_game else "work"
-    cur = get_session_theme_id(sess_filter)
-    prompt_lbl = "◈ ИГРОВОЕ ОКРУЖЕНИЕ (HYPRGAME)" if in_game else "◈ РАБОЧЕЕ ОКРУЖЕНИЕ (HYPRWORK)"
-
+    cur = load_current()
     lines, id_map = [], {}
     for tid, meta in THEMES.items():
-        if meta["session"] != sess_filter:
-            continue
-        mark = "   [● АКТИВНО]" if tid == cur else ""
+        mark = "   [● АКТИВНА]" if tid == cur else ""
         row = f"{meta['title']}{mark}"
         lines.append(row)
         id_map[row] = tid
 
     proc = subprocess.run(
-        ["rofi", "-dmenu", "-i", "-p", prompt_lbl, "-theme", ROFI_WIFI],
+        ["rofi", "-dmenu", "-i", "-p", "◈ ВЫБОР МИРА / ОКРУЖЕНИЯ (5 ТЕМ)", "-theme", ROFI_WIFI],
         input="\n".join(lines), text=True, capture_output=True
     )
     ch = proc.stdout.strip()
@@ -935,11 +978,9 @@ if __name__ == "__main__":
     act = sys.argv[1] if len(sys.argv) > 1 else "menu"
     if act == "--apply-backend" and len(sys.argv) > 2:
         apply_backend(sys.argv[2], restart_hub=True)
-    elif act == "--sync-session" and len(sys.argv) > 2:
-        tid = get_session_theme_id(sys.argv[2])
-        apply_backend(tid, restart_hub=False)
+    elif act == "--sync-session":
+        apply_backend(load_current(), restart_hub=False)
     elif act == "get":
-        tid = get_session_theme_id()
-        print(THEMES[tid]["short"])
+        print(THEMES[load_current()]["short"])
     else:
         show_menu()
