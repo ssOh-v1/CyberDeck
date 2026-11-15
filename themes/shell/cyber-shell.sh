@@ -1,3 +1,4 @@
+unset LD_PRELOAD
 case $- in
     *i*) ;;
     *) return ;;

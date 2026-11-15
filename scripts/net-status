@@ -12,6 +12,7 @@ def check_vpn():
     return False
 
 def get_net():
+    subprocess.Popen([os.path.expanduser("~/.local/bin/cyber-net-doctor")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     vpn = check_vpn()
     zapret = subprocess.call(["pgrep", "-x", "nfqws"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
     wl_devs = [os.path.basename(p) for p in sorted(glob.glob("/sys/class/net/wl*"))]

@@ -8,6 +8,7 @@ CACHE = os.path.join(HOME, ".cache/cyberdeck")
 os.makedirs(UI, exist_ok=True); os.makedirs(CACHE, exist_ok=True)
 
 ui_svgs = {
+    "sun.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.2" fill="none" stroke="#22b8cf" stroke-width="1.7"/><path d="M8 1.5 V3.2 M8 12.8 V14.5 M1.5 8 H3.2 M12.8 8 H14.5 M3.4 3.4 L4.6 4.6 M11.4 11.4 L12.6 12.6 M12.6 3.4 L11.4 4.6 M4.6 11.4 L3.4 12.6" stroke="#66d9e8" stroke-width="1.6" stroke-linecap="round"/></svg>',
     "bolt.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M9.5 1.5 L3.5 9 H8 L6.5 14.5 L12.5 7 H8 Z" fill="#22b8cf"/></svg>',
     "eco.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path d="M13.5 2.5 C7 2.5 3 6.5 3 11.5 C3 12.5 3.5 13 4.5 13 C9.5 13 13.5 9 13.5 2.5 Z" fill="none" stroke="#63e6be" stroke-width="1.8"/><path d="M3.5 12.5 L9.5 6.5" stroke="#63e6be" stroke-width="1.6" stroke-linecap="round"/></svg>',
     "turbo.svg": '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><polygon points="8,1.5 14,13.5 8,10.8 2,13.5" fill="none" stroke="#ff6b6b" stroke-width="1.7" stroke-linejoin="round"/></svg>',

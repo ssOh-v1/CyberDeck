@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+import os, glob, json, time, subprocess
+
+def get_wifi_info():
+    wl_devs = [os.path.basename(p) for p in glob.glob("/sys/class/net/wl*")]
+    if not wl_devs:
+        return {"enabled": False, "connected": False, "ssid": "", "signal": 0, "icon": "wifi-off.svg"}
+    dev = wl_devs[0]
+    try:
+        oper = open(f"/sys/class/net/{dev}/operstate").read().strip()
+    except Exception:
+        oper = "down"
+    if oper != "up":
+        return {"enabled": True, "connected": False, "ssid": "", "signal": 0, "icon": "wifi-low.svg"}
+
+    sig_pct = 75
+    try:
+        for line in open("/proc/net/wireless"):
+            if dev + ":" in line:
+                sig_pct = min(100, max(0, int(round(float(line.split()[2].rstrip(".")) * 100.0 / 70.0))))
+    except Exception:
+        pass
+
+    cache_f = f"/tmp/cyber_ssid_{os.getuid()}"
+    ssid = ""
+    if os.path.isfile(cache_f) and (time.time() - os.path.getmtime(cache_f)) < 30:
+        ssid = open(cache_f).read().strip()
+    else:
+        try:
+            out = subprocess.check_output(["nmcli", "-t", "-f", "GENERAL.CONNECTION", "device", "show", dev], text=True, stderr=subprocess.DEVNULL, timeout=0.6).strip()
+            if ":" in out and out.split(":", 1)[1].strip() != "--":
+                ssid = out.split(":", 1)[1].strip()
+                open(cache_f, "w").write(ssid)
+        except Exception:
+            pass
+
+    ic = "wifi-high.svg" if sig_pct >= 68 else ("wifi-mid.svg" if sig_pct >= 38 else "wifi-low.svg")
+    return {"enabled": True, "connected": True, "ssid": ssid or dev, "signal": sig_pct, "icon": ic}
+
+if __name__ == "__main__":
+    print(json.dumps(get_wifi_info(), ensure_ascii=False))

@@ -11,7 +11,7 @@ export XCURSOR_SIZE=28
 gsettings set org.gnome.desktop.interface cursor-theme 'CyberDeck-Cursor' 2>/dev/null || true
 gsettings set org.gnome.desktop.interface cursor-size 28 2>/dev/null || true
 gsettings set org.gnome.desktop.interface icon-theme 'CyberDeck-Icons' 2>/dev/null || true
-command -v powerprofilesctl >/dev/null 2>&1 && powerprofilesctl set balanced 2>/dev/null || true
+command -v powerprofilesctl >/dev/null 2>&1 && powerprofilesctl set power-saver 2>/dev/null || true
 cleanup() {
     pkill -f "cyberdeck-hub-desktop.py" 2>/dev/null || true
     [ -f "/tmp/cyber_kb_osd_$(id -u).pid" ] && kill "$(cat "/tmp/cyber_kb_osd_$(id -u).pid")" 2>/dev/null || true

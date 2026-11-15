@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+import os, json, subprocess
+
+def sync_xwayland():
+    try:
+        devs = json.loads(subprocess.check_output(["hyprctl", "devices", "-j"], text=True, stderr=subprocess.DEVNULL))
+        active_km = "English (US)"
+        for kb in devs.get("keyboards", []):
+            if kb.get("main"):
+                active_km = kb.get("active_keymap", "English (US)")
+                break
+        is_ru = any(k in active_km.lower() for k in ("ru", "rus", "рус", "cyrillic"))
+        # Задаём полноценную двухъязычную таблицу в XWayland и ставим текущую раскладку первой для старых X11/Wine игр
+        order = "ru,us" if is_ru else "us,ru"
+        subprocess.run(["setxkbmap", "-layout", order, "-option", "grp:alt_shift_toggle"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+if __name__ == "__main__":
+    sync_xwayland()

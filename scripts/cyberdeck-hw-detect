@@ -226,3 +226,5 @@ if __name__ == "__main__":
         render_adaptive_bg(p["width"], p["height"], bg_out)
     if "--refresh-bg" not in sys.argv:
         write_cyberdeck_hypr_conf(p)
+binde = SUPER ALT, up, exec, brightnessctl -q set +10%
+binde = SUPER ALT, down, exec, brightnessctl -q set 10%-

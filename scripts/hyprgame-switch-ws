@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+import sys, json, subprocess
+
+target = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+subprocess.run(["hyprctl", "dispatch", "workspace", str(target)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+try:
+    clients = json.loads(subprocess.check_output(["hyprctl", "clients", "-j"], text=True, stderr=subprocess.DEVNULL))
+except Exception:
+    clients = []
+
+if target == 1:
+    # Если на столе 1 пусто, а Steam спрятан в special:bg — достаём его обратно на стол 1
+    on_ws1 = [c for c in clients if c.get("workspace", {}).get("id") == 1]
+    if not on_ws1:
+        for c in clients:
+            cls = (c.get("class") or "").lower()
+            if cls == "steam" and c.get("workspace", {}).get("name") == "special:bg":
+                addr = c.get("address")
+                subprocess.run(["hyprctl", "--batch", f"dispatch movetoworkspace 1,address:{addr} ; dispatch focuswindow address:{addr}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                break
+elif target == 2:
+    # Если Discord спрятан в special:bg — достаём его обратно на стол 2
+    on_ws2 = [c for c in clients if c.get("workspace", {}).get("id") == 2]
+    if not on_ws2:
+        for c in clients:
+            cls = (c.get("class") or "").lower()
+            if any(d in cls for d in ("discord", "vesktop", "legcord", "equibop", "webcord")) and c.get("workspace", {}).get("name") == "special:bg":
+                addr = c.get("address")
+                subprocess.run(["hyprctl", "--batch", f"dispatch movetoworkspace 2,address:{addr} ; dispatch focuswindow address:{addr}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                break

@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+import os, sys, json, subprocess, importlib.util
+
+os.environ.pop("LD_PRELOAD", None)
+HOME = os.path.expanduser("~")
+THEME = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
+
+_spec = importlib.util.spec_from_file_location("cyber_bg_helper", os.path.join(HOME, ".local/bin/cyber-bg-helper.py"))
+cyber_bg = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(cyber_bg)
+
+items = cyber_bg.get_bg_and_open_items()
+if not items:
+    subprocess.Popen(["notify-send", "-a", "cyber-kb", "◈ ФОНОВЫЕ ПРОЦЕССЫ", "Нет активных или скрытых в фон приложений"])
+    sys.exit(0)
+
+entries = []
+action_map = {}
+
+for it in items:
+    name = it["name"]
+    cnt = it["count"]
+    cnt_str = f" (окон: {cnt})" if cnt > 1 else ""
+    if it.get("is_daemon"):
+        row = f"●  {name}   [РАБОТАЕТ В ТРЕЕ]  —  Развернуть окно"
+    elif it.get("is_bg"):
+        row = f"📦  {name}{cnt_str}   [СКРЫТО В ФОНЕ]  —  Вернуть на экран"
+    else:
+        row = f"◈  {name}{cnt_str}   [АКТИВНО]  —  Переключиться / Скрыть в фон"
+    entries.append(row)
+    action_map[row] = it
+
+    # Дополнительная строка быстрого скрытия в фон для открытых окон
+    if not it.get("is_bg") and not it.get("is_daemon"):
+        hide_row = f"   ╰─ 📥 Скрыть {name} в фоновый карман"
+        entries.append(hide_row)
+        action_map[hide_row] = {"lclick": it["rclick"]}
+
+proc = subprocess.run(
+    ["rofi", "-dmenu", "-i", "-p", "◈ ФОН И ОКНА", "-theme", THEME],
+    input="\n".join(entries), text=True, capture_output=True
+)
+choice = proc.stdout.strip()
+if proc.returncode == 0 and choice in action_map:
+    cmd = action_map[choice]["lclick"]
+    subprocess.Popen(["/bin/sh", "-c", cmd], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

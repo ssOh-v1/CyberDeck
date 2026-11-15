@@ -254,6 +254,28 @@ class CyberDeckHubApp(Gtk.Application):
             self.pwr_btn = Gtk.Button(); self.pwr_btn.add_css_class("ctrl-pill"); self.pwr_btn.set_valign(Gtk.Align.CENTER)
             self.pwr_btn.connect("clicked", self.on_toggle_power); self.update_pwr_label(); right_zone.append(self.pwr_btn)
 
+        bri_cap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        bri_cap.add_css_class("audio-capsule"); bri_cap.set_valign(Gtk.Align.CENTER)
+        bri_btn = Gtk.Button()
+        bri_btn.add_css_class("audio-icon-btn"); bri_btn.set_valign(Gtk.Align.CENTER)
+        bri_btn.set_child(ui_svg("sun.svg", 16))
+        bri_btn.set_tooltip_text("Яркость экрана — ЛКМ: 100% / 60%")
+        bri_btn.connect("clicked", self.on_bri_icon_clicked)
+        bri_cap.append(bri_btn)
+
+        cur_b = self.get_current_bri()
+        self.bri_pct_lbl = Gtk.Label(label=f"{int(cur_b)}%")
+        self.bri_pct_lbl.add_css_class("vol-pct"); self.bri_pct_lbl.set_valign(Gtk.Align.CENTER)
+
+        self.bri_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 5, 100, 1)
+        self.bri_scale.set_draw_value(False); self.bri_scale.set_size_request(64, -1)
+        self.bri_scale.set_valign(Gtk.Align.CENTER)
+        self.bri_scale.set_value(cur_b)
+        self.bri_scale.connect("value-changed", self.on_bri_changed)
+        bri_cap.append(self.bri_scale)
+        bri_cap.append(self.bri_pct_lbl)
+        right_zone.append(bri_cap)
+
         audio_cap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); audio_cap.add_css_class("audio-capsule"); audio_cap.set_valign(Gtk.Align.CENTER)
         audio_btn = Gtk.Button(); audio_btn.add_css_class("audio-icon-btn"); audio_btn.set_valign(Gtk.Align.CENTER)
         audio_btn.set_child(ui_svg("audio.svg", 16)); audio_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-audio-menu"))
@@ -262,7 +284,7 @@ class CyberDeckHubApp(Gtk.Application):
         cur_v = self.get_current_vol()
         self.vol_pct_lbl = Gtk.Label(label=f"{int(cur_v)}%"); self.vol_pct_lbl.add_css_class("vol-pct"); self.vol_pct_lbl.set_valign(Gtk.Align.CENTER)
         self.vol_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
-        self.vol_scale.set_draw_value(False); self.vol_scale.set_size_request(74, -1); self.vol_scale.set_valign(Gtk.Align.CENTER)
+        self.vol_scale.set_draw_value(False); self.vol_scale.set_size_request(64, -1); self.vol_scale.set_valign(Gtk.Align.CENTER)
         self.vol_scale.set_value(cur_v); self.vol_scale.connect("value-changed", self.on_vol_changed)
         audio_cap.append(self.vol_scale); audio_cap.append(self.vol_pct_lbl); right_zone.append(audio_cap)
 
@@ -394,7 +416,7 @@ class CyberDeckHubApp(Gtk.Application):
                     rc = Gtk.GestureClick.new(); rc.set_button(3)
                     rc.connect("pressed", lambda _g, _n, _x, _y, cmd=item["rclick"]: self.spawn_raw(cmd))
                     b.add_controller(rc); self.bg_items_box.append(b)
-            clients = json.loads(subprocess.check_output(["hyprctl", "clients", "-j"], text=True, stderr=subprocess.DEVNULL))
+            clients = cyber_bg.hypr_ipc_json("clients")
             ws_map = {}
             for cl in clients:
                 wid = cl.get("workspace", {}).get("id", -1)
@@ -413,22 +435,78 @@ class CyberDeckHubApp(Gtk.Application):
         except Exception: pass
         return True
 
+    def read_power_mode(self):
+        try:
+            if os.path.isfile("/run/cyberdeck-power-mode"):
+                m = open("/run/cyberdeck-power-mode").read().strip()
+                if m == "performance":
+                    return "performance"
+                return "eco"
+        except Exception:
+            pass
+        return "eco"
+
     def update_pwr_label(self):
-        if not self.pwr_btn: return
-        try: prof = subprocess.check_output(["powerprofilesctl", "get"], text=True, stderr=subprocess.DEVNULL).strip()
-        except Exception: prof = "balanced"
-        hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6); hb.set_valign(Gtk.Align.CENTER)
-        if prof == "performance": hb.append(ui_svg("turbo.svg", 14)); hb.append(Gtk.Label(label="Турбо"))
-        elif prof == "power-saver": hb.append(ui_svg("eco.svg", 14)); hb.append(Gtk.Label(label="Эко"))
-        else: hb.append(ui_svg("bolt.svg", 14)); hb.append(Gtk.Label(label="Баланс"))
+        if not getattr(self, "pwr_btn", None):
+            return
+        is_perf = (self.read_power_mode() == "performance")
+        if is_perf:
+            self.pwr_btn.remove_css_class("ctrl-pill")
+            self.pwr_btn.add_css_class("ctrl-pill-perf")
+        else:
+            self.pwr_btn.remove_css_class("ctrl-pill-perf")
+            self.pwr_btn.add_css_class("ctrl-pill")
+        hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        hb.set_valign(Gtk.Align.CENTER)
+        hb.append(ui_svg("turbo.svg" if is_perf else "eco.svg", 14))
+        hb.append(Gtk.Label(label="Перфоманс" if is_perf else "Эко"))
         self.pwr_btn.set_child(hb)
+        self.pwr_btn.set_tooltip_text("Питание: Перфоманс / Эко (SUPER+SHIFT+P)")
 
     def on_toggle_power(self, _b):
-        try: prof = subprocess.check_output(["powerprofilesctl", "get"], text=True, stderr=subprocess.DEVNULL).strip()
-        except Exception: prof = "balanced"
-        cycle = ({"balanced": "power-saver", "power-saver": "performance", "performance": "balanced"} if self.hw.get("has_battery") else {"balanced": "performance", "performance": "balanced", "power-saver": "balanced"})
-        subprocess.run(["powerprofilesctl", "set", cycle.get(prof, "balanced")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run([os.path.join(HOME, ".local/bin/cyber-power"), "toggle"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.update_pwr_label()
+
+    def get_current_bri(self):
+        try:
+            for bdir in sorted(glob.glob("/sys/class/backlight/*")):
+                cur = float(open(os.path.join(bdir, "brightness")).read().strip())
+                mx = float(open(os.path.join(bdir, "max_brightness")).read().strip())
+                if mx > 0:
+                    return max(5.0, min(100.0, round(cur * 100.0 / mx)))
+        except Exception:
+            pass
+        try:
+            out = subprocess.check_output(["brightnessctl", "-m"], text=True, stderr=subprocess.DEVNULL).strip()
+            for part in out.split(","):
+                if part.endswith("%"):
+                    return max(5.0, min(100.0, float(part[:-1])))
+        except Exception:
+            pass
+        return 90.0
+
+    def set_hw_bri(self, val):
+        val = max(5, min(100, int(val)))
+        wrote = False
+        for bdir in sorted(glob.glob("/sys/class/backlight/*")):
+            try:
+                mx = int(open(os.path.join(bdir, "max_brightness")).read().strip())
+                raw = max(1, int(round(mx * val / 100.0)))
+                open(os.path.join(bdir, "brightness"), "w").write(str(raw))
+                wrote = True
+            except Exception:
+                pass
+        if not wrote:
+            subprocess.Popen(["brightnessctl", "-q", "set", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def on_bri_changed(self, scale):
+        val = int(scale.get_value())
+        self.bri_pct_lbl.set_label(f"{val}%")
+        self.set_hw_bri(val)
+
+    def on_bri_icon_clicked(self, _b):
+        cur = int(self.bri_scale.get_value())
+        self.bri_scale.set_value(100 if cur < 95 else 60)
 
     def get_current_vol(self):
         try: return float(subprocess.check_output(["pamixer", "--get-volume"], text=True, stderr=subprocess.DEVNULL).strip())
@@ -466,6 +544,15 @@ class CyberDeckHubApp(Gtk.Application):
         tags = (["VPN"] if n.get("vpn") else []) + (["DPI"] if n.get("zapret") else []) + [("WI-FI" if n.get("mode") == "wifi" and n.get("connected") else ("LAN" if n.get("connected") else "OFFLINE"))]
         self.net_lbl.set_label("● " + " • ".join(tags))
         self.update_pwr_label()
+        try:
+            bri_v = self.get_current_bri()
+            if abs(self.bri_scale.get_value() - bri_v) > 1.5:
+                self.bri_scale.handler_block_by_func(self.on_bri_changed)
+                self.bri_scale.set_value(bri_v)
+                self.bri_pct_lbl.set_label(f"{int(bri_v)}%")
+                self.bri_scale.handler_unblock_by_func(self.on_bri_changed)
+        except Exception:
+            pass
         try:
             vol_v = float(subprocess.check_output(["pamixer", "--get-volume"], text=True, stderr=subprocess.DEVNULL).strip())
             if abs(self.vol_scale.get_value() - vol_v) > 1.5:

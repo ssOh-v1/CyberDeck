@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+import os, glob, subprocess
+
+HOME = os.path.expanduser("~")
+
+def is_proxy_listening():
+    # Проверяем, слушает ли Happ / локальный прокси какой-либо порт на 127.0.0.1
+    try:
+        out = subprocess.check_output(["ss", "-tln"], text=True, stderr=subprocess.DEVNULL)
+        for port in ("2080", "2081", "7890", "7897", "1080", "10808", "10809", "12334"):
+            if f":{port} " in out:
+                return True
+    except Exception:
+        pass
+    return False
+
+def heal_network():
+    happ_running = subprocess.call(["pgrep", "-fi", "(^|/)(happ|sing-box|xray|v2ray|nekobox|hiddify)"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+
+    if not happ_running and not is_proxy_listening():
+        # Сбрасываем зависший системный прокси GNOME/GTK, который блокирует браузер без Happ
+        subprocess.run(["gsettings", "set", "org.gnome.system.proxy", "mode", "none"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Очищаем принудительный ручной прокси в профилях Firefox, если он остался от VPN
+        for root in (os.path.join(HOME, ".config/mozilla/firefox"), os.path.join(HOME, ".mozilla/firefox")):
+            for pjs in glob.glob(os.path.join(root, "*", "prefs.js")):
+                try:
+                    txt = open(pjs, "r", encoding="utf-8", errors="ignore").read()
+                    if 'user_pref("network.proxy.type", 1);' in txt:
+                        txt = txt.replace('user_pref("network.proxy.type", 1);', 'user_pref("network.proxy.type", 0);')
+                        open(pjs, "w", encoding="utf-8").write(txt)
+                except Exception:
+                    pass
+
+    subprocess.run(["sudo", "-n", "/usr/local/bin/cyber-dns-restore"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+if __name__ == "__main__":
+    heal_network()
