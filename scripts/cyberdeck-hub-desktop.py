@@ -64,11 +64,11 @@ if SINGLE_PIN_WID is None:
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
 GEMINI_PERSONA_PROMPT = (
-    "Ты — Gemini, единственный встроенный ИИ-напарник Дениса (ssOh) в виджете его рабочего стола "
+    "Ты — Gemini 2.5 Pro, флагманский ИИ-архитектор и персональный напарник Дениса (ssOh), встроенный в виджет его рабочего стола "
     "на базе Arch Linux / Wayland / Hyprland (тема Studio Matte-Grey). "
-    "Ты отлично знаешь его задачи: разработку 2D rogue-платформера на Python 3 и Pygame (pygame-ce), "
-    "настройку Linux/Hyprland/Waybar и учёбу в колледже на 2 курсе (Python, C#, C++, JS, Java, HTML, 1С). "
-    "Отвечай по-русски, прямо, по делу и без лишней воды. Если нужен код — пиши чистый рабочий код."
+    "Ты глубоко разбираешься в его проектах: разработке 2D rogue-платформера на Python 3 и Pygame (pygame-ce), "
+    "системном программировании, кастомизации Linux/Hyprland/Waybar и учебных дисциплинах 2 курса (Python, C#, C++, JS, Java, HTML, 1С). "
+    "Давай глубокие, технически точные ответы на русском языке и пиши готовый к запуску, оптимизированный код."
 )
 
 def get_logical_monitor_size():
@@ -91,8 +91,8 @@ def get_logical_monitor_size():
 W_MON, H_MON = get_logical_monitor_size()
 
 DEFAULT_WIDGETS = {
-    "ai":       {"title": "✦ GEMINI",             "x": 18,          "y": 46,  "w": 350, "h": 310, "base_w": 350, "base_h": 310, "min_w": 250, "min_h": 185, "collapsed": False},
-    "notes":    {"title": "▣ ЗАМЕТКИ",            "x": 18,          "y": 368, "w": 350, "h": 225, "base_w": 350, "base_h": 225, "min_w": 220, "min_h": 145, "collapsed": False},
+    "ai":       {"title": "✦ GEMINI 2.5 PRO",     "x": 18,          "y": 46,  "w": 355, "h": 315, "base_w": 355, "base_h": 315, "min_w": 255, "min_h": 185, "collapsed": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",            "x": 18,          "y": 372, "w": 355, "h": 225, "base_w": 355, "base_h": 225, "min_w": 220, "min_h": 145, "collapsed": False},
     "calendar": {"title": "▣ КАЛЕНДАРЬ",          "x": W_MON - 298, "y": 46,  "w": 280, "h": 210, "base_w": 280, "base_h": 205, "min_w": 220, "min_h": 160, "collapsed": False},
     "media":    {"title": "▣ МЕДИАПЛЕЕР",         "x": W_MON - 298, "y": 268, "w": 280, "h": 130, "base_w": 280, "base_h": 128, "min_w": 230, "min_h": 110, "collapsed": False},
     "notif":    {"title": "󰂚 ЦЕНТР УВЕДОМЛЕНИЙ", "x": W_MON - 478, "y": 44,  "w": 460, "h": 540, "base_w": 460, "base_h": 540, "min_w": 340, "min_h": 300, "collapsed": False},
@@ -272,158 +272,92 @@ def is_rate_limited_or_bad(text):
     )
     return any(b in low for b in bad_markers)
 
-def query_native_google_gemini_api(api_key, sys_prompt, messages):
-    try:
-        contents = []
-        for m in messages[-10:]:
-            role = "user" if m.get("role") == "user" else "model"
-            contents.append({"role": role, "parts": [{"text": m.get("content", "")}]})
-        payload = {
-            "systemInstruction": {"parts": [{"text": sys_prompt}]},
-            "contents": contents,
+# ==============================================================================
+# ФЛАГМАНСКОЕ ЯДРО GEMINI 2.5 PRO (ПРЯМОЙ GOOGLE API + МОЩНЫЙ ШЛЮЗ OPENAI-LARGE)
+# ==============================================================================
+def query_native_google_gemini_pro(api_key, sys_prompt, messages):
+    contents = []
+    for m in messages[-12:]:
+        role = "user" if m.get("role") == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": m.get("content", "")}]})
+    payload = {
+        "systemInstruction": {"parts": [{"text": sys_prompt}]},
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.65,
+            "maxOutputTokens": 8192,
         }
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-            if parts and "text" in parts[0]:
-                return parts[0]["text"].strip()
-    except Exception:
-        pass
-    return None
-
-def query_duckduckgo_ai(sys_prompt, messages):
-    try:
-        req_st = urllib.request.Request(
-            "https://duckduckgo.com/duckchat/v1/status",
-            headers={
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0",
-                "Accept": "*/*",
-                "x-vqd-accept": "1",
-            }
-        )
-        with urllib.request.urlopen(req_st, timeout=6) as resp:
-            vqd = resp.headers.get("x-vqd-4", "")
-        if not vqd:
-            return None
-
-        ddg_msgs = [{"role": m["role"], "content": m["content"]} for m in messages[-6:]]
-        if ddg_msgs:
-            ddg_msgs[-1]["content"] = f"{sys_prompt}\n\nСообщение пользователя: {ddg_msgs[-1]['content']}"
-
-        payload = json.dumps({"model": "gpt-4o-mini", "messages": ddg_msgs}).encode("utf-8")
-        req_chat = urllib.request.Request(
-            "https://duckduckgo.com/duckchat/v1/chat",
-            data=payload,
-            headers={
-                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0",
-                "Content-Type": "application/json",
-                "Accept": "text/event-stream",
-                "x-vqd-4": vqd,
-                "Origin": "https://duckduckgo.com",
-                "Referer": "https://duckduckgo.com/",
-            }
-        )
-        chunks = []
-        with urllib.request.urlopen(req_chat, timeout=25) as r_chat:
-            for raw_line in r_chat:
-                ln = raw_line.decode("utf-8", errors="ignore").strip()
-                if ln.startswith("data: "):
-                    data_str = ln[6:].strip()
-                    if data_str == "[DONE]":
-                        break
-                    try:
-                        obj = json.loads(data_str)
-                        if obj.get("message"):
-                            chunks.append(obj["message"])
-                    except Exception:
-                        pass
-        ans = "".join(chunks).strip()
-        if not is_rate_limited_or_bad(ans):
-            return ans
-    except Exception:
-        pass
-    return None
-
-def query_blackbox_ai(sys_prompt, messages):
-    try:
-        bb_msgs = [{"role": "user", "content": sys_prompt}] + messages[-5:]
-        payload = {"messages": bb_msgs, "model": "deepseek-v3", "max_tokens": 1024}
-        res = subprocess.run(
-            ["curl", "-s", "-L", "--connect-timeout", "6", "--max-time", "25",
-             "-X", "POST", "https://api.blackbox.ai/api/chat",
-             "-H", "Content-Type: application/json",
-             "-H", "Origin: https://www.blackbox.ai",
-             "-H", "Referer: https://www.blackbox.ai/",
-             "-A", "Mozilla/5.0 (X11; Linux x86_64)",
-             "-d", json.dumps(payload, ensure_ascii=False)],
-            capture_output=True, text=True
-        )
-        ans = re.sub(r"\$@\$.*?\$@\$", "", res.stdout or "", flags=re.S).strip()
-        if not is_rate_limited_or_bad(ans):
-            return ans
-    except Exception:
-        pass
+    }
+    # Сначала обращаемся к самой мощной модели gemini-2.5-pro, при лимите квоты — мгновенно к gemini-2.5-flash
+    for g_model in ("gemini-2.5-pro", "gemini-2.5-flash"):
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{g_model}:generateContent?key={api_key}"
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                for p in parts:
+                    if "text" in p and p["text"].strip():
+                        return p["text"].strip()
+        except Exception:
+            continue
     return None
 
 def query_gemini(messages, session_topic=""):
     topic_ctx = f" Тема текущего чата: «{session_topic}»." if session_topic else ""
     sys_prompt = GEMINI_PERSONA_PROMPT + topic_ctx
 
+    # 1. Прямой канал Google Gemini 2.5 Pro (максимальная мощность и 0 секунд ожидания)
     if os.path.isfile(GEM_KEY_FILE):
         gkey = open(GEM_KEY_FILE, "r", encoding="utf-8").read().strip()
         if gkey:
-            ans_native = query_native_google_gemini_api(gkey, sys_prompt, messages)
-            if ans_native:
-                return ans_native
+            ans_pro = query_native_google_gemini_pro(gkey, sys_prompt, messages)
+            if ans_pro:
+                return ans_pro
 
-    ans_ddg = query_duckduckgo_ai(sys_prompt, messages)
-    if ans_ddg:
-        return ans_ddg
+    # 2. Бесключевой канал: одиночный чистый запрос к старшей модели openai-large (без цикла спама по IP)
+    seed = random.randint(10000, 999999)
+    payload = {
+        "model": "openai-large",
+        "seed": seed,
+        "messages": [{"role": "system", "content": sys_prompt}] + messages[-8:],
+    }
+    try:
+        res = subprocess.run(
+            ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "35",
+             "-X", "POST", "https://text.pollinations.ai/openai",
+             "-H", "Content-Type: application/json",
+             "-A", "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0",
+             "-d", json.dumps(payload, ensure_ascii=False)],
+            capture_output=True, text=True
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            raw = res.stdout.strip()
+            try:
+                data = json.loads(raw)
+                if "choices" in data and data["choices"]:
+                    content = data["choices"][0].get("message", {}).get("content", "").strip()
+                    if content and not is_rate_limited_or_bad(content):
+                        return content
+            except Exception:
+                if not is_rate_limited_or_bad(raw):
+                    return raw
+            if "free limit reached" in raw.lower() or "45 seconds" in raw.lower():
+                return (
+                    "⏳ Публичный бесключевой шлюз ограничивает частоту до 1 запроса в 45 секунд.\n\n"
+                    "Чтобы включить полную мощь Gemini 2.5 Pro без ожидания:\n"
+                    "1. Нажми кнопку «🔑» в правом верхнем углу этого виджета.\n"
+                    "2. Выбери «🌐 Открыть Google AI Studio» и скопируй бесплатный ключ.\n"
+                    "3. Снова нажми «🔑» -> «📋 Вставить ключ из буфера обмена»."
+                )
+    except Exception as e:
+        return f"Ошибка сети: {e}"
 
-    ans_bb = query_blackbox_ai(sys_prompt, messages)
-    if ans_bb:
-        return ans_bb
-
-    seed = random.randint(10000, 9999999)
-    for try_model in ("gemini", "openai", "qwen-coder", "mistral"):
-        try:
-            payload = {
-                "model": try_model,
-                "seed": seed,
-                "private": True,
-                "messages": [{"role": "system", "content": sys_prompt}] + messages[-5:],
-            }
-            res = subprocess.run(
-                ["curl", "-s", "-L", "--connect-timeout", "7", "--max-time", "25",
-                 "-X", "POST", "https://text.pollinations.ai/openai?referrer=https://pollinations.ai",
-                 "-H", "Content-Type: application/json",
-                 "-H", "Referer: https://pollinations.ai/",
-                 "-H", "Origin: https://pollinations.ai",
-                 "-A", f"Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Studio/{seed}",
-                 "-d", json.dumps(payload, ensure_ascii=False)],
-                capture_output=True, text=True
-            )
-            if res.returncode == 0 and res.stdout.strip():
-                raw = res.stdout.strip()
-                try:
-                    data = json.loads(raw)
-                    if "choices" in data and data["choices"]:
-                        content = data["choices"][0].get("message", {}).get("content", "").strip()
-                        if not is_rate_limited_or_bad(content):
-                            return content
-                except Exception:
-                    if not is_rate_limited_or_bad(raw):
-                        return raw
-        except Exception:
-            pass
-
-    return "Канал связи временно перегружен, повтори отправку через пару секунд."
+    return "⏳ Публичный шлюз просит подождать ~30 секунд перед следующим вопросом (или нажми «🔑» сверху для прямого подключения Gemini 2.5 Pro без лимитов)."
 
 class OverlayWidgetCard:
     def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False, extra_hdr_btns=None):
@@ -536,7 +470,7 @@ class OverlayWidgetCard:
         f_track  = max(10, int(round(11.5 * scale)))
         f_artist = max(9,  int(round(10.0 * scale)))
         pad_v    = max(2,  int(round(2.5  * scale)))
-        pad_h    = max(4,  int(round(6.0  * scale)))
+        pad_h    = max(4,  int(round(5.5  * scale)))
         cell_w   = max(20, int(round(26.0 * scale)))
         cell_h   = max(16, int(round(20.0 * scale)))
 
@@ -723,17 +657,17 @@ class StudioDesktopApp(Gtk.Application):
                 {
                     "id": "gamedev",
                     "title": "🎮 Разработка игры",
-                    "messages": [{"role": "assistant", "content": "Привет, Денис! Я на связи прямо в виджете. Готов помогать с твоим 2D rogue-платформером на Pygame, логикой врагов и карточками предметов."}],
+                    "messages": [{"role": "assistant", "content": "Привет, Денис! Я обновлён до Gemini 2.5 Pro. Готов помогать с твоим 2D rogue-платформером на Pygame, логикой врагов и архитектурой кода."}],
                 },
                 {
                     "id": "linux-env",
                     "title": "🖥 Окружение Studio",
-                    "messages": [{"role": "assistant", "content": "Чат «Окружение Studio» активен. Если нужно подправить конфиги Hyprland, Waybar или скрипты — пиши прямо сюда."}],
+                    "messages": [{"role": "assistant", "content": "Чат «Окружение Studio» активен. Пиши сюда задачи по Hyprland, Waybar или скриптам."}],
                 },
                 {
                     "id": "college-code",
                     "title": "📚 Учёба и экзамены",
-                    "messages": [{"role": "assistant", "content": "Чат «Учёба и экзамены» готов. Разберём любые задачи по Python, C#, C++, JS, Java, HTML или 1С."}],
+                    "messages": [{"role": "assistant", "content": "Чат «Учёба и экзамены» готов. Разберём задачи по Python, C#, C++, JS, Java, HTML или 1С."}],
                 },
             ]
         }
@@ -754,25 +688,22 @@ class StudioDesktopApp(Gtk.Application):
     def get_active_chat_session(self):
         sessions = self.chats_data.get("sessions", [])
         if not sessions:
-            sessions.append({"id": "default", "title": "💬 Основной чат", "messages": [{"role": "assistant", "content": "Новый чат готов к работе!"}]})
+            sessions.append({"id": "default", "title": "Основной чат", "messages": [{"role": "assistant", "content": "Новый чат готов к работе!"}]})
         idx = max(0, min(int(self.chats_data.get("active_idx", 0)), len(sessions) - 1))
         self.chats_data["active_idx"] = idx
         return idx, sessions[idx]
 
-    # ==========================================================================
-    # 1. ВИДЖЕТ ✦ GEMINI (БЕЗ ВЫБОРА СТОРОННИХ МОДЕЛЕЙ, ТОЛЬКО GEMINI И ЧАТЫ)
-    # ==========================================================================
     def build_ai_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
-        # Единственная верхняя панель: переключение чатов + создание (+) + удаление (✕)
+        # Верхняя панель: ◀ | 💬 Название (1/N) ▾ | ▶ | + | ✕ | 🔑
         chat_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
 
         b_prev_c = Gtk.Button(label="◀"); b_prev_c.add_css_class("mini-btn"); b_prev_c.set_has_tooltip(False)
         b_prev_c.connect("clicked", lambda _b: self.shift_chat_session(-1))
         chat_row.append(b_prev_c)
 
-        self.chat_sel_btn = Gtk.Button(label="💬 Чат ▾")
+        self.chat_sel_btn = Gtk.Button(label="💬 Основной чат (1/1) ▾")
         self.chat_sel_btn.add_css_class("mini-btn"); self.chat_sel_btn.set_hexpand(True); self.chat_sel_btn.set_has_tooltip(False)
         self.chat_sel_btn.connect("clicked", self.on_open_chats_rofi_menu)
         rc_c = Gtk.GestureClick.new(); rc_c.set_button(3)
@@ -795,9 +726,13 @@ class StudioDesktopApp(Gtk.Application):
         b_del_c.add_controller(rc_del_c)
         chat_row.append(b_del_c)
 
+        # Кнопка подключения прямого ключа Gemini 2.5 Pro API
+        b_key = Gtk.Button(label="🔑"); b_key.add_css_class("mini-btn"); b_key.set_has_tooltip(False)
+        b_key.connect("clicked", self.on_set_gemini_key_dialog)
+        chat_row.append(b_key)
+
         box.append(chat_row)
 
-        # Окно диалога с Gemini
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
         self.chat_tv = Gtk.TextView()
         self.chat_tv.set_editable(False); self.chat_tv.set_cursor_visible(False)
@@ -807,7 +742,6 @@ class StudioDesktopApp(Gtk.Application):
         sc.set_child(self.chat_tv)
         box.append(sc)
 
-        # Поле ввода сообщения
         in_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self.ai_entry = Gtk.Entry()
         self.ai_entry.add_css_class("compact-entry"); self.ai_entry.set_hexpand(True); self.ai_entry.set_has_tooltip(False)
@@ -831,6 +765,41 @@ class StudioDesktopApp(Gtk.Application):
         self.render_chat_log()
         return box
 
+    def on_set_gemini_key_dialog(self, _b):
+        def _worker():
+            has_k = os.path.isfile(GEM_KEY_FILE) and bool(open(GEM_KEY_FILE).read().strip())
+            st_lbl = "АКТИВЕН ПРЯМОЙ GEMINI 2.5 PRO" if has_k else "ПУБЛИЧНЫЙ ШЛЮЗ"
+            ch = rofi_prompt(f"🔑 GEMINI 2.5 PRO [{st_lbl}]", [
+                "📋 Вставить API-ключ из буфера обмена (Ctrl+C -> клик сюда)",
+                "🌐 Открыть Google AI Studio в браузере (получить бесплатный ключ)",
+                "🗑 Удалить ключ и вернуться на публичный шлюз",
+            ])
+            if not ch:
+                return
+            if "Вставить API-ключ" in ch:
+                try:
+                    clip = subprocess.check_output(["wl-paste", "-n"], text=True, stderr=subprocess.DEVNULL).strip()
+                except Exception:
+                    clip = ""
+                if clip and len(clip) > 15:
+                    open(GEM_KEY_FILE, "w", encoding="utf-8").write(clip)
+                    self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Прямой ключ из буфера обмена подключён!'")
+                else:
+                    manual = rofi_prompt("Вставьте ключ AIzaSy...", [""])
+                    if manual.strip():
+                        open(GEM_KEY_FILE, "w", encoding="utf-8").write(manual.strip())
+                        self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Прямой ключ успешно подключён!'")
+            elif "Открыть Google AI Studio" in ch:
+                self.spawn_raw("xdg-open 'https://aistudio.google.com/apikey'")
+            elif "Удалить ключ" in ch:
+                if os.path.isfile(GEM_KEY_FILE):
+                    os.remove(GEM_KEY_FILE)
+                self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI' 'Включён публичный шлюз'")
+            elif ch.strip().startswith("AIza"):
+                open(GEM_KEY_FILE, "w", encoding="utf-8").write(ch.strip())
+                self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Прямой ключ успешно подключён!'")
+        threading.Thread(target=_worker, daemon=True).start()
+
     def on_delete_current_chat_btn(self, _b):
         idx, _ = self.get_active_chat_session()
         self._finish_delete_chat(idx)
@@ -842,7 +811,8 @@ class StudioDesktopApp(Gtk.Application):
             lines = ["🔥 Удалить ВСЕ старые чаты, кроме текущего"]
             for i, s in enumerate(sessions):
                 tag = " [ТЕКУЩИЙ]" if i == cur_idx else ""
-                lines.append(f"{i+1}. 🗑 Удалить чат «{s['title']}» ({len(s.get('messages', []))} сообщ.){tag}")
+                clean_t = re.sub(r"^[💬\s]+", "", s.get("title", "")).strip() or "Чат"
+                lines.append(f"{i+1}. 🗑 Удалить чат «{clean_t}» ({len(s.get('messages', []))} сообщ.){tag}")
             ch = rofi_prompt("🗑 УДАЛЕНИЕ СТАРЫХ ЧАТОВ", lines)
             if not ch:
                 return
@@ -874,16 +844,17 @@ class StudioDesktopApp(Gtk.Application):
 
     def on_create_new_chat_dialog(self, _b):
         def _worker():
-            title = rofi_prompt("💬 Название нового чата", ["🎮 Механики игры", "🖥 Кастомизация Linux", "🐍 Скрипты и код", "📚 Учёба"])
+            title = rofi_prompt("💬 Название нового чата", ["🎮 Разработка игры", "🖥 Окружение Linux", "🐍 Скрипты и код", "📚 Учёба"])
             if title:
                 GLib.idle_add(self._finish_create_chat, title)
         threading.Thread(target=_worker, daemon=True).start()
 
     def _finish_create_chat(self, title):
+        clean_t = re.sub(r"^[💬\s]+", "", title).strip() or "Новый чат"
         self.chats_data["sessions"].append({
             "id": f"chat-{int(time.time())}",
-            "title": title,
-            "messages": [{"role": "assistant", "content": f"Создан новый чат «{title}». Слушаю тебя, Денис — какую задачу разбираем?"}],
+            "title": clean_t,
+            "messages": [{"role": "assistant", "content": f"Создан новый чат «{clean_t}». Слушаю тебя, Денис — какую задачу разбираем?"}],
         })
         self.chats_data["active_idx"] = len(self.chats_data["sessions"]) - 1
         self.save_chats_db()
@@ -894,14 +865,17 @@ class StudioDesktopApp(Gtk.Application):
         def _worker():
             sessions = self.chats_data.get("sessions", [])
             cur_idx = int(self.chats_data.get("active_idx", 0))
-            lines = [f"{i+1}. 💬 {s['title']}" + ("  [● АКТИВЕН]" if i == cur_idx else f"  ({len(s.get('messages', []))} сообщ.)") for i, s in enumerate(sessions)]
+            lines = []
+            for i, s in enumerate(sessions):
+                clean_t = re.sub(r"^[💬\s]+", "", s.get("title", "")).strip() or "Чат"
+                lines.append(f"{i+1}. 💬 {clean_t}" + ("  [● АКТИВЕН]" if i == cur_idx else f"  ({len(s.get('messages', []))} сообщ.)"))
             lines += [
                 "➕ Создать новый чат...",
                 "✎ Переименовать текущий чат...",
                 "🗑 Выбрать и удалить старые чаты...",
                 "🔥 Удалить все старые чаты, кроме текущего",
             ]
-            ch = rofi_prompt("💬 ЧАТЫ С GEMINI", lines)
+            ch = rofi_prompt("💬 ЧАТЫ С GEMINI 2.5 PRO", lines)
             if not ch: return
             if "Создать новый" in ch:
                 new_t = rofi_prompt("💬 Название нового чата", ["🎮 Новый проект"])
@@ -926,7 +900,8 @@ class StudioDesktopApp(Gtk.Application):
         return False
 
     def _finish_rename_chat(self, idx, new_title):
-        self.chats_data["sessions"][idx]["title"] = new_title
+        clean_t = re.sub(r"^[💬\s]+", "", new_title).strip() or "Чат"
+        self.chats_data["sessions"][idx]["title"] = clean_t
         self.save_chats_db(); self.render_chat_log()
         return False
 
@@ -937,7 +912,7 @@ class StudioDesktopApp(Gtk.Application):
         else:
             self.chats_data["sessions"] = [{
                 "id": f"chat-{int(time.time())}",
-                "title": "💬 Основной чат",
+                "title": "Основной чат",
                 "messages": [{"role": "assistant", "content": "Старый чат удалён. Готов к новой задаче!"}],
             }]
             self.chats_data["active_idx"] = 0
@@ -948,15 +923,16 @@ class StudioDesktopApp(Gtk.Application):
     def render_chat_log(self):
         idx, sess = self.get_active_chat_session()
         total_c = len(self.chats_data.get("sessions", []))
+        clean_t = re.sub(r"^[💬\s]+", "", sess.get("title", "")).strip() or "Основной чат"
         if hasattr(self, "chat_sel_btn"):
-            self.chat_sel_btn.set_label(f"💬 {sess['title'][:18]} ({idx+1}/{total_c}) ▾")
+            self.chat_sel_btn.set_label(f"💬 {clean_t[:16]} ({idx+1}/{total_c}) ▾")
 
         lines = []
         for msg in sess.get("messages", [])[-12:]:
-            prefix = "▸ ВЫ:" if msg["role"] == "user" else "✦ Gemini:"
+            prefix = "▸ ВЫ:" if msg["role"] == "user" else "✦ Gemini 2.5 Pro:"
             lines.append(f"{prefix}\n{msg['content']}")
         if sess["id"] in self.ai_busy_sessions:
-            lines.append("✦ Gemini:\n▪ печатаю ответ...")
+            lines.append("✦ Gemini 2.5 Pro:\n▪ анализирую и пишу ответ...")
         self.chat_buf.set_text("\n\n".join(lines))
         GLib.idle_add(self.scroll_chat_bottom)
 
@@ -979,7 +955,7 @@ class StudioDesktopApp(Gtk.Application):
         self.render_chat_log()
 
         msgs_snapshot = list(sess["messages"])
-        topic_title = sess.get("title", "")
+        topic_title = re.sub(r"^[💬\s]+", "", sess.get("title", "")).strip()
 
         def worker():
             ans = query_gemini(msgs_snapshot, session_topic=topic_title)
@@ -1002,17 +978,18 @@ class StudioDesktopApp(Gtk.Application):
         for msg in reversed(sess.get("messages", [])):
             if msg["role"] == "assistant":
                 subprocess.run(["wl-copy"], input=msg["content"], text=True, stderr=subprocess.DEVNULL)
-                self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI' 'Ответ скопирован в буфер обмена'")
+                self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Ответ скопирован в буфер обмена'")
                 break
 
     def on_clear_ai_chat(self, _b):
         _, sess = self.get_active_chat_session()
-        sess["messages"] = [{"role": "assistant", "content": f"История чата «{sess['title']}» очищена. О чём поговорим?"}]
+        clean_t = re.sub(r"^[💬\s]+", "", sess.get("title", "")).strip() or "Основной чат"
+        sess["messages"] = [{"role": "assistant", "content": f"История чата «{clean_t}» очищена. О чём поговорим?"}]
         self.save_chats_db()
         self.render_chat_log()
 
     # ==========================================================================
-    # 2. ВИДЖЕТ ЗАМЕТОК С УДАЛЕНИЕМ СТАРЫХ ВКЛАДОК (✕)
+    # 2. ВИДЖЕТ ЗАМЕТОК
     # ==========================================================================
     def load_notes_db(self):
         try:
@@ -1034,7 +1011,7 @@ class StudioDesktopApp(Gtk.Application):
             "active_idx": 0,
             "pages": [
                 {"id": "game-notes", "title": "🎮 Разработка игры", "content": first_text},
-                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Виджет с Gemini и удалением старых чатов\n"},
+                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Виджет с Gemini 2.5 Pro и удалением старых чатов\n"},
                 {"id": "study-notes", "title": "📚 Учёба и зачёты", "content": "[ ] Зачёты в декабре (Python, C#, C++)\n"},
             ]
         }
@@ -1053,7 +1030,7 @@ class StudioDesktopApp(Gtk.Application):
     def get_active_note_page(self):
         pages = self.notes_data.get("pages", [])
         if not pages:
-            pages.append({"id": "default", "title": "📑 Заметка 1", "content": ""})
+            pages.append({"id": "default", "title": "Заметка 1", "content": ""})
         idx = max(0, min(int(self.notes_data.get("active_idx", 0)), len(pages) - 1))
         self.notes_data["active_idx"] = idx
         return idx, pages[idx]
@@ -1121,7 +1098,8 @@ class StudioDesktopApp(Gtk.Application):
             lines = ["🔥 Удалить ВСЕ старые вкладки заметок, кроме текущей"]
             for i, p in enumerate(pages):
                 tag = " [ТЕКУЩАЯ]" if i == cur_idx else ""
-                lines.append(f"{i+1}. 🗑 Удалить заметку «{p['title']}»{tag}")
+                clean_t = re.sub(r"^[📑\s]+", "", p.get("title", "")).strip() or "Заметка"
+                lines.append(f"{i+1}. 🗑 Удалить заметку «{clean_t}»{tag}")
             ch = rofi_prompt("🗑 УДАЛЕНИЕ СТАРЫХ ЗАМЕТОК", lines)
             if not ch:
                 return
@@ -1156,8 +1134,9 @@ class StudioDesktopApp(Gtk.Application):
     def refresh_note_page_ui(self):
         idx, page = self.get_active_note_page()
         total_p = len(self.notes_data.get("pages", []))
+        clean_t = re.sub(r"^[📑\s]+", "", page.get("title", "")).strip() or "Заметка"
         if hasattr(self, "note_sel_btn"):
-            self.note_sel_btn.set_label(f"📑 {page['title'][:16]} ({idx+1}/{total_p}) ▾")
+            self.note_sel_btn.set_label(f"📑 {clean_t[:16]} ({idx+1}/{total_p}) ▾")
         if hasattr(self, "notes_buf"):
             self.updating_notes_ui = True
             self.notes_buf.set_text(page.get("content", ""))
@@ -1176,7 +1155,8 @@ class StudioDesktopApp(Gtk.Application):
         threading.Thread(target=_worker, daemon=True).start()
 
     def _finish_create_note(self, title):
-        self.notes_data["pages"].append({"id": f"note-{int(time.time())}", "title": title, "content": f"# {title}\n[ ] "})
+        clean_t = re.sub(r"^[📑\s]+", "", title).strip() or "Новая заметка"
+        self.notes_data["pages"].append({"id": f"note-{int(time.time())}", "title": clean_t, "content": f"# {clean_t}\n[ ] "})
         self.notes_data["active_idx"] = len(self.notes_data["pages"]) - 1
         self.save_notes_db(); self.refresh_note_page_ui()
         return False
@@ -1185,7 +1165,10 @@ class StudioDesktopApp(Gtk.Application):
         def _worker():
             pages = self.notes_data.get("pages", [])
             cur_idx = int(self.notes_data.get("active_idx", 0))
-            lines = [f"{i+1}. 📑 {p['title']}" + ("  [● АКТИВНА]" if i == cur_idx else "") for i, p in enumerate(pages)]
+            lines = []
+            for i, p in enumerate(pages):
+                clean_t = re.sub(r"^[📑\s]+", "", p.get("title", "")).strip() or "Заметка"
+                lines.append(f"{i+1}. 📑 {clean_t}" + ("  [● АКТИВНА]" if i == cur_idx else ""))
             lines += [
                 "➕ Создать новую вкладку заметок...",
                 "✎ Переименовать текущую заметку...",
@@ -1217,7 +1200,8 @@ class StudioDesktopApp(Gtk.Application):
         return False
 
     def _finish_rename_note(self, idx, new_title):
-        self.notes_data["pages"][idx]["title"] = new_title
+        clean_t = re.sub(r"^[📑\s]+", "", new_title).strip() or "Заметка"
+        self.notes_data["pages"][idx]["title"] = clean_t
         self.save_notes_db(); self.refresh_note_page_ui()
         return False
 
@@ -1226,7 +1210,7 @@ class StudioDesktopApp(Gtk.Application):
             self.notes_data["pages"].pop(idx)
             self.notes_data["active_idx"] = max(0, min(idx, len(self.notes_data["pages"]) - 1))
         else:
-            self.notes_data["pages"] = [{"id": f"note-{int(time.time())}", "title": "📑 Основная заметка", "content": "[ ] "}]
+            self.notes_data["pages"] = [{"id": f"note-{int(time.time())}", "title": "Основная заметка", "content": "[ ] "}]
             self.notes_data["active_idx"] = 0
         self.save_notes_db()
         self.refresh_note_page_ui()
