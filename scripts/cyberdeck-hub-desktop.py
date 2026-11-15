@@ -301,9 +301,9 @@ class WorkHubApp(Gtk.Application):
         sys_cap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2); sys_cap.add_css_class("power-capsule")
         btop_b = Gtk.Button(label="BTOP"); btop_b.add_css_class("icon-act-btn"); btop_b.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-tool btop")); sys_cap.append(btop_b)
         lock_b = Gtk.Button(); lock_b.add_css_class("icon-act-btn"); lock_b.set_child(ui_svg("lock.svg", 15)); lock_b.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-lock")); sys_cap.append(lock_b)
-        sddm_b = Gtk.Button(label="SDDM"); sddm_b.add_css_class("danger-act-btn"); sddm_b.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-theme --sync-session; hyprctl dispatch exit")); sys_cap.append(sddm_b)
-        reb_b = Gtk.Button(); reb_b.add_css_class("icon-act-btn"); reb_b.set_child(ui_svg("reboot.svg", 15)); reb_b.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-theme --sync-session; systemctl reboot")); sys_cap.append(reb_b)
-        off_b = Gtk.Button(); off_b.add_css_class("danger-act-btn"); off_b.set_child(ui_svg("power.svg", 15)); off_b.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-theme --sync-session; systemctl poweroff")); sys_cap.append(off_b)
+        sddm_b = Gtk.Button(label="SDDM"); sddm_b.add_css_class("danger-act-btn"); sddm_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme --sync-session; hyprctl dispatch exit")); sys_cap.append(sddm_b)
+        reb_b = Gtk.Button(); reb_b.add_css_class("icon-act-btn"); reb_b.set_child(ui_svg("reboot.svg", 15)); reb_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme --sync-session; systemctl reboot")); sys_cap.append(reb_b)
+        off_b = Gtk.Button(); off_b.add_css_class("danger-act-btn"); off_b.set_child(ui_svg("power.svg", 15)); off_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme --sync-session; systemctl poweroff")); sys_cap.append(off_b)
         return sys_cap
 
     def build_app_grid(self, max_cols=5):
@@ -331,7 +331,7 @@ class WorkHubApp(Gtk.Application):
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5); lz.append(self.ws_box)
         nb = Gtk.Button(label="+ Стол"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(nb)
         self.bg_menu_btn = Gtk.Button(label="◈ Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
-        tb = Gtk.Button(label="◈ Мир / Тема"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-theme menu")); lz.append(tb)
+        tb = Gtk.Button(label="◈ Мир / Тема"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); lz.append(tb)
         top.set_start_widget(lz)
 
         cp = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8); cp.add_css_class("telemetry-pod")
@@ -377,7 +377,7 @@ class WorkHubApp(Gtk.Application):
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); lz.append(self.ws_box)
         b_portal = Gtk.Button(label="+ Портал"); b_portal.add_css_class("ws-new-btn"); b_portal.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(b_portal)
         self.bg_menu_btn = Gtk.Button(label="🎒 Инвентарь фона [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
-        tb = Gtk.Button(label="⚔ Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-theme menu")); lz.append(tb)
+        tb = Gtk.Button(label="⚔ Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); lz.append(tb)
         rpg_top.set_start_widget(lz)
 
         # Центральные RPG-шкалы: HP (Красный), MANA (Синий), STAMINA (Золотой)
@@ -466,7 +466,7 @@ class WorkHubApp(Gtk.Application):
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); pill_l.append(self.ws_box)
         nb = Gtk.Button(label="+ Поляна"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); pill_l.append(nb)
         self.bg_menu_btn = Gtk.Button(label="🌿 Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); pill_l.append(self.bg_menu_btn)
-        tb = Gtk.Button(label="🌿 Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-theme menu")); pill_l.append(tb)
+        tb = Gtk.Button(label="🌿 Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); pill_l.append(tb)
         wb_row.set_start_widget(pill_l)
 
         pill_c = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12); pill_c.add_css_class("waybar-pill")
@@ -548,7 +548,7 @@ class WorkHubApp(Gtk.Application):
         self.bg_menu_btn = Gtk.Button(label="🎨 Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.set_hexpand(True); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu"))
         row_b.append(nb); row_b.append(self.bg_menu_btn); easel.append(row_b)
 
-        tb = Gtk.Button(label="🎨 Сменить мир [SUPER+T]"); tb.add_css_class("primary-btn"); tb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-theme menu")); easel.append(tb)
+        tb = Gtk.Button(label="🎨 Сменить мир [SUPER+T]"); tb.add_css_class("primary-btn"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); easel.append(tb)
 
         sp = Gtk.Box(); sp.set_vexpand(True); easel.append(sp)
         easel.append(self.make_sliders_pair(54))
@@ -578,7 +578,7 @@ class WorkHubApp(Gtk.Application):
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); lz.append(self.ws_box)
         nb = Gtk.Button(label="+ Scene"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(nb)
         self.bg_menu_btn = Gtk.Button(label="📦 Nodes [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
-        tb = Gtk.Button(label="🎮 Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-theme menu")); lz.append(tb)
+        tb = Gtk.Button(label="🎮 Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); lz.append(tb)
         bar.set_start_widget(lz)
 
         # Центральный кластер Playtest (как в Godot / Unity)
