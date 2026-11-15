@@ -52,16 +52,16 @@ if SINGLE_PIN_WID is None:
 
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
+# Только 4 нужных виджета (DEV & GIT полностью удалён) с базовыми пропорциями для масштабирования
 DEFAULT_WIDGETS = {
-    "ai":       {"title": "▣ AI STUDIO",  "x": 18,   "y": 46,  "w": 335, "h": 295, "min_w": 250, "min_h": 185, "collapsed": False},
-    "notes":    {"title": "▣ ЗАМЕТКИ",    "x": 18,   "y": 352, "w": 285, "h": 185, "min_w": 210, "min_h": 120, "collapsed": False},
-    "gamedev":  {"title": "▣ DEV & GIT",  "x": 18,   "y": 548, "w": 285, "h": 145, "min_w": 210, "min_h": 115, "collapsed": False},
-    "calendar": {"title": "▣ КАЛЕНДАРЬ",  "x": 1632, "y": 46,  "w": 270, "h": 180, "min_w": 220, "min_h": 155, "collapsed": False},
-    "media":    {"title": "▣ МЕДИАПЛЕЕР", "x": 1632, "y": 238, "w": 270, "h": 122, "min_w": 235, "min_h": 110, "collapsed": False},
+    "ai":       {"title": "▣ AI STUDIO",  "x": 18,   "y": 46,  "w": 335, "h": 300, "base_w": 335, "base_h": 300, "min_w": 240, "min_h": 180, "collapsed": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",    "x": 18,   "y": 358, "w": 335, "h": 210, "base_w": 335, "base_h": 210, "min_w": 210, "min_h": 130, "collapsed": False},
+    "calendar": {"title": "▣ КАЛЕНДАРЬ",  "x": 1622, "y": 46,  "w": 280, "h": 210, "base_w": 280, "base_h": 210, "min_w": 220, "min_h": 160, "collapsed": False},
+    "media":    {"title": "▣ МЕДИАПЛЕЕР", "x": 1622, "y": 268, "w": 280, "h": 130, "base_w": 280, "base_h": 130, "min_w": 230, "min_h": 110, "collapsed": False},
 }
 
 FALLBACK_ART = os.path.join(ART_CACHE, "fallback_vinyl.svg")
-open(FALLBACK_ART, "w", encoding="utf-8").write("""<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
+open(FALLBACK_ART, "w", encoding="utf-8").write("""<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 52 52">
   <rect width="52" height="52" rx="6" fill="#16181d"/>
   <circle cx="26" cy="26" r="18" fill="none" stroke="#3a3f48" stroke-width="2"/>
   <circle cx="26" cy="26" r="12" fill="none" stroke="#282c34" stroke-width="1.5"/>
@@ -98,17 +98,21 @@ def load_widgets_state():
     try:
         if os.path.isfile(STATE_FILE):
             saved = json.load(open(STATE_FILE, encoding="utf-8"))
-            for k, v in saved.items():
-                if k in st and isinstance(v, dict):
-                    st[k].update(v)
+            for k in list(st.keys()):
+                if k in saved and isinstance(saved[k], dict):
+                    st[k].update(saved[k])
                     st[k]["title"] = DEFAULT_WIDGETS[k]["title"]
+                    st[k]["base_w"] = DEFAULT_WIDGETS[k]["base_w"]
+                    st[k]["base_h"] = DEFAULT_WIDGETS[k]["base_h"]
     except Exception:
         pass
     return st
 
 def save_widgets_state(st):
     os.makedirs(CFG_DIR, exist_ok=True)
-    json.dump(st, open(STATE_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    # Сохраняем только актуальные 4 виджета
+    clean_st = {k: st[k] for k in DEFAULT_WIDGETS if k in st}
+    json.dump(clean_st, open(STATE_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
 
 def resolve_cyber_svg(spec, fallback_glyph="default"):
     theme_apps = os.path.join(HOME, ".local/share/icons/CyberDeck-Icons/scalable/apps")
@@ -133,35 +137,6 @@ def make_cyber_icon_widget(icon_spec, size=18):
     img = Gtk.Image.new_from_file(svg_path) if svg_path else Gtk.Image.new_from_icon_name("application-x-executable")
     img.set_pixel_size(size)
     return img
-
-def scan_dev_ports():
-    ports = []
-    try:
-        for ln in open("/proc/net/tcp").readlines()[1:]:
-            parts = ln.split()
-            if len(parts) > 3 and parts[3] == "0A":
-                p = int(parts[1].split(":")[1], 16)
-                if p in (3000, 4000, 5000, 5173, 7860, 8000, 8080, 8888, 11434) and f":{p}" not in ports:
-                    ports.append(f":{p}")
-    except Exception: pass
-    return " ".join(ports[:4]) if ports else "нет"
-
-def read_git_projects_status():
-    rows = []
-    candidates = [os.path.join(HOME, "CyberDeck")]
-    for d in sorted(glob.glob(os.path.join(HOME, "*"))):
-        if os.path.isdir(os.path.join(d, ".git")) and d not in candidates:
-            candidates.append(d)
-    for repo in candidates[:2]:
-        if not os.path.isdir(os.path.join(repo, ".git")): continue
-        name = os.path.basename(repo)
-        try:
-            br = subprocess.check_output(["git", "-C", repo, "symbolic-ref", "--short", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
-            chg = len(subprocess.check_output(["git", "-C", repo, "status", "--porcelain"], text=True, stderr=subprocess.DEVNULL).splitlines())
-            st = f"изм:{chg}" if chg > 0 else "ок"
-            rows.append(f"▸ {name[:12]:<12} [{br}] • {st}")
-        except Exception: pass
-    return "\n".join(rows) if rows else "▸ Git-репозитории готовы"
 
 def get_media_sink_inputs():
     ids, vols = [], []
@@ -228,7 +203,7 @@ def read_music_and_art():
                         ["curl", "-L", "-s", "--max-time", "4", "-o", cached_p, art_url],
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                     )
-            return f"{ic} {title[:22]}", f"{artist[:22] or 'Медиапоток'}", art_file
+            return f"{ic} {title[:28]}", f"{artist[:28] or 'Медиапоток'}", art_file
     except Exception:
         pass
     return "⏹ Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART
@@ -241,11 +216,12 @@ def load_ai_models():
                 return m
     except Exception:
         pass
-    return [{"id": "qwen-coder", "name": "Qwen 2.5 Coder 32B", "provider": "pollinations", "model": "qwen-coder"}]
+    return [{"id": "gemini-argon", "name": "Gemini Argon (Флагманский ИИ и Код)", "provider": "pollinations", "model": "gemini"}]
 
 def query_ai_llm(model_meta, messages):
     prov = model_meta.get("provider", "pollinations")
-    mod_name = model_meta.get("model", "openai")
+    mod_name = model_meta.get("model", "gemini")
+    m_title = model_meta.get("name", "Gemini Argon")
 
     if prov == "ollama":
         try:
@@ -253,7 +229,7 @@ def query_ai_llm(model_meta, messages):
                 tags = json.loads(urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2.0).read().decode())
                 mlist = [x["name"] for x in tags.get("models", [])]
                 if not mlist:
-                    return "В Ollama нет скачанных моделей. Выполните: ollama run qwen2.5-coder:7b (или выберите облачную модель сверху)."
+                    return "В Ollama нет скачанных моделей. Выполните: ollama run qwen2.5-coder:7b (или выберите Gemini Argon сверху)."
                 mod_name = mlist[0]
             req = urllib.request.Request(
                 "http://127.0.0.1:11434/api/chat",
@@ -263,7 +239,7 @@ def query_ai_llm(model_meta, messages):
             resp = json.loads(urllib.request.urlopen(req, timeout=60).read().decode("utf-8"))
             return resp.get("message", {}).get("content", "").strip()
         except Exception:
-            return "Локальный сервер Ollama не запущен. Запустите `ollama serve` или переключите модель кнопкой сверху."
+            return "Локальный сервер Ollama не запущен. Запустите `ollama serve` или выберите Gemini Argon сверху."
 
     if prov == "custom" and model_meta.get("url"):
         try:
@@ -280,8 +256,8 @@ def query_ai_llm(model_meta, messages):
         except Exception as e:
             return f"Ошибка пользовательского API: {e}"
 
-    sys_msg = {"role": "system", "content": "Отвечай чётко, лаконично и по делу на русском языке. При написании кода выдавай чистый рабочий код."}
-    payload = {"model": mod_name, "messages": [sys_msg] + messages[-6:]}
+    sys_prompt = f"Ты — {m_title}. Отвечай чётко, лаконично и по делу на русском языке. При написании кода выдавай чистый рабочий код."
+    payload = {"model": mod_name, "messages": [{"role": "system", "content": sys_prompt}] + messages[-6:]}
     try:
         res = subprocess.run(
             ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "35",
@@ -307,7 +283,7 @@ def query_ai_llm(model_meta, messages):
 
     try:
         last_q = messages[-1]["content"]
-        enc_q = urllib.parse.quote(f"Ответь на русском языке: {last_q}")
+        enc_q = urllib.parse.quote(f"Ответь на русском языке как {m_title}: {last_q}")
         res2 = subprocess.run(
             ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "30",
              "-A", "Mozilla/5.0",
@@ -319,10 +295,10 @@ def query_ai_llm(model_meta, messages):
     except Exception as e:
         return f"Не удалось получить ответ: {e}"
 
-    return "Сервер модели перегружен, переключите модель кнопкой сверху."
+    return "Сервер модели перегружен, попробуйте повторить запрос через пару секунд."
 
 # ==============================================================================
-# КАРТОЧКА ПЕРЕМЕЩАЕМОГО И МАСШТАБИРУЕМОГО ВИДЖЕТА НА ХОЛСТЕ GTK.FIXED
+# КАРТОЧКА ВИДЖЕТА С ДИНАМИЧЕСКИМ ПРОПОРЦИОНАЛЬНЫМ МАСШТАБИРОВАНИЕМ СОДЕРЖИМОГО
 # ==============================================================================
 class CanvasWidgetCard:
     def __init__(self, app, canvas, wid, state_dict, build_body_fn, is_standalone=False):
@@ -335,9 +311,17 @@ class CanvasWidgetCard:
         self.m_start_cursor = None
         self.r_start_wh = (280, 180)
         self.r_start_cursor = None
+        self.on_scale_hook = None
+
+        # Индивидуальный CSS-провайдер для пропорционального масштабирования шрифтов и элементов внутри виджета
+        self.scale_css = Gtk.CssProvider()
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), self.scale_css, Gtk.STYLE_PROVIDER_PRIORITY_USER + 35
+        )
 
         self.frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.frame.add_css_class("widget-frame-top" if is_standalone else "widget-frame")
+        self.frame.add_css_class(f"wscale-{wid}")
 
         hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         hdr.add_css_class("widget-header")
@@ -358,7 +342,6 @@ class CanvasWidgetCard:
             move_gest.connect("drag-end", self.on_move_end)
             drag_box.add_controller(move_gest)
 
-        # Кнопка закрепления виджета ПОВЕРХ ВСЕХ ОКОН (открывает плавающее окно Hyprland [float; pin])
         self.pin_btn = Gtk.Button(label="📌" if not is_standalone else "✕")
         self.pin_btn.add_css_class("w-pin-active" if is_standalone else "w-hdr-btn")
         self.pin_btn.set_tooltip_text("Закрепить виджет ПОВЕРХ открытых приложений" if not is_standalone else "Закрыть окно поверх приложений")
@@ -374,7 +357,7 @@ class CanvasWidgetCard:
 
         self.frame.append(hdr)
 
-        self.body_wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self.body_wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         self.body_wrap.add_css_class("widget-body")
         self.body_wrap.set_vexpand(True); self.body_wrap.set_hexpand(True)
 
@@ -389,7 +372,7 @@ class CanvasWidgetCard:
             grip = Gtk.Label(label="◢")
             grip.add_css_class("resize-grip")
             grip_box.append(grip)
-            grip_box.set_tooltip_text("Потяните ЛКМ за уголок, чтобы изменить размер виджета")
+            grip_box.set_tooltip_text("Потяните ЛКМ за уголок — всё содержимое масштабируется пропорционально!")
 
             rsz_gest = Gtk.GestureDrag.new()
             rsz_gest.set_button(1)
@@ -403,13 +386,51 @@ class CanvasWidgetCard:
         self.frame.append(self.body_wrap)
         self.apply_geometry()
 
+    def update_proportional_scale(self, w, h):
+        cfg = self.st[self.wid]
+        bw = float(cfg.get("base_w", 280))
+        bh = float(cfg.get("base_h", 190))
+        # Вычисляем пропорциональный коэффициент масштаба относительно базового размера виджета
+        scale = max(0.80, min(2.60, min(w / bw, h / bh)))
+
+        f_title  = max(9,  int(round(10.5 * scale)))
+        f_text   = max(9,  int(round(11.0 * scale)))
+        f_btn    = max(9,  int(round(10.5 * scale)))
+        f_cal_d  = max(9,  int(round(11.0 * scale)))
+        f_cal_w  = max(8,  int(round(9.5  * scale)))
+        f_track  = max(10, int(round(11.5 * scale)))
+        f_artist = max(9,  int(round(10.0 * scale)))
+        pad_v    = max(2,  int(round(3.0  * scale)))
+        pad_h    = max(5,  int(round(7.0  * scale)))
+        cell_w   = max(20, int(round(26.0 * scale)))
+        cell_h   = max(16, int(round(20.0 * scale)))
+
+        css = f"""
+        .wscale-{self.wid} .widget-title {{ font-size: {f_title}px; }}
+        .wscale-{self.wid} .chat-view,
+        .wscale-{self.wid} .notes-view,
+        .wscale-{self.wid} entry.compact-entry {{ font-size: {f_text}px; }}
+        .wscale-{self.wid} button.mini-btn {{ font-size: {f_btn}px; padding: {pad_v}px {pad_h}px; min-height: {int(20 * scale)}px; }}
+        .wscale-{self.wid} .cal-dow {{ font-size: {f_cal_w}px; min-width: {cell_w}px; }}
+        .wscale-{self.wid} .cal-day,
+        .wscale-{self.wid} .cal-today {{ font-size: {f_cal_d}px; min-width: {cell_w}px; min-height: {cell_h}px; }}
+        .wscale-{self.wid} .track-title {{ font-size: {f_track}px; }}
+        .wscale-{self.wid} .track-artist,
+        .wscale-{self.wid} .mono-sub {{ font-size: {f_artist}px; }}
+        """
+        self.scale_css.load_from_string(css)
+
+        if callable(self.on_scale_hook):
+            self.on_scale_hook(scale, w, h)
+
     def apply_geometry(self):
         cfg = self.st[self.wid]
-        w = max(int(cfg.get("min_w", 220)), int(cfg.get("w", 280)))
+        w = max(int(cfg.get("min_w", 210)), int(cfg.get("w", 280)))
         h = max(int(cfg.get("min_h", 110)), int(cfg.get("h", 180)))
         is_col = bool(cfg.get("collapsed", False)) and not self.is_standalone
         self.body_wrap.set_visible(not is_col)
         self.frame.set_size_request(w, 26 if is_col else h)
+        self.update_proportional_scale(w, h)
 
     def on_move_begin(self, _g, _x, _y):
         cfg = self.st[self.wid]
@@ -447,9 +468,10 @@ class CanvasWidgetCard:
         else:
             nw = self.r_start_wh[0] + int(off_x)
             nh = self.r_start_wh[1] + int(off_y)
-        cfg["w"] = max(int(cfg.get("min_w", 220)), min(900, nw))
-        cfg["h"] = max(int(cfg.get("min_h", 110)), min(850, nh))
+        cfg["w"] = max(int(cfg.get("min_w", 210)), min(960, nw))
+        cfg["h"] = max(int(cfg.get("min_h", 110)), min(880, nh))
         self.frame.set_size_request(cfg["w"], cfg["h"])
+        self.update_proportional_scale(cfg["w"], cfg["h"])
 
     def on_resize_end(self, _g, _ox, _oy):
         save_widgets_state(self.st)
@@ -525,7 +547,7 @@ class StudioDesktopApp(Gtk.Application):
                 return json.load(open(CHAT_FILE, encoding="utf-8"))[-12:]
         except Exception:
             pass
-        return [{"role": "assistant", "content": "Нейросеть готова! Нажмите на кнопку модели сверху для выбора ИИ (или «+ ИИ» для добавления своей) и введите запрос ниже."}]
+        return [{"role": "assistant", "content": "Gemini Argon готов к работе! Нажмите на кнопку модели сверху для смены ИИ (или «+ ИИ» для добавления своей) и введите запрос ниже."}]
 
     def save_chat_history(self):
         try:
@@ -533,13 +555,13 @@ class StudioDesktopApp(Gtk.Application):
         except Exception:
             pass
 
-    # --- 1. ВИДЖЕТ НЕЙРОСЕТЕЙ (СПИСОК ДОСТУПНЫХ ИИ + ДОБАВЛЕНИЕ СВОИХ + ЧАТ) ---
+    # --- 1. ВИДЖЕТ НЕЙРОСЕТЕЙ (GEMINI ARGON ПО УМОЛЧАНИЮ + СПИСОК ИИ) ---
     def build_ai_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
         top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        cur_m_name = self.ai_models[self.active_model_idx]["name"] if self.ai_models else "Qwen 2.5 Coder"
-        self.model_sel_btn = Gtk.Button(label=f"🤖 {cur_m_name[:24]} ▾")
+        cur_m_name = self.ai_models[self.active_model_idx]["name"] if self.ai_models else "Gemini Argon"
+        self.model_sel_btn = Gtk.Button(label=f"🤖 {cur_m_name[:26]} ▾")
         self.model_sel_btn.add_css_class("mini-btn")
         self.model_sel_btn.set_hexpand(True)
         self.model_sel_btn.set_tooltip_text("ЛКМ: Открыть список доступных нейросетей • ПКМ: Следующая модель")
@@ -596,7 +618,7 @@ class StudioDesktopApp(Gtk.Application):
         if not self.ai_models: return
         self.active_model_idx = (self.active_model_idx + 1) % len(self.ai_models)
         cur_m_name = self.ai_models[self.active_model_idx]["name"]
-        self.model_sel_btn.set_label(f"🤖 {cur_m_name[:24]} ▾")
+        self.model_sel_btn.set_label(f"🤖 {cur_m_name[:26]} ▾")
         self.render_chat_log()
 
     def on_open_model_list_rofi(self, _b):
@@ -626,12 +648,12 @@ class StudioDesktopApp(Gtk.Application):
     def set_active_model_idx(self, idx):
         self.active_model_idx = idx
         cur_m_name = self.ai_models[self.active_model_idx]["name"]
-        self.model_sel_btn.set_label(f"🤖 {cur_m_name[:24]} ▾")
+        self.model_sel_btn.set_label(f"🤖 {cur_m_name[:26]} ▾")
         self.render_chat_log()
         return False
 
     def render_chat_log(self, thinking=False):
-        m_meta = self.ai_models[self.active_model_idx] if self.ai_models else {"name": "AI"}
+        m_meta = self.ai_models[self.active_model_idx] if self.ai_models else {"name": "Gemini Argon"}
         short_m = m_meta["name"].split("(")[0].strip()
         lines = []
         for msg in self.chat_history[-10:]:
@@ -657,7 +679,7 @@ class StudioDesktopApp(Gtk.Application):
         self.ai_busy = True
         self.render_chat_log(thinking=True)
 
-        m_meta = self.ai_models[self.active_model_idx] if self.ai_models else {"provider": "pollinations", "model": "openai"}
+        m_meta = self.ai_models[self.active_model_idx] if self.ai_models else {"provider": "pollinations", "model": "gemini"}
         msgs_snapshot = list(self.chat_history)
 
         def worker():
@@ -708,9 +730,11 @@ class StudioDesktopApp(Gtk.Application):
         box.append(row)
         return box
 
-    # --- 3. ВИДЖЕТ КАЛЕНДАРЯ ---
-    def build_calendar_widget(self, _card):
+    # --- 3. ПРОПОРЦИОНАЛЬНО МАСШТАБИРУЕМЫЙ ВИДЖЕТ КАЛЕНДАРЯ ---
+    def build_calendar_widget(self, card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box.set_hexpand(True); box.set_vexpand(True)
+
         nav = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self.cal_title_lbl = Gtk.Label(label="", xalign=0, hexpand=True, css_classes=["widget-title"])
         nav.append(self.cal_title_lbl)
@@ -720,10 +744,21 @@ class StudioDesktopApp(Gtk.Application):
             nav.append(b)
         box.append(nav)
 
+        # Сетка календаря с равномерным растягиванием всех строк и столбцов пропорционально окну виджета!
         self.cal_grid = Gtk.Grid()
-        self.cal_grid.set_column_spacing(4); self.cal_grid.set_row_spacing(2)
-        self.cal_grid.set_halign(Gtk.Align.CENTER); self.cal_grid.set_vexpand(True)
+        self.cal_grid.set_hexpand(True); self.cal_grid.set_vexpand(True)
+        self.cal_grid.set_halign(Gtk.Align.FILL); self.cal_grid.set_valign(Gtk.Align.FILL)
+        self.cal_grid.set_column_homogeneous(True)
+        self.cal_grid.set_row_homogeneous(True)
+        self.cal_grid.set_column_spacing(4); self.cal_grid.set_row_spacing(3)
         box.append(self.cal_grid)
+
+        def _on_cal_scale(scale, _w, _h):
+            sp = max(2, int(round(4 * scale)))
+            self.cal_grid.set_column_spacing(sp)
+            self.cal_grid.set_row_spacing(max(1, sp - 1))
+
+        card.on_scale_hook = _on_cal_scale
         self.refresh_cal()
         return box
 
@@ -745,22 +780,27 @@ class StudioDesktopApp(Gtk.Application):
             if c is None: break
             self.cal_grid.remove(c)
         for i, d in enumerate(("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")):
-            self.cal_grid.attach(Gtk.Label(label=d, css_classes=["cal-dow"]), i, 0, 1, 1)
+            dl = Gtk.Label(label=d, css_classes=["cal-dow"])
+            dl.set_hexpand(True); dl.set_vexpand(True)
+            self.cal_grid.attach(dl, i, 0, 1, 1)
         today = datetime.date.today()
         for r_i, week in enumerate(calendar.Calendar(0).monthdayscalendar(self.cal_year, self.cal_month), 1):
             for c_i, day in enumerate(week):
                 lbl = Gtk.Label(label=" " if day == 0 else f"{day:2d}")
+                lbl.set_hexpand(True); lbl.set_vexpand(True)
                 is_t = (day == today.day and self.cal_month == today.month and self.cal_year == today.year)
                 lbl.add_css_class("cal-today" if is_t else "cal-day")
                 self.cal_grid.attach(lbl, c_i, r_i, 1, 1)
 
-    # --- 4. МИНИМАЛИСТИЧНЫЙ ВИДЖЕТ МУЗЫКИ (ОБЛОЖКА 52x52 + ГРОМКОСТЬ ТОЛЬКО ДЛЯ МЕДИА) ---
-    def build_media_widget(self, _card):
+    # --- 4. ПРОПОРЦИОНАЛЬНО МАСШТАБИРУЕМЫЙ ВИДЖЕТ МУЗЫКИ С ОБЛОЖКОЙ ---
+    def build_media_widget(self, card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        box.set_hexpand(True); box.set_vexpand(True)
 
         top_h = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        top_h.set_vexpand(True)
         self.art_pic = Gtk.Picture()
-        self.art_pic.set_size_request(52, 52)
+        self.art_pic.set_size_request(54, 54)
         self.art_pic.add_css_class("cover-frame")
         if hasattr(Gtk, "ContentFit"):
             self.art_pic.set_content_fit(Gtk.ContentFit.COVER)
@@ -785,7 +825,7 @@ class StudioDesktopApp(Gtk.Application):
         top_h.append(meta_v)
         box.append(top_h)
 
-        # Ползунок громкости ТОЛЬКО для музыки/видео (без ползунка яркости!)
+        # Ползунок громкости ТОЛЬКО для музыки/видео
         v_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         v_row.append(Gtk.Label(label="🔊 Медиа", css_classes=["mono-sub"]))
         _, cur_mv = get_media_sink_inputs()
@@ -798,6 +838,11 @@ class StudioDesktopApp(Gtk.Application):
         v_row.append(self.media_vol_scale); v_row.append(self.media_vol_lbl)
         box.append(v_row)
 
+        def _on_media_scale(scale, _w, _h):
+            art_sz = max(44, min(140, int(round(54 * scale))))
+            self.art_pic.set_size_request(art_sz, art_sz)
+
+        card.on_scale_hook = _on_media_scale
         return box
 
     def on_media_vol_changed(self, scale):
@@ -806,25 +851,6 @@ class StudioDesktopApp(Gtk.Application):
         val = int(scale.get_value())
         self.media_vol_lbl.set_label(f"{val}%")
         set_media_stream_only_volume(val)
-
-    # --- 5. ВИДЖЕТ РАЗРАБОТКИ ИГР И КОДА ---
-    def build_gamedev_widget(self, _card):
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        self.git_lbl = Gtk.Label(label=read_git_projects_status(), xalign=0, css_classes=["mono-sub"])
-        self.ports_lbl = Gtk.Label(label=f"Порты: {scan_dev_ports()}", xalign=0, css_classes=["mono-sub"])
-        box.append(self.git_lbl); box.append(self.ports_lbl)
-
-        for row_btns in [
-            [("⌨ IDE", "code || codium || zed || foot"), ("🐍 Pygame", "foot -e python3"), ("📁 Проекты", "~/.local/bin/cyber-fm ~")],
-            [("🎨 Пипетка", "~/.local/bin/cyber-tool pick"), ("📷 Скрин", "~/.local/bin/cyber-tool shot"), ("📊 Btop", "~/.local/bin/cyber-tool btop")],
-        ]:
-            r = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-            for l, c in row_btns:
-                b = Gtk.Button(label=l); b.add_css_class("mini-btn"); b.set_hexpand(True)
-                b.connect("clicked", lambda _b, cmd=c: self.spawn_raw(cmd))
-                r.append(b)
-            box.append(r)
-        return box
 
     # --- ЦЕНТР УВЕДОМЛЕНИЙ НА ХОЛСТЕ (ПО КЛИКУ НА 🔔 НА WAYBAR) ---
     def build_notification_center_card(self):
@@ -939,12 +965,10 @@ class StudioDesktopApp(Gtk.Application):
         builders = {
             "ai":       self.build_ai_widget,
             "notes":    self.build_notes_widget,
-            "gamedev":  self.build_gamedev_widget,
             "calendar": self.build_calendar_widget,
             "media":    self.build_media_widget,
         }
 
-        # Если запущено отдельное закреплённое окно поверх всех приложений (--pin-window <wid>)
         if SINGLE_PIN_WID in builders:
             cfg = self.st[SINGLE_PIN_WID]
             pwin = Gtk.ApplicationWindow(application=self, title=f"Pinned-{SINGLE_PIN_WID}")
@@ -955,7 +979,6 @@ class StudioDesktopApp(Gtk.Application):
             GLib.timeout_add(600, self.tick_fast)
             return
 
-        # Основной полноэкранный слой рабочего стола с Gtk.Fixed холстом для свободного перемещения виджетов
         win = Gtk.ApplicationWindow(application=self, title="WorkHubDesktop")
         win.set_default_size(1920, 1080)
         Gtk4LayerShell.init_for_window(win)
@@ -974,7 +997,6 @@ class StudioDesktopApp(Gtk.Application):
         bg_area.set_draw_func(self.on_draw_bg)
         overlay.set_child(bg_area)
 
-        # Холст свободного перемещения и изменения размеров виджетов
         self.canvas = Gtk.Fixed()
         self.canvas.set_hexpand(True); self.canvas.set_vexpand(True)
 
@@ -983,13 +1005,11 @@ class StudioDesktopApp(Gtk.Application):
             self.cards[wid] = card
             self.canvas.put(card.frame, int(self.st[wid]["x"]), int(self.st[wid]["y"]))
 
-        # Всплывающий виджет Центра уведомлений под правой частью Waybar
         self.notif_frame = self.build_notification_center_card()
         self.canvas.put(self.notif_frame, 1580, 44)
 
         overlay.add_overlay(self.canvas)
 
-        # Нижний док закреплённых приложений
         dock_align = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         dock_align.set_valign(Gtk.Align.END); dock_align.set_halign(Gtk.Align.CENTER)
         dock_align.set_margin_bottom(12)
@@ -1011,7 +1031,6 @@ class StudioDesktopApp(Gtk.Application):
         win.present()
 
         GLib.timeout_add(450, self.tick_fast)
-        GLib.timeout_add_seconds(4, self.tick_slow)
 
     def tick_fast(self):
         if os.path.exists(NOTIF_TRIG):
@@ -1036,7 +1055,7 @@ class StudioDesktopApp(Gtk.Application):
                 self.ai_models = load_ai_models()
                 self.active_model_idx = max(0, min(self.active_model_idx, len(self.ai_models) - 1))
                 if hasattr(self, "model_sel_btn") and self.ai_models:
-                    self.model_sel_btn.set_label(f"🤖 {self.ai_models[self.active_model_idx]['name'][:24]} ▾")
+                    self.model_sel_btn.set_label(f"🤖 {self.ai_models[self.active_model_idx]['name'][:26]} ▾")
         except Exception: pass
 
         if hasattr(self, "track_lbl"):
@@ -1054,12 +1073,6 @@ class StudioDesktopApp(Gtk.Application):
                 self.media_vol_lbl.set_label(f"{int(mv)}%")
                 self.updating_vol_ui = False
 
-        return True
-
-    def tick_slow(self):
-        if hasattr(self, "git_lbl"):
-            self.git_lbl.set_label(read_git_projects_status())
-            self.ports_lbl.set_label(f"Порты: {scan_dev_ports()}")
         return True
 
     def spawn_raw(self, cmd):

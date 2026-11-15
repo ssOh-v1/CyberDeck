@@ -1,77 +1,16 @@
 #!/usr/bin/python3
-import os, sys, json, signal, subprocess
+import os, sys, json, subprocess
 
 HOME = os.path.expanduser("~")
 STATE_F = os.path.join(HOME, ".config/cyberdeck/widgets_state.json")
-ROFI_T  = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
 
 DEFAULTS = {
-    "ai":       {"title": "▣ AI CHAT",  "x": 18,   "y": 48,  "w": 320, "h": 280, "top": False, "collapsed": False, "visible": True},
-    "notes":    {"title": "▣ NOTES",    "x": 18,   "y": 340, "w": 320, "h": 195, "top": False, "collapsed": False, "visible": True},
-    "gamedev":  {"title": "▣ DEV & GIT","x": 18,   "y": 547, "w": 320, "h": 155, "top": False, "collapsed": False, "visible": True},
-    "calendar": {"title": "▣ CALENDAR", "x": 1622, "y": 48,  "w": 280, "h": 185, "top": False, "collapsed": False, "visible": True},
-    "media":    {"title": "▣ MEDIA",    "x": 1622, "y": 245, "w": 280, "h": 115, "top": False, "collapsed": False, "visible": True},
+    "ai":       {"title": "▣ AI STUDIO",  "x": 18,   "y": 46,  "w": 335, "h": 300, "min_w": 240, "min_h": 180, "collapsed": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",    "x": 18,   "y": 358, "w": 335, "h": 210, "min_w": 210, "min_h": 130, "collapsed": False},
+    "calendar": {"title": "▣ КАЛЕНДАРЬ",  "x": 1622, "y": 46,  "w": 280, "h": 210, "min_w": 220, "min_h": 160, "collapsed": False},
+    "media":    {"title": "▣ МЕДИАПЛЕЕР", "x": 1622, "y": 268, "w": 280, "h": 130, "min_w": 230, "min_h": 110, "collapsed": False},
 }
 
-def load_st():
-    try:
-        if os.path.isfile(STATE_F):
-            d = json.load(open(STATE_F, encoding="utf-8"))
-            for k, v in DEFAULTS.items():
-                if k not in d: d[k] = v
-            return d
-    except Exception:
-        pass
-    return json.loads(json.dumps(DEFAULTS))
-
-def save_and_reload(st):
+if (sys.argv[1] if len(sys.argv) > 1 else "") == "reset":
     os.makedirs(os.path.dirname(STATE_F), exist_ok=True)
-    json.dump(st, open(STATE_F, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
-    subprocess.run(["pkill", "-USR1", "-f", "work-hub-desktop.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-act = sys.argv[1] if len(sys.argv) > 1 else "menu"
-st = load_st()
-
-if act == "toggle-all":
-    any_vis = any(v.get("visible", True) for v in st.values())
-    for k in st: st[k]["visible"] = not any_vis
-    save_and_reload(st)
-elif act == "pin-all":
-    any_top = any(v.get("top", False) for v in st.values())
-    for k in st: st[k]["top"] = not any_top
-    save_and_reload(st)
-elif act == "reset":
-    save_and_reload(DEFAULTS)
-else:
-    lines = [
-        "󰕮  Показать / Скрыть все виджеты",
-        "󰐃  Закрепить все виджеты ПОВЕРХ ОКОН / Вернуть на стол",
-        "󰜉  Сбросить позиции и размеры виджетов по умолчанию",
-    ]
-    key_map = {}
-    for k, meta in st.items():
-        vis = "ВКЛ" if meta.get("visible", True) else "СКРЫТ"
-        top = " • ПОВЕРХ ОКОН" if meta.get("top", False) else ""
-        row = f"▣  Виджет {meta.get('title', k)}   [{vis}{top}]"
-        lines.append(row)
-        key_map[row] = k
-
-    cmd = ["rofi", "-dmenu", "-i", "-p", "󰕮 ВИДЖЕТЫ СТУДИИ"]
-    if os.path.isfile(ROFI_T): cmd += ["-theme", ROFI_T]
-    proc = subprocess.run(cmd, input="\n".join(lines), text=True, capture_output=True)
-    if proc.returncode == 0:
-        ch = proc.stdout.strip()
-        if "Показать / Скрыть все" in ch:
-            any_vis = any(v.get("visible", True) for v in st.values())
-            for k in st: st[k]["visible"] = not any_vis
-            save_and_reload(st)
-        elif "Закрепить все" in ch:
-            any_top = any(v.get("top", False) for v in st.values())
-            for k in st: st[k]["top"] = not any_top
-            save_and_reload(st)
-        elif "Сбросить позиции" in ch:
-            save_and_reload(DEFAULTS)
-        elif ch in key_map:
-            k = key_map[ch]
-            st[k]["visible"] = not st[k].get("visible", True)
-            save_and_reload(st)
+    json.dump(DEFAULTS, open(STATE_F, "w", encoding="utf-8"), indent=2, ensure_ascii=False)

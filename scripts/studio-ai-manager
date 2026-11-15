@@ -7,10 +7,12 @@ MODELS_F = os.path.join(HOME, ".config/cyberdeck/ai_models.json")
 ROFI_T   = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
 
 CATALOG = [
-    {"id": "claude-hybrid", "name": "Claude 3.5 Haiku (Анализ и Код)",     "provider": "pollinations", "model": "claude-hybridspace"},
-    {"id": "gemini-flash",  "name": "Gemini 2.0 Flash (Быстрый поиск)",    "provider": "pollinations", "model": "gemini"},
+    {"id": "gemini-argon",  "name": "Gemini Argon (Флагманский ИИ и Код)", "provider": "pollinations", "model": "gemini"},
+    {"id": "gemini-pro",    "name": "Gemini 2.5 Pro (Архитектура и Код)",  "provider": "pollinations", "model": "gemini-large"},
+    {"id": "gemini-flash",  "name": "Gemini 2.0 Flash (Мгновенный ответ)", "provider": "pollinations", "model": "gemini"},
+    {"id": "claude-hybrid", "name": "Claude 3.5 Sonnet/Haiku (Анализ)",    "provider": "pollinations", "model": "claude-hybridspace"},
     {"id": "qwq-32b",       "name": "Qwen QwQ 32B (Математика и Физика)",  "provider": "pollinations", "model": "qwq"},
-    {"id": "phi-4",         "name": "Microsoft Phi-4 (Компактный ИИ)",     "provider": "pollinations", "model": "phi"},
+    {"id": "mistral",       "name": "Mistral Small 3 (Код и Текст)",       "provider": "pollinations", "model": "mistral"},
     {"id": "codellama",     "name": "Ollama: CodeLlama (Локальная)",       "provider": "ollama",       "model": "codellama"},
     {"id": "deepseek-loc",  "name": "Ollama: DeepSeek-Coder (Локальная)",  "provider": "ollama",       "model": "deepseek-coder"},
 ]
@@ -27,7 +29,7 @@ except Exception:
     models = []
 
 menu = [
-    "➕  Добавить нейросеть из каталога доступных моделей",
+    "➕  Добавить нейросеть из каталога (Gemini Argon, Claude, QwQ и др.)",
     "🛠  Добавить свою собственную нейросеть (Custom API / Ollama / OpenRouter)",
     "🗑  Удалить нейросеть из списка виджета",
 ]
@@ -37,33 +39,33 @@ if "из каталога" in ch:
     existing_ids = {m["id"] for m in models}
     avail = [c for c in CATALOG if c["id"] not in existing_ids]
     if not avail:
-        subprocess.Popen(["notify-send", "-a", "cyber-kb", "▣ AI STUDIO", "Все модели из каталога уже добавлены"])
+        subprocess.Popen(["notify-send", "-a", "cyber-kb", "▣ AI STUDIO", "Все модели из каталога уже добавлены в список"])
     else:
         c_lines = [f"➕ {c['name']}  [{c['model']}]" for c in avail]
         sel = rofi_ask("Выберите модель", c_lines)
         for c in avail:
             if c["name"] in sel:
-                models.append(c)
+                models.insert(0, c)
                 json.dump(models, open(MODELS_F, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
                 subprocess.Popen(["notify-send", "-a", "cyber-kb", "▣ AI STUDIO", f"Добавлена модель: {c['name']}"])
                 break
 
 elif "свою собственную" in ch:
-    name = rofi_ask("1/4 Название вашей нейросети", ["Моя Нейросеть (Custom)"])
+    name = rofi_ask("1/4 Название вашей нейросети", ["Gemini Argon Custom"])
     if name:
         prov = rofi_ask("2/4 Тип подключения", [
-            "pollinations (Бесплатное облако по ID модели)",
+            "pollinations (Облачный шлюз по ID модели)",
             "ollama (Локальная модель из Ollama)",
-            "openai-custom (Свой URL OpenAI-совместимого API / OpenRouter)"
+            "openai-custom (Свой URL OpenAI-совместимого API / OpenRouter / Gemini API)"
         ])
         prov_key = "ollama" if "ollama" in prov else ("custom" if "custom" in prov else "pollinations")
-        mod_id = rofi_ask("3/4 ID модели (например: openai, llama3, gpt-4o)", ["openai"])
+        mod_id = rofi_ask("3/4 ID модели (например: gemini, openai, llama3)", ["gemini"])
         api_url, api_key = "", ""
         if prov_key == "custom":
             api_url = rofi_ask("4/4 URL API (например: https://openrouter.ai/api/v1/chat/completions)", ["https://openrouter.ai/api/v1/chat/completions"])
             api_key = rofi_ask("API Ключ (если требуется)", [""])
         if mod_id:
-            models.append({
+            models.insert(0, {
                 "id": f"custom-{len(models)+1}",
                 "name": name,
                 "provider": prov_key,
@@ -72,7 +74,7 @@ elif "свою собственную" in ch:
                 "key": api_key,
             })
             json.dump(models, open(MODELS_F, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-            subprocess.Popen(["notify-send", "-a", "cyber-kb", "▣ AI STUDIO", f"Нейросеть «{name}» добавлена в виджет!"])
+            subprocess.Popen(["notify-send", "-a", "cyber-kb", "▣ AI STUDIO", f"Нейросеть «{name}» добавлена!"])
 
 elif "Удалить" in ch and len(models) > 1:
     d_lines = [f"🗑 {m['name']}" for m in models]
