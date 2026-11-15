@@ -5,7 +5,7 @@ try:
 except Exception:
     pass
 
-import os, sys, re, glob, json, time, random, socket, signal, atexit, hashlib, urllib.request, urllib.parse, calendar, threading, subprocess, datetime
+import os, sys, re, glob, json, time, socket, signal, atexit, hashlib, urllib.parse, calendar, threading, subprocess, datetime
 
 signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
@@ -18,8 +18,6 @@ NOTES_FILE   = os.path.join(CFG_DIR, "studio_notes.txt")
 NOTES_PAGES  = os.path.join(CFG_DIR, "studio_notes_pages.json")
 PIN_FILE     = os.path.join(CFG_DIR, "pinned_work_apps.json")
 STATE_FILE   = os.path.join(CFG_DIR, "widgets_state.json")
-CHATS_DB     = os.path.join(CFG_DIR, "ai_chats.json")
-GEM_KEY_FILE = os.path.join(CFG_DIR, "gemini_api_key.txt")
 HIDDEN_NOTIF = os.path.join(CFG_DIR, "hidden_notifications.json")
 ROFI_T       = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
 NOTIF_TRIG   = "/tmp/studio_toggle_notif_center"
@@ -63,14 +61,6 @@ if SINGLE_PIN_WID is None:
 
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
-GEMINI_PERSONA_PROMPT = (
-    "Ты — Gemini 2.5 Pro, флагманский ИИ-архитектор и персональный напарник Дениса (ssOh), встроенный в виджет его рабочего стола "
-    "на базе Arch Linux / Wayland / Hyprland (тема Studio Matte-Grey). "
-    "Ты глубоко разбираешься в его проектах: разработке 2D rogue-платформера на Python 3 и Pygame (pygame-ce), "
-    "системном программировании, кастомизации Linux/Hyprland/Waybar и учебных дисциплинах 2 курса (Python, C#, C++, JS, Java, HTML, 1С). "
-    "Давай глубокие, технически точные ответы на русском языке и пиши готовый к запуску, оптимизированный код."
-)
-
 def get_logical_monitor_size():
     for _ in range(10):
         try:
@@ -91,8 +81,7 @@ def get_logical_monitor_size():
 W_MON, H_MON = get_logical_monitor_size()
 
 DEFAULT_WIDGETS = {
-    "ai":       {"title": "✦ GEMINI ULTRA // 2.5 PRO",     "x": 18,          "y": 46,  "w": 355, "h": 315, "base_w": 355, "base_h": 315, "min_w": 255, "min_h": 185, "collapsed": False},
-    "notes":    {"title": "▣ ЗАМЕТКИ",            "x": 18,          "y": 372, "w": 355, "h": 225, "base_w": 355, "base_h": 225, "min_w": 220, "min_h": 145, "collapsed": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",            "x": 18,          "y": 46,  "w": 340, "h": 250, "base_w": 340, "base_h": 250, "min_w": 220, "min_h": 145, "collapsed": False},
     "calendar": {"title": "▣ КАЛЕНДАРЬ",          "x": W_MON - 298, "y": 46,  "w": 280, "h": 210, "base_w": 280, "base_h": 205, "min_w": 220, "min_h": 160, "collapsed": False},
     "media":    {"title": "▣ МЕДИАПЛЕЕР",         "x": W_MON - 298, "y": 268, "w": 280, "h": 130, "base_w": 280, "base_h": 128, "min_w": 230, "min_h": 110, "collapsed": False},
     "notif":    {"title": "󰂚 ЦЕНТР УВЕДОМЛЕНИЙ", "x": W_MON - 478, "y": 44,  "w": 460, "h": 540, "base_w": 460, "base_h": 540, "min_w": 340, "min_h": 300, "collapsed": False},
@@ -253,175 +242,6 @@ def read_music_and_art():
         pass
     return "󰓛 Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART
 
-def is_rate_limited_or_bad(text):
-    if not text or len(text.strip()) < 2:
-        return True
-    low = text.lower()
-    bad_markers = (
-        "free limit reached",
-        "1 reply every",
-        "enter.pollinations.ai",
-        "pollen key",
-        "rate limit",
-        "too many requests",
-        "<!doctype",
-        "<html",
-        "502 bad gateway",
-        "504 gateway",
-        "error 52",
-    )
-    return any(b in low for b in bad_markers)
-
-# ==============================================================================
-# ЯДРО GEMINI ULTRA (2.5 PRO 16K + СТРОГАЯ ОЧЕРЕДНОСТЬ РОЛЕЙ + ПОДДЕРЖКА HAPP)
-# ==============================================================================
-def get_saved_gemini_key():
-    if os.path.isfile(GEM_KEY_FILE):
-        try:
-            raw = open(GEM_KEY_FILE, "r", encoding="utf-8").read()
-            clean = re.sub(r"[^A-Za-z0-9_-]", "", raw)
-            if len(clean) >= 20:
-                return clean
-        except Exception:
-            pass
-    return ""
-
-def detect_local_proxy():
-    # Если запущен Happ / Sing-box / Xray, находим активный локальный порт для обхода гео-блокировки Google API
-    for port in (2080, 10808, 10809, 7890, 12334, 1080):
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.08):
-                return f"http://127.0.0.1:{port}"
-        except Exception:
-            pass
-    return None
-
-def build_valid_gemini_contents(messages):
-    # Официальный API Google требует, чтобы диалог строго начинался с роли 'user' и чередовал 'user' <-> 'model'
-    cleaned = []
-    for m in messages[-16:]:
-        txt = (m.get("content") or "").strip()
-        if not txt:
-            continue
-        # Игнорируем старые системные заглушки и сообщения об ошибках
-        if any(bad in txt for bad in ("Публичный бесключевой шлюз", "Публичный шлюз просит", "Старый чат удалён", "История чата", "Создан новый чат", "Канал связи временно", "Привет, Денис!")):
-            continue
-        role = "user" if m.get("role") == "user" else "model"
-        # Пропускаем любые сообщения модели, пока не встретится первое сообщение пользователя
-        if not cleaned and role == "model":
-            continue
-        # Если две реплики подряд имеют одинаковую роль — склеиваем их в один блок
-        if cleaned and cleaned[-1]["role"] == role:
-            cleaned[-1]["parts"][0]["text"] += "
-
-" + txt
-        else:
-            cleaned.append({"role": role, "parts": [{"text": txt}]})
-
-    if not cleaned and messages:
-        cleaned = [{"role": "user", "parts": [{"text": messages[-1].get("content", "Привет")}]}]
-    return cleaned
-
-def query_native_google_gemini_pro(api_key, sys_prompt, messages):
-    contents = build_valid_gemini_contents(messages)
-    payload = {
-        "systemInstruction": {"parts": [{"text": sys_prompt}]},
-        "contents": contents,
-        "generationConfig": {
-            "temperature": 0.65,
-            "maxOutputTokens": 16384,
-        }
-    }
-    payload_str = json.dumps(payload, ensure_ascii=False)
-    local_proxy = detect_local_proxy()
-
-    # Каскад моделей от флагманской Pro до скоростной 2.5 Flash (если на бесплатном ключе лимит RPM для Pro исчерпан)
-    last_err = ""
-    for g_model in ("gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{g_model}:generateContent?key={api_key}"
-        for use_proxy in ([False, True] if local_proxy else [False]):
-            cmd = ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "45",
-                   "-X", "POST", url, "-H", "Content-Type: application/json", "-d", payload_str]
-            if use_proxy and local_proxy:
-                cmd = ["curl", "-s", "-L", "-x", local_proxy, "--connect-timeout", "8", "--max-time", "45",
-                       "-X", "POST", url, "-H", "Content-Type: application/json", "-d", payload_str]
-            try:
-                res = subprocess.run(cmd, capture_output=True, text=True)
-                if not res.stdout.strip():
-                    continue
-                data = json.loads(res.stdout)
-                if "candidates" in data and data["candidates"]:
-                    parts = data["candidates"][0].get("content", {}).get("parts", [])
-                    out_texts = [p.get("text", "") for p in parts if "text" in p and not p.get("thought", False)]
-                    if not out_texts:
-                        out_texts = [p.get("text", "") for p in parts if "text" in p]
-                    ans = "
-".join(out_texts).strip()
-                    if ans:
-                        return ans
-                if "error" in data:
-                    err_obj = data["error"]
-                    msg = err_obj.get("message", str(err_obj))
-                    last_err = msg
-                    # Если гео-блок — пробуем со следующей итерацией через локальный прокси Happ
-                    if "location is not supported" in msg.lower() and not use_proxy and local_proxy:
-                        continue
-                    # Если ключ неверный — сообщаем сразу
-                    if "api_key_invalid" in msg.lower() or "api key not valid" in msg.lower():
-                        return "❌ Сохранённый API-ключ отклонён сервером Google (API key not valid). Скопируй новый ключ на aistudio.google.com/apikey и нажми «🔑 PRO» -> «📋 Вставить ключ»."
-            except Exception as e:
-                last_err = str(e)
-                continue
-
-    if "location is not supported" in last_err.lower():
-        return "🌐 Сервер Google Gemini требует включённый VPN/прокси для твоего региона. Включи туннель в Happ и отправь сообщение снова!"
-    if last_err:
-        return f"⚠ Ответ сервера Google API: {last_err}"
-    return None
-
-def query_gemini(messages, session_topic=""):
-    topic_ctx = f" Тема текущего чата: «{session_topic}»." if session_topic else ""
-    sys_prompt = GEMINI_PERSONA_PROMPT + topic_ctx
-
-    gkey = get_saved_gemini_key()
-    if gkey:
-        ans_pro = query_native_google_gemini_pro(gkey, sys_prompt, messages)
-        if ans_pro:
-            return ans_pro
-
-    # Если ключа нет вообще — используем бесключевой шлюз
-    seed = random.randint(10000, 999999)
-    payload = {
-        "model": "openai-large",
-        "seed": seed,
-        "messages": [{"role": "system", "content": sys_prompt}] + messages[-8:],
-    }
-    try:
-        res = subprocess.run(
-            ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "35",
-             "-X", "POST", "https://text.pollinations.ai/openai",
-             "-H", "Content-Type: application/json",
-             "-A", "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0",
-             "-d", json.dumps(payload, ensure_ascii=False)],
-            capture_output=True, text=True
-        )
-        if res.returncode == 0 and res.stdout.strip():
-            raw = res.stdout.strip()
-            try:
-                data = json.loads(raw)
-                if "choices" in data and data["choices"]:
-                    content = data["choices"][0].get("message", {}).get("content", "").strip()
-                    if content and not is_rate_limited_or_bad(content):
-                        return content
-            except Exception:
-                if not is_rate_limited_or_bad(raw):
-                    return raw
-    except Exception:
-        pass
-
-    return "⏳ Бесключевой канал перегружен. Нажми кнопку «🔑» сверху, чтобы подключить прямой ключ Google AI Studio."
-
-
 class OverlayWidgetCard:
     def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False, extra_hdr_btns=None):
         self.app = app
@@ -539,7 +359,6 @@ class OverlayWidgetCard:
 
         css = f"""
         .wscale-{self.wid} .widget-title {{ font-size: {f_title}px; }}
-        .wscale-{self.wid} .chat-view,
         .wscale-{self.wid} .notes-view,
         .wscale-{self.wid} entry.compact-entry {{ font-size: {f_text}px; }}
         .wscale-{self.wid} button.mini-btn,
@@ -647,9 +466,6 @@ class StudioDesktopApp(Gtk.Application):
         self.hidden_notifs = self.load_hidden_notifs()
         self.last_pin_mtime = 0
 
-        self.chats_data = self.load_chats_db()
-        self.ai_busy_sessions = set()
-
         self.notes_data = self.load_notes_db()
         self.updating_notes_ui = False
 
@@ -705,357 +521,8 @@ class StudioDesktopApp(Gtk.Application):
         try: json.dump(sorted(list(self.hidden_notifs))[-200:], open(HIDDEN_NOTIF, "w", encoding="utf-8"))
         except Exception: pass
 
-    def load_chats_db(self):
-        try:
-            if os.path.isfile(CHATS_DB):
-                d = json.load(open(CHATS_DB, encoding="utf-8"))
-                if isinstance(d, dict) and d.get("sessions"):
-                    return d
-        except Exception:
-            pass
-
-        default_db = {
-            "active_idx": 0,
-            "sessions": [
-                {
-                    "id": "gamedev",
-                    "title": "🎮 Разработка игры",
-                    "messages": [{"role": "assistant", "content": "Привет, Денис! Я обновлён до Gemini 2.5 Pro. Готов помогать с твоим 2D rogue-платформером на Pygame, логикой врагов и архитектурой кода."}],
-                },
-                {
-                    "id": "linux-env",
-                    "title": "🖥 Окружение Studio",
-                    "messages": [{"role": "assistant", "content": "Чат «Окружение Studio» активен. Пиши сюда задачи по Hyprland, Waybar или скриптам."}],
-                },
-                {
-                    "id": "college-code",
-                    "title": "📚 Учёба и экзамены",
-                    "messages": [{"role": "assistant", "content": "Чат «Учёба и экзамены» готов. Разберём задачи по Python, C#, C++, JS, Java, HTML или 1С."}],
-                },
-            ]
-        }
-        self.save_chats_db(default_db)
-        return default_db
-
-    def save_chats_db(self, data=None):
-        if data is None:
-            data = self.chats_data
-        try:
-            tmp_p = CHATS_DB + ".tmp"
-            with open(tmp_p, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            os.replace(tmp_p, CHATS_DB)
-        except Exception:
-            pass
-
-    def get_active_chat_session(self):
-        sessions = self.chats_data.get("sessions", [])
-        if not sessions:
-            sessions.append({"id": "default", "title": "Основной чат", "messages": [{"role": "assistant", "content": "Новый чат готов к работе!"}]})
-        idx = max(0, min(int(self.chats_data.get("active_idx", 0)), len(sessions) - 1))
-        self.chats_data["active_idx"] = idx
-        return idx, sessions[idx]
-
-    def build_ai_widget(self, _card):
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-
-        # Верхняя панель: ◀ | 💬 Название (1/N) ▾ | ▶ | + | ✕ | 🔑
-        chat_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
-
-        b_prev_c = Gtk.Button(label="◀"); b_prev_c.add_css_class("mini-btn"); b_prev_c.set_has_tooltip(False)
-        b_prev_c.connect("clicked", lambda _b: self.shift_chat_session(-1))
-        chat_row.append(b_prev_c)
-
-        self.chat_sel_btn = Gtk.Button(label="💬 Основной чат (1/1) ▾")
-        self.chat_sel_btn.add_css_class("mini-btn"); self.chat_sel_btn.set_hexpand(True); self.chat_sel_btn.set_has_tooltip(False)
-        self.chat_sel_btn.connect("clicked", self.on_open_chats_rofi_menu)
-        rc_c = Gtk.GestureClick.new(); rc_c.set_button(3)
-        rc_c.connect("pressed", lambda *_a: self.shift_chat_session(1))
-        self.chat_sel_btn.add_controller(rc_c)
-        chat_row.append(self.chat_sel_btn)
-
-        b_next_c = Gtk.Button(label="▶"); b_next_c.add_css_class("mini-btn"); b_next_c.set_has_tooltip(False)
-        b_next_c.connect("clicked", lambda _b: self.shift_chat_session(1))
-        chat_row.append(b_next_c)
-
-        b_new_c = Gtk.Button(label="+"); b_new_c.add_css_class("mini-btn"); b_new_c.set_has_tooltip(False)
-        b_new_c.connect("clicked", self.on_create_new_chat_dialog)
-        chat_row.append(b_new_c)
-
-        b_del_c = Gtk.Button(label="✕"); b_del_c.add_css_class("del-btn"); b_del_c.set_has_tooltip(False)
-        b_del_c.connect("clicked", self.on_delete_current_chat_btn)
-        rc_del_c = Gtk.GestureClick.new(); rc_del_c.set_button(3)
-        rc_del_c.connect("pressed", lambda *_a: self.on_open_delete_old_chats_menu())
-        b_del_c.add_controller(rc_del_c)
-        chat_row.append(b_del_c)
-
-        # Кнопка подключения прямого ключа Gemini 2.5 Pro API
-        self.b_key = Gtk.Button(label="🔑 PRO" if get_saved_gemini_key() else "🔑"); self.b_key.add_css_class("mini-btn"); self.b_key.set_has_tooltip(False)
-        b_key = self.b_key
-        b_key.connect("clicked", self.on_set_gemini_key_dialog)
-        chat_row.append(b_key)
-
-        box.append(chat_row)
-
-        sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
-        self.chat_tv = Gtk.TextView()
-        self.chat_tv.set_editable(False); self.chat_tv.set_cursor_visible(False)
-        self.chat_tv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        self.chat_tv.add_css_class("chat-view")
-        self.chat_buf = self.chat_tv.get_buffer()
-        sc.set_child(self.chat_tv)
-        box.append(sc)
-
-        in_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        self.ai_entry = Gtk.Entry()
-        self.ai_entry.add_css_class("compact-entry"); self.ai_entry.set_hexpand(True); self.ai_entry.set_has_tooltip(False)
-        self.ai_entry.set_placeholder_text("Напиши мне вопрос или задачу (Enter)...")
-        self.ai_entry.connect("activate", self.on_send_ai_msg)
-        in_row.append(self.ai_entry)
-
-        b_send = Gtk.Button(label="➤"); b_send.add_css_class("mini-btn"); b_send.set_has_tooltip(False)
-        b_send.connect("clicked", self.on_send_ai_msg)
-        in_row.append(b_send)
-
-        b_copy = Gtk.Button(label="󰆏"); b_copy.add_css_class("mini-btn"); b_copy.set_has_tooltip(False)
-        b_copy.connect("clicked", self.on_copy_last_ai)
-        in_row.append(b_copy)
-
-        b_clr = Gtk.Button(label="󰩺"); b_clr.add_css_class("mini-btn"); b_clr.set_has_tooltip(False)
-        b_clr.connect("clicked", self.on_clear_ai_chat)
-        in_row.append(b_clr)
-
-        box.append(in_row)
-        self.render_chat_log()
-        return box
-
-    def on_set_gemini_key_dialog(self, _b):
-        def _worker():
-            has_k = os.path.isfile(GEM_KEY_FILE) and bool(open(GEM_KEY_FILE).read().strip())
-            st_lbl = "АКТИВЕН ПРЯМОЙ GEMINI 2.5 PRO" if has_k else "ПУБЛИЧНЫЙ ШЛЮЗ"
-            ch = rofi_prompt(f"🔑 GEMINI 2.5 PRO [{st_lbl}]", [
-                "📋 Вставить API-ключ из буфера обмена (Ctrl+C -> клик сюда)",
-                "🌐 Открыть Google AI Studio в браузере (получить бесплатный ключ)",
-                "🗑 Удалить ключ и вернуться на публичный шлюз",
-            ])
-            if not ch:
-                return
-            if "Вставить API-ключ" in ch:
-                try:
-                    clip = subprocess.check_output(["wl-paste", "-n"], text=True, stderr=subprocess.DEVNULL).strip()
-                except Exception:
-                    clip = ""
-                if clip and len(clip) > 15:
-                    open(GEM_KEY_FILE, "w", encoding="utf-8").write( re.sub(r"[^A-Za-z0-9_-]", "", clip) )
-                    GLib.idle_add(self.b_key.set_label, "🔑 PRO")
-                    self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Прямой ключ из буфера обмена подключён!'")
-                else:
-                    manual = rofi_prompt("Вставьте ключ AIzaSy...", [""])
-                    if manual.strip():
-                        open(GEM_KEY_FILE, "w", encoding="utf-8").write( re.sub(r"[^A-Za-z0-9_-]", "", manual) )
-                        GLib.idle_add(self.b_key.set_label, "🔑 PRO")
-                        self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Прямой ключ успешно подключён!'")
-            elif "Открыть Google AI Studio" in ch:
-                self.spawn_raw("xdg-open 'https://aistudio.google.com/apikey'")
-            elif "Удалить ключ" in ch:
-                if os.path.isfile(GEM_KEY_FILE):
-                    os.remove(GEM_KEY_FILE)
-                self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI' 'Включён публичный шлюз'")
-            elif ch.strip().startswith("AIza"):
-                open(GEM_KEY_FILE, "w", encoding="utf-8").write(ch.strip())
-                self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Прямой ключ успешно подключён!'")
-        threading.Thread(target=_worker, daemon=True).start()
-
-    def on_delete_current_chat_btn(self, _b):
-        idx, _ = self.get_active_chat_session()
-        self._finish_delete_chat(idx)
-
-    def on_open_delete_old_chats_menu(self):
-        def _worker():
-            sessions = self.chats_data.get("sessions", [])
-            cur_idx = int(self.chats_data.get("active_idx", 0))
-            lines = ["🔥 Удалить ВСЕ старые чаты, кроме текущего"]
-            for i, s in enumerate(sessions):
-                tag = " [ТЕКУЩИЙ]" if i == cur_idx else ""
-                clean_t = re.sub(r"^[💬\s]+", "", s.get("title", "")).strip() or "Чат"
-                lines.append(f"{i+1}. 🗑 Удалить чат «{clean_t}» ({len(s.get('messages', []))} сообщ.){tag}")
-            ch = rofi_prompt("🗑 УДАЛЕНИЕ СТАРЫХ ЧАТОВ", lines)
-            if not ch:
-                return
-            if "Удалить ВСЕ старые" in ch:
-                GLib.idle_add(self._finish_keep_only_current_chat)
-            elif "." in ch:
-                try:
-                    sel_i = int(ch.split(".", 1)[0]) - 1
-                    if 0 <= sel_i < len(sessions):
-                        GLib.idle_add(self._finish_delete_chat, sel_i)
-                except Exception:
-                    pass
-        threading.Thread(target=_worker, daemon=True).start()
-
-    def _finish_keep_only_current_chat(self):
-        _, cur_sess = self.get_active_chat_session()
-        self.chats_data["sessions"] = [cur_sess]
-        self.chats_data["active_idx"] = 0
-        self.save_chats_db()
-        self.render_chat_log()
-        return False
-
-    def shift_chat_session(self, delta):
-        sessions = self.chats_data.get("sessions", [])
-        if not sessions: return
-        self.chats_data["active_idx"] = (int(self.chats_data.get("active_idx", 0)) + delta) % len(sessions)
-        self.save_chats_db()
-        self.render_chat_log()
-
-    def on_create_new_chat_dialog(self, _b):
-        def _worker():
-            title = rofi_prompt("💬 Название нового чата", ["🎮 Разработка игры", "🖥 Окружение Linux", "🐍 Скрипты и код", "📚 Учёба"])
-            if title:
-                GLib.idle_add(self._finish_create_chat, title)
-        threading.Thread(target=_worker, daemon=True).start()
-
-    def _finish_create_chat(self, title):
-        clean_t = re.sub(r"^[💬\s]+", "", title).strip() or "Новый чат"
-        self.chats_data["sessions"].append({
-            "id": f"chat-{int(time.time())}",
-            "title": clean_t,
-            "messages": [{"role": "assistant", "content": f"Создан новый чат «{clean_t}». Слушаю тебя, Денис — какую задачу разбираем?"}],
-        })
-        self.chats_data["active_idx"] = len(self.chats_data["sessions"]) - 1
-        self.save_chats_db()
-        self.render_chat_log()
-        return False
-
-    def on_open_chats_rofi_menu(self, _b):
-        def _worker():
-            sessions = self.chats_data.get("sessions", [])
-            cur_idx = int(self.chats_data.get("active_idx", 0))
-            lines = []
-            for i, s in enumerate(sessions):
-                clean_t = re.sub(r"^[💬\s]+", "", s.get("title", "")).strip() or "Чат"
-                lines.append(f"{i+1}. 💬 {clean_t}" + ("  [● АКТИВЕН]" if i == cur_idx else f"  ({len(s.get('messages', []))} сообщ.)"))
-            lines += [
-                "➕ Создать новый чат...",
-                "✎ Переименовать текущий чат...",
-                "🗑 Выбрать и удалить старые чаты...",
-                "🔥 Удалить все старые чаты, кроме текущего",
-            ]
-            ch = rofi_prompt("💬 ЧАТЫ С GEMINI 2.5 PRO", lines)
-            if not ch: return
-            if "Создать новый" in ch:
-                new_t = rofi_prompt("💬 Название нового чата", ["🎮 Новый проект"])
-                if new_t: GLib.idle_add(self._finish_create_chat, new_t)
-            elif "Переименовать" in ch:
-                ren_t = rofi_prompt("✎ Новое название чата", [sessions[cur_idx]["title"]])
-                if ren_t: GLib.idle_add(self._finish_rename_chat, cur_idx, ren_t)
-            elif "Выбрать и удалить" in ch:
-                self.on_open_delete_old_chats_menu()
-            elif "Удалить все старые" in ch:
-                GLib.idle_add(self._finish_keep_only_current_chat)
-            elif "." in ch:
-                try:
-                    sel_i = int(ch.split(".", 1)[0]) - 1
-                    if 0 <= sel_i < len(sessions): GLib.idle_add(self._finish_select_chat, sel_i)
-                except Exception: pass
-        threading.Thread(target=_worker, daemon=True).start()
-
-    def _finish_select_chat(self, idx):
-        self.chats_data["active_idx"] = idx
-        self.save_chats_db(); self.render_chat_log()
-        return False
-
-    def _finish_rename_chat(self, idx, new_title):
-        clean_t = re.sub(r"^[💬\s]+", "", new_title).strip() or "Чат"
-        self.chats_data["sessions"][idx]["title"] = clean_t
-        self.save_chats_db(); self.render_chat_log()
-        return False
-
-    def _finish_delete_chat(self, idx):
-        if len(self.chats_data["sessions"]) > 1:
-            self.chats_data["sessions"].pop(idx)
-            self.chats_data["active_idx"] = max(0, min(idx, len(self.chats_data["sessions"]) - 1))
-        else:
-            self.chats_data["sessions"] = [{
-                "id": f"chat-{int(time.time())}",
-                "title": "Основной чат",
-                "messages": [{"role": "assistant", "content": "Старый чат удалён. Готов к новой задаче!"}],
-            }]
-            self.chats_data["active_idx"] = 0
-        self.save_chats_db()
-        self.render_chat_log()
-        return False
-
-    def render_chat_log(self):
-        idx, sess = self.get_active_chat_session()
-        total_c = len(self.chats_data.get("sessions", []))
-        clean_t = re.sub(r"^[💬\s]+", "", sess.get("title", "")).strip() or "Основной чат"
-        if hasattr(self, "chat_sel_btn"):
-            self.chat_sel_btn.set_label(f"💬 {clean_t[:16]} ({idx+1}/{total_c}) ▾")
-
-        lines = []
-        for msg in sess.get("messages", [])[-12:]:
-            prefix = "▸ ВЫ:" if msg["role"] == "user" else "✦ Gemini 2.5 Pro:"
-            lines.append(f"{prefix}\n{msg['content']}")
-        if sess["id"] in self.ai_busy_sessions:
-            lines.append("✦ Gemini 2.5 Pro:\n▪ анализирую и пишу ответ...")
-        self.chat_buf.set_text("\n\n".join(lines))
-        GLib.idle_add(self.scroll_chat_bottom)
-
-    def scroll_chat_bottom(self):
-        end_it = self.chat_buf.get_end_iter()
-        mark = self.chat_buf.create_mark(None, end_it, False)
-        self.chat_tv.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
-        return False
-
-    def on_send_ai_msg(self, *_args):
-        _, sess = self.get_active_chat_session()
-        sid = sess["id"]
-        if sid in self.ai_busy_sessions: return
-        q = self.ai_entry.get_text().strip()
-        if not q: return
-        self.ai_entry.set_text("")
-        sess.setdefault("messages", []).append({"role": "user", "content": q})
-        self.save_chats_db()
-        self.ai_busy_sessions.add(sid)
-        self.render_chat_log()
-
-        msgs_snapshot = list(sess["messages"])
-        topic_title = re.sub(r"^[💬\s]+", "", sess.get("title", "")).strip()
-
-        def worker():
-            ans = query_gemini(msgs_snapshot, session_topic=topic_title)
-            GLib.idle_add(self.on_ai_response_ready, sid, ans)
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def on_ai_response_ready(self, target_sid, ans):
-        self.ai_busy_sessions.discard(target_sid)
-        for s in self.chats_data.get("sessions", []):
-            if s.get("id") == target_sid:
-                s.setdefault("messages", []).append({"role": "assistant", "content": ans})
-                break
-        self.save_chats_db()
-        self.render_chat_log()
-        return False
-
-    def on_copy_last_ai(self, _b):
-        _, sess = self.get_active_chat_session()
-        for msg in reversed(sess.get("messages", [])):
-            if msg["role"] == "assistant":
-                subprocess.run(["wl-copy"], input=msg["content"], text=True, stderr=subprocess.DEVNULL)
-                self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Ответ скопирован в буфер обмена'")
-                break
-
-    def on_clear_ai_chat(self, _b):
-        _, sess = self.get_active_chat_session()
-        clean_t = re.sub(r"^[💬\s]+", "", sess.get("title", "")).strip() or "Основной чат"
-        sess["messages"] = [{"role": "assistant", "content": f"История чата «{clean_t}» очищена. О чём поговорим?"}]
-        self.save_chats_db()
-        self.render_chat_log()
-
     # ==========================================================================
-    # 2. ВИДЖЕТ ЗАМЕТОК
+    # 1. ВИДЖЕТ ЗАМЕТОК С ПЕРЕКЛЮЧЕНИЕМ И УДАЛЕНИЕМ ВКЛАДОК
     # ==========================================================================
     def load_notes_db(self):
         try:
@@ -1077,7 +544,7 @@ class StudioDesktopApp(Gtk.Application):
             "active_idx": 0,
             "pages": [
                 {"id": "game-notes", "title": "🎮 Разработка игры", "content": first_text},
-                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Виджет с Gemini 2.5 Pro и удалением старых чатов\n"},
+                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Пропорциональные виджеты без подсказок\n"},
                 {"id": "study-notes", "title": "📚 Учёба и зачёты", "content": "[ ] Зачёты в декабре (Python, C#, C++)\n"},
             ]
         }
@@ -1282,6 +749,9 @@ class StudioDesktopApp(Gtk.Application):
         self.refresh_note_page_ui()
         return False
 
+    # ==========================================================================
+    # 2. ВИДЖЕТ КАЛЕНДАРЯ
+    # ==========================================================================
     def build_calendar_widget(self, card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.set_hexpand(True); box.set_vexpand(True)
@@ -1342,6 +812,9 @@ class StudioDesktopApp(Gtk.Application):
                 lbl.add_css_class("cal-today" if is_t else "cal-day")
                 self.cal_grid.attach(lbl, c_i, r_i, 1, 1)
 
+    # ==========================================================================
+    # 3. ВИДЖЕТ МЕДИАПЛЕЕРА
+    # ==========================================================================
     def build_media_widget(self, card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         box.set_hexpand(True); box.set_vexpand(True)
@@ -1398,6 +871,9 @@ class StudioDesktopApp(Gtk.Application):
         self.media_vol_lbl.set_label(f"{val}%")
         set_media_stream_only_volume(val)
 
+    # ==========================================================================
+    # 4. ЦЕНТР УВЕДОМЛЕНИЙ
+    # ==========================================================================
     def build_notif_widget_body(self, _card):
         body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         body.set_hexpand(True); body.set_vexpand(True)
@@ -1515,7 +991,6 @@ class StudioDesktopApp(Gtk.Application):
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 25)
 
         builders = {
-            "ai":       self.build_ai_widget,
             "notes":    self.build_notes_widget,
             "calendar": self.build_calendar_widget,
             "media":    self.build_media_widget,
@@ -1550,9 +1025,12 @@ class StudioDesktopApp(Gtk.Application):
         overlay.set_child(bg_area)
 
         for wid, b_fn in builders.items():
-            card = OverlayWidgetCard(self, wid, self.st, b_fn, is_standalone=False)
-            self.cards[wid] = card
-            overlay.add_overlay(card.frame)
+            try:
+                card = OverlayWidgetCard(self, wid, self.st, b_fn, is_standalone=False)
+                self.cards[wid] = card
+                overlay.add_overlay(card.frame)
+            except Exception:
+                pass
 
         b_dnd = Gtk.Button(label="󰂛 DND"); b_dnd.add_css_class("w-hdr-btn"); b_dnd.set_has_tooltip(False)
         b_dnd.connect("clicked", lambda _b: self.spawn_raw("makoctl mode -t do-not-disturb"))
