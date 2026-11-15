@@ -10,16 +10,13 @@
   "exclusive": true,
   "passthrough": false,
   "reload_style_on_change": true,
-
   "modules-left": [
     "custom/launcher",
     "hyprland/workspaces",
     "cpu",
     "memory"
   ],
-
   "modules-center": [],
-
   "modules-right": [
     "custom/media",
     "tray",
@@ -36,106 +33,99 @@
     "custom/lock",
     "custom/poweroff"
   ],
-
   "custom/launcher": {
     "format": "▣",
-    "tooltip-format": "ЛКМ: Лаунчер приложений (Rofi)\nПКМ: Большой системный монитор Btop",
     "on-click": "rofi -show drun -theme ~/.config/hypr/gaming_launcher.rasi",
-    "on-click-right": "~/.local/bin/cyber-tool btop"
+    "on-click-right": "~/.local/bin/cyber-tool btop",
+    "tooltip": false
   },
-
   "hyprland/workspaces": {
     "format": "{id}",
     "on-click": "activate",
     "on-scroll-up": "hyprctl dispatch workspace e-1",
     "on-scroll-down": "hyprctl dispatch workspace e+1",
     "all-outputs": true,
-    "sort-by-number": true
+    "sort-by-number": true,
+    "tooltip": false
   },
-
   "cpu": {
     "interval": 2,
     "format": "󰻠 CPU {usage}%",
-    "tooltip-format": "Процессор: {usage}%\nЛКМ — открыть большой Btop",
-    "on-click": "~/.local/bin/cyber-tool btop"
+    "on-click": "~/.local/bin/cyber-tool btop",
+    "tooltip": false
   },
-
   "memory": {
     "interval": 3,
     "format": "󰍛 RAM {used:0.1f}G",
-    "tooltip-format": "ОЗУ: {used:0.1f} GB / {total:0.1f} GB\nЛКМ: Btop • ПКМ: Очистить кэш ОЗУ",
     "on-click": "~/.local/bin/cyber-tool btop",
-    "on-click-right": "sudo -n /usr/local/bin/cyber-power-hw purge-ram && notify-send -a cyber-kb '▣ STUDIO' 'Кэш ОЗУ очищен'"
+    "on-click-right": "sudo -n /usr/local/bin/cyber-power-hw purge-ram && notify-send -a cyber-kb '▣ STUDIO' 'Кэш ОЗУ очищен'",
+    "tooltip": false
   },
-
   "custom/media": {
     "exec": "~/.local/bin/waybar-media",
     "return-type": "json",
     "interval": 2,
     "on-click": "playerctl play-pause",
     "on-scroll-up": "playerctl previous",
-    "on-scroll-down": "playerctl next"
+    "on-scroll-down": "playerctl next",
+    "tooltip": false
   },
-
   "tray": {
     "icon-size": 15,
     "spacing": 8,
-    "show-passive-items": true
+    "show-passive-items": true,
+    "tooltip": false
   },
-
   "backlight": {
     "format": "󰃠 {percent}%",
-    "tooltip-format": "Яркость экрана: {percent}% (ЛКМ — 100%/60%)",
     "on-scroll-up": "brightnessctl -q set +5%",
     "on-scroll-down": "brightnessctl -q set 5%-",
-    "on-click": "sh -c 'CUR=$(brightnessctl -m | cut -d, -f4 | tr -d \"%\"); [ \"$CUR\" -lt 95 ] && brightnessctl -q set 100% || brightnessctl -q set 60%'"
+    "on-click": "sh -c 'CUR=$(brightnessctl -m | cut -d, -f4 | tr -d \"%\"); [ \"$CUR\" -lt 95 ] && brightnessctl -q set 100% || brightnessctl -q set 60%'",
+    "tooltip": false
   },
-
   "backlight/slider": {
     "min": 5,
     "max": 100,
-    "orientation": "horizontal"
+    "orientation": "horizontal",
+    "tooltip": false
   },
-
   "pulseaudio": {
     "format": "󰕾 {volume}%",
     "format-muted": "󰝟 MUTE",
-    "tooltip-format": "Системный звук: {volume}% (ЛКМ — микшер, ПКМ — Mute)",
     "on-click": "~/.local/bin/cyber-audio-menu",
     "on-click-right": "pamixer -t",
     "on-scroll-up": "pamixer -i 5",
-    "on-scroll-down": "pamixer -d 5"
+    "on-scroll-down": "pamixer -d 5",
+    "tooltip": false
   },
-
   "pulseaudio/slider": {
     "min": 0,
     "max": 100,
-    "orientation": "horizontal"
+    "orientation": "horizontal",
+    "tooltip": false
   },
-
   "custom/wifi": {
     "exec": "~/.local/bin/waybar-wifi",
     "return-type": "json",
     "interval": 4,
-    "on-click": "~/.local/bin/cyber-wifi-menu"
+    "on-click": "~/.local/bin/cyber-wifi-menu",
+    "tooltip": false
   },
-
   "custom/power-mode": {
     "exec": "~/.local/bin/waybar-power-mode",
     "return-type": "json",
     "interval": 2,
     "on-click": "~/.local/bin/cyber-power toggle",
-    "on-click-right": "~/.local/bin/cyber-power menu"
+    "on-click-right": "~/.local/bin/cyber-power menu",
+    "tooltip": false
   },
-
   "hyprland/language": {
     "format": "{}",
     "format-en": "EN",
     "format-ru": "RU",
-    "tooltip-format": "Сменить раскладку (Alt + Shift)",
-    "on-click": "hyprctl switchxkblayout all next"
+    "on-click": "hyprctl switchxkblayout all next",
+    "tooltip": false
   },
-
   "battery": {
     "states": {
       "warning": 30,
@@ -143,33 +133,31 @@
     },
     "format": "󰁹 {capacity}%",
     "format-charging": "󰂄 {capacity}%",
-    "format-plugged": "󰚥 {capacity}%"
+    "format-plugged": "󰚥 {capacity}%",
+    "tooltip": false
   },
-
   "custom/notifications": {
     "exec": "~/.local/bin/waybar-notif-status",
     "return-type": "json",
     "interval": 2,
     "on-click": "touch /tmp/studio_toggle_notif_center",
-    "on-click-right": "makoctl mode -t do-not-disturb"
+    "on-click-right": "makoctl mode -t do-not-disturb",
+    "tooltip": false
   },
-
   "clock": {
     "format": "{:%H:%M  •  %d.%m}",
-    "tooltip-format": "<tt>{calendar}</tt>"
+    "tooltip": false
   },
-
   "custom/lock": {
     "format": "󰌾",
-    "tooltip-format": "Блокировка экрана (SUPER + L)",
-    "on-click": "~/.local/bin/cyber-lock"
+    "on-click": "~/.local/bin/cyber-lock",
+    "tooltip": false
   },
-
   "custom/poweroff": {
     "format": "󰐥",
-    "tooltip-format": "ЛКМ: Выключить ПК • ПКМ: Перезагрузить • СКМ: Выйти в SDDM",
     "on-click": "systemctl poweroff",
     "on-click-right": "systemctl reboot",
-    "on-click-middle": "hyprctl dispatch exit"
+    "on-click-middle": "hyprctl dispatch exit",
+    "tooltip": false
   }
 }

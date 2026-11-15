@@ -255,3 +255,12 @@ tooltip label {
     min-height: 1px;
     margin: 3px 4px;
 }
+
+tooltip, tooltip label {
+    opacity: 0;
+    background-color: transparent;
+    color: transparent;
+    border: none;
+    padding: 0px;
+    margin: 0px;
+}

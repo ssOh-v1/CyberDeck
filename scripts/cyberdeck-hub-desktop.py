@@ -470,7 +470,7 @@ class OverlayWidgetCard:
         drag_lbl = Gtk.Label(label=f"⠿ {self.st[wid].get('title', wid.upper())}", xalign=0, hexpand=True)
         drag_lbl.add_css_class("widget-title")
         drag_box.append(drag_lbl)
-        drag_box.set_tooltip_text("Зажмите ЛКМ и перетащите виджет (позиция сохраняется навсегда)")
+        drag_box.set_has_tooltip(False)
         hdr.append(drag_box)
 
         if not is_standalone:
@@ -488,14 +488,14 @@ class OverlayWidgetCard:
         if wid != "notif":
             self.pin_btn = Gtk.Button(label="󰐃" if not is_standalone else "✕")
             self.pin_btn.add_css_class("w-pin-active" if is_standalone else "w-hdr-btn")
-            self.pin_btn.set_tooltip_text("Закрепить виджет ПОВЕРХ открытых приложений" if not is_standalone else "Закрыть окно поверх приложений")
+            self.pin_btn.set_has_tooltip(False)
             self.pin_btn.connect("clicked", self.on_toggle_pin_top)
             hdr.append(self.pin_btn)
 
             if not is_standalone:
                 col_btn = Gtk.Button(label="—")
                 col_btn.add_css_class("w-hdr-btn")
-                col_btn.set_tooltip_text("Свернуть / развернуть виджет")
+                col_btn.set_has_tooltip(False)
                 col_btn.connect("clicked", self.on_toggle_collapse)
                 hdr.append(col_btn)
 
@@ -516,7 +516,7 @@ class OverlayWidgetCard:
             grip = Gtk.Label(label="◢")
             grip.add_css_class("resize-grip")
             grip_box.append(grip)
-            grip_box.set_tooltip_text("Потяните ЛКМ за уголок для изменения размера (масштаб сохраняется)")
+            grip_box.set_has_tooltip(False)
 
             rsz_gest = Gtk.GestureDrag.new()
             rsz_gest.set_button(1)
@@ -772,13 +772,13 @@ class StudioDesktopApp(Gtk.Application):
 
         chat_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
         b_prev_c = Gtk.Button(label="◀"); b_prev_c.add_css_class("mini-btn")
-        b_prev_c.set_tooltip_text("Предыдущий чат")
+        b_prev_c.set_has_tooltip(False)
         b_prev_c.connect("clicked", lambda _b: self.shift_chat_session(-1))
         chat_row.append(b_prev_c)
 
         self.chat_sel_btn = Gtk.Button(label="💬 Чат ▾")
         self.chat_sel_btn.add_css_class("mini-btn"); self.chat_sel_btn.set_hexpand(True)
-        self.chat_sel_btn.set_tooltip_text("ЛКМ: Меню всех чатов • ПКМ: Следующий чат")
+        self.chat_sel_btn.set_has_tooltip(False)
         self.chat_sel_btn.connect("clicked", self.on_open_chats_rofi_menu)
         rc_c = Gtk.GestureClick.new(); rc_c.set_button(3)
         rc_c.connect("pressed", lambda *_a: self.shift_chat_session(1))
@@ -786,12 +786,12 @@ class StudioDesktopApp(Gtk.Application):
         chat_row.append(self.chat_sel_btn)
 
         b_next_c = Gtk.Button(label="▶"); b_next_c.add_css_class("mini-btn")
-        b_next_c.set_tooltip_text("Следующий чат")
+        b_next_c.set_has_tooltip(False)
         b_next_c.connect("clicked", lambda _b: self.shift_chat_session(1))
         chat_row.append(b_next_c)
 
         b_new_c = Gtk.Button(label="+ Чат"); b_new_c.add_css_class("mini-btn")
-        b_new_c.set_tooltip_text("Создать новый чат")
+        b_new_c.set_has_tooltip(False)
         b_new_c.connect("clicked", self.on_create_new_chat_dialog)
         chat_row.append(b_new_c)
         box.append(chat_row)
@@ -1384,7 +1384,7 @@ class StudioDesktopApp(Gtk.Application):
             self.dock_box.remove(c)
         for name, cmd, icon_spec in [it for it in items if it[0] in self.pinned]:
             db = Gtk.Button(); db.add_css_class("dock-item")
-            db.set_tooltip_text(f"{name} (ЛКМ: запустить • ПКМ: открепить)")
+            db.set_has_tooltip(False)
             hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=7)
             hb.append(make_cyber_icon_widget(icon_spec, 18))
             hb.append(Gtk.Label(label=name[:16]))
