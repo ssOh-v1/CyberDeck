@@ -1,6 +1,6 @@
 * {
     font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     border: none;
     border-radius: 0;
@@ -8,175 +8,164 @@
 }
 
 window#waybar {
-    background-color: rgba(18, 20, 24, 0.96);
-    border: 1px solid #2e3238;
-    border-bottom: 2px solid #525761;
-    border-radius: 7px;
-    color: #d4d8de;
+    background-color: rgba(17, 18, 21, 0.94);
+    border: 1px solid #282b30;
+    border-radius: 6px;
+    color: #c8ccd2;
 }
 
 tooltip {
-    background-color: #16181c;
-    border: 1px solid #454a52;
-    border-radius: 6px;
+    background-color: #15171a;
+    border: 1px solid #3a3f47;
+    border-radius: 5px;
 }
 
 tooltip label {
     color: #d4d8de;
-    font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
-    font-size: 11.5px;
+    font-size: 11px;
 }
 
-#custom-brand {
+#custom-launcher {
     background-color: #202329;
     color: #e6e9ef;
     font-family: "JetBrainsMono Nerd Font", monospace;
-    font-weight: 700;
-    border: 1px solid #3a3f47;
-    border-radius: 5px;
-    padding: 0px 10px;
-    margin: 4px 2px 4px 6px;
-}
-
-#workspaces {
-    background-color: #15171b;
-    border: 1px solid #2a2d34;
-    border-radius: 5px;
-    margin: 4px 2px;
-    padding: 0px 3px;
-}
-
-#workspaces button {
-    background-color: transparent;
-    color: #8c939e;
-    font-family: "JetBrainsMono Nerd Font", monospace;
-    padding: 0px 8px;
-    margin: 2px 1px;
+    font-size: 13px;
+    border: 1px solid #343840;
     border-radius: 4px;
+    padding: 0px 9px;
+    margin: 3px 2px 3px 5px;
 }
 
-#workspaces button:hover {
-    background-color: #252830;
-    color: #ffffff;
-}
-
-#workspaces button.active {
-    background-color: #323640;
-    color: #ffffff;
-    border-bottom: 2px solid #9ea4b0;
-}
-
-#custom-new-ws,
-#custom-bg-nodes,
-#custom-pin-dock,
-#custom-term,
-#custom-files,
-#custom-pin-win,
-#custom-power-mode {
-    background-color: #1c1f24;
-    color: #d4d8de;
-    border: 1px solid #2e3238;
-    border-radius: 5px;
-    padding: 0px 10px;
-    margin: 4px 2px;
-}
-
-#custom-term {
-    background-color: #23272e;
-    border-left: 2px solid #8c939e;
-    color: #e6e9ef;
-}
-
-#custom-power-mode.perf {
-    background-color: #282c34;
-    border-color: #8c939e;
-    color: #ffffff;
-}
-
-#custom-new-ws:hover,
-#custom-bg-nodes:hover,
-#custom-pin-dock:hover,
-#custom-term:hover,
-#custom-files:hover,
-#custom-pin-win:hover,
-#custom-power-mode:hover {
+#custom-launcher:hover {
     background-color: #2c3038;
     border-color: #7a818e;
     color: #ffffff;
 }
 
+#workspaces {
+    background-color: #15171a;
+    border: 1px solid #24272c;
+    border-radius: 4px;
+    margin: 3px 2px;
+    padding: 0px 2px;
+}
+
+#workspaces button {
+    background-color: transparent;
+    color: #7a818e;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 11px;
+    padding: 0px 7px;
+    margin: 2px 1px;
+    border-radius: 3px;
+}
+
+#workspaces button:hover {
+    background-color: #22252b;
+    color: #d4d8de;
+}
+
+#workspaces button.active {
+    background-color: #2c3038;
+    color: #ffffff;
+}
+
+#custom-widgets,
+#custom-pin-dock,
+#custom-bg-nodes {
+    background-color: #181a1f;
+    color: #b0b6c0;
+    border: 1px solid #262930;
+    border-radius: 4px;
+    padding: 0px 8px;
+    margin: 3px 1px;
+}
+
+#custom-widgets:hover,
+#custom-pin-dock:hover,
+#custom-bg-nodes:hover {
+    background-color: #252830;
+    border-color: #5c626d;
+    color: #ffffff;
+}
+
+#window {
+    color: #9ea4b0;
+    font-family: "Inter", sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 0px 10px;
+}
+
+#custom-media,
 #cpu,
 #memory,
 #backlight,
 #pulseaudio,
 #custom-wifi,
+#custom-power-mode,
 #language,
 #battery {
-    background-color: #17191d;
-    color: #c8ccd2;
+    background-color: #16181c;
+    color: #b8bec8;
     font-family: "JetBrainsMono Nerd Font", monospace;
-    font-size: 11.5px;
-    border: 1px solid #2a2d34;
-    border-radius: 5px;
-    padding: 0px 9px;
-    margin: 4px 2px;
+    font-size: 11px;
+    border: 1px solid #24272c;
+    border-radius: 4px;
+    padding: 0px 8px;
+    margin: 3px 1px;
 }
 
-#backlight:hover,
-#pulseaudio:hover,
-#custom-wifi:hover,
-#language:hover,
-#cpu:hover,
-#memory:hover {
-    background-color: #252830;
+#custom-power-mode.perf {
+    background-color: #24272e;
     border-color: #6c727d;
-    color: #ffffff;
+    color: #e6e9ef;
 }
 
 #language {
     color: #e6e9ef;
     font-weight: 700;
-    border-color: #3e434c;
 }
 
 #clock {
-    background-color: #202329;
+    background-color: #1d2025;
     color: #e6e9ef;
     font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 11px;
     font-weight: 700;
-    border: 1px solid #454a52;
-    border-radius: 5px;
-    padding: 0px 11px;
-    margin: 4px 2px;
+    border: 1px solid #343840;
+    border-radius: 4px;
+    padding: 0px 9px;
+    margin: 3px 2px;
 }
 
-#custom-btop,
 #custom-lock,
-#custom-sddm,
-#custom-reboot,
 #custom-poweroff {
-    background-color: #17191d;
-    color: #b0b6c0;
-    border: 1px solid #2a2d34;
-    border-radius: 5px;
+    background-color: #16181c;
+    color: #9ea4b0;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 12px;
+    border: 1px solid #24272c;
+    border-radius: 4px;
     padding: 0px 8px;
-    margin: 4px 1px;
+    margin: 3px 1px;
 }
 
 #custom-poweroff {
-    margin-right: 6px;
+    margin-right: 5px;
 }
 
-#custom-btop:hover,
+#custom-media:hover,
+#cpu:hover,
+#memory:hover,
+#backlight:hover,
+#pulseaudio:hover,
+#custom-wifi:hover,
+#custom-power-mode:hover,
+#language:hover,
 #custom-lock:hover,
-#custom-reboot:hover {
-    background-color: #282c34;
-    color: #ffffff;
-}
-
-#custom-sddm:hover,
 #custom-poweroff:hover {
-    background-color: #36282b;
-    border-color: #7a6064;
+    background-color: #262930;
+    border-color: #5c626d;
     color: #ffffff;
 }

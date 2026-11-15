@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+import json, subprocess
+try:
+    st = subprocess.check_output(["playerctl", "status"], text=True, stderr=subprocess.DEVNULL, timeout=0.5).strip()
+    title = subprocess.check_output(["playerctl", "metadata", "xesam:title"], text=True, stderr=subprocess.DEVNULL, timeout=0.5).strip()
+    artist = subprocess.check_output(["playerctl", "metadata", "xesam:artist"], text=True, stderr=subprocess.DEVNULL, timeout=0.5).strip()
+    if title:
+        ic = "󰐊" if st == "Playing" else "󰏤"
+        short = title[:20] + ("…" if len(title) > 20 else "")
+        print(json.dumps({"text": f"{ic} {short}", "tooltip": f"{title} — {artist}\nЛКМ: Пауза/Пуск • Колёсико: Пред/След трек"}))
+    else:
+        print(json.dumps({"text": "", "tooltip": ""}))
+except Exception:
+    print(json.dumps({"text": "", "tooltip": ""}))

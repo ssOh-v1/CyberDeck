@@ -7,6 +7,6 @@ try:
     _spec.loader.exec_module(cyber_bg)
     items = cyber_bg.get_bg_and_open_items()
     cnt = sum(i.get("count", 1) for i in items)
-    print(json.dumps({"text": f"📦 Фон [{cnt}]", "tooltip": f"Активных и фоновых приложений: {cnt} (ЛКМ — открыть меню)"}))
+    print(json.dumps({"text": f"󰘔 {cnt}", "tooltip": f"Фоновые и открытые окна: {cnt}\nЛКМ — управление окнами"}))
 except Exception:
-    print(json.dumps({"text": "📦 Фон [0]", "tooltip": "Фоновые приложения"}))
+    print(json.dumps({"text": "󰘔 0", "tooltip": "Фоновые окна"}))

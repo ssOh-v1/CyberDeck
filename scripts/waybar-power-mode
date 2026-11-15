@@ -2,7 +2,7 @@
 MODE="eco"
 [ -f /run/cyberdeck-power-mode ] && MODE=$(cat /run/cyberdeck-power-mode 2>/dev/null)
 if [ "$MODE" = "performance" ]; then
-    printf '{"text": "⚡ Перфоманс", "class": "perf", "tooltip": "Активен режим максимальной производительности (ЛКМ — переключить на Эко)"}\n'
+    printf '{"text": "󰓅 PERF", "class": "perf", "tooltip": "Режим: Перфоманс (ЛКМ — переключить на Эко)"}\n'
 else
-    printf '{"text": "🌿 Эко", "class": "eco", "tooltip": "Активен энергосберегающий режим (ЛКМ — переключить на Перфоманс)"}\n'
+    printf '{"text": "󰾆 ECO", "class": "eco", "tooltip": "Режим: Эко (ЛКМ — переключить на Перфоманс)"}\n'
 fi
