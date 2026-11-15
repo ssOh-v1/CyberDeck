@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import os, re, glob, subprocess
 
 HOME = os.path.expanduser("~")

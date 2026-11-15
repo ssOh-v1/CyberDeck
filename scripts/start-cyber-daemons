@@ -12,4 +12,4 @@ else
     nohup mako >/dev/null 2>&1 &
 fi
 
-nohup python3 "$HOME/.local/bin/cyber-kb-osd" >/dev/null 2>&1 &
+nohup /usr/bin/python3 "$HOME/.local/bin/cyber-kb-osd" >/dev/null 2>&1 &

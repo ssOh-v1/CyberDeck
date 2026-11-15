@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import sys, os, math, cairo
 
 gt_dir = sys.argv[1]

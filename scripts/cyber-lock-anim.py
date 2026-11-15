@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import os, sys, math, time, random, datetime, subprocess
 from ctypes import CDLL
 try:

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import os, json, subprocess
 
 os.environ.pop("LD_PRELOAD", None)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 from ctypes import CDLL
 try:
     CDLL("libgtk4-layer-shell.so")

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 import os, math, shutil, tempfile, subprocess, cairo
 
 theme_dir = os.path.expanduser("~/.local/share/icons/CyberDeck-Cursor")
