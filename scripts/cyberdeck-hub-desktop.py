@@ -7,6 +7,9 @@ except Exception:
 
 import os, sys, re, glob, json, time, random, socket, signal, atexit, hashlib, urllib.request, urllib.parse, calendar, threading, subprocess, datetime
 
+# Игнорируем SIGHUP, чтобы закрытие терминала никогда не закрывало виджеты
+signal.signal(signal.SIGHUP, signal.SIG_IGN)
+
 HOME = os.path.expanduser("~")
 UID = os.getuid()
 CFG_DIR      = os.path.join(HOME, ".config/cyberdeck")
@@ -23,6 +26,8 @@ HIDDEN_NOTIF = os.path.join(CFG_DIR, "hidden_notifications.json")
 ROFI_T       = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
 NOTIF_TRIG   = "/tmp/studio_toggle_notif_center"
 ART_CACHE    = "/tmp/studio_art_cache"
+PID_FILE     = f"/tmp/studio_widgets_{UID}.pid"
+
 os.makedirs(ART_CACHE, exist_ok=True)
 os.makedirs(CFG_DIR, exist_ok=True)
 
@@ -40,22 +45,24 @@ import cairo
 
 os.environ.pop("LD_PRELOAD", None)
 
-
-signal.signal(signal.SIGHUP, signal.SIG_IGN)
-if SINGLE_PIN_WID is None:
-    _pid_f = f"/tmp/studio_widgets_{UID}.pid"
-    if os.path.isfile(_pid_f):
-        try:
-            _old = int(open(_pid_f).read().strip())
-            if _old != os.getpid():
-                os.kill(_old, signal.SIGTERM)
-                time.sleep(0.15)
-        except Exception:
-            pass
-    open(_pid_f, "w").write(str(os.getpid()))
-
+# Сначала определяем режим запуска, и только затем проверяем PID-файл
 SINGLE_PIN_WID = sys.argv[2] if (len(sys.argv) > 2 and sys.argv[1] == "--pin-window") else None
 
+if SINGLE_PIN_WID is None:
+    if os.path.isfile(PID_FILE):
+        try:
+            old_pid = int(open(PID_FILE).read().strip())
+            if old_pid != os.getpid() and os.path.exists(f"/proc/{old_pid}/cmdline"):
+                cmdline = open(f"/proc/{old_pid}/cmdline", "rb").read().decode("utf-8", "ignore")
+                if "work-hub-desktop.py" in cmdline and "--pin-window" not in cmdline:
+                    os.kill(old_pid, signal.SIGTERM)
+                    time.sleep(0.15)
+        except Exception:
+            pass
+    try:
+        open(PID_FILE, "w").write(str(os.getpid()))
+    except Exception:
+        pass
 
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
@@ -131,8 +138,12 @@ def load_widgets_state():
                     for field in ("x", "y", "w", "h", "collapsed"):
                         if field in saved[k]:
                             st[k][field] = saved[k][field]
-                    st[k]["x"] = max(0, min(W_MON - 80, int(st[k]["x"])))
-                    st[k]["y"] = max(34, min(H_MON - 36, int(st[k]["y"])))
+                    w = max(int(st[k]["min_w"]), min(W_MON - 20, int(st[k]["w"])))
+                    h = max(int(st[k]["min_h"]), min(H_MON - 60, int(st[k]["h"])))
+                    st[k]["w"] = w
+                    st[k]["h"] = h
+                    st[k]["x"] = max(4, min(W_MON - w - 4, int(st[k]["x"])))
+                    st[k]["y"] = max(36, min(H_MON - h - 4, int(st[k]["y"])))
     except Exception:
         pass
     return st
@@ -152,6 +163,8 @@ def save_widgets_state(st):
 
 def resolve_cyber_svg(spec, fallback_glyph="default"):
     theme_apps = os.path.join(HOME, ".local/share/icons/CyberDeck-Icons/scalable/apps")
+    if spec and os.path.isfile(spec):
+        return spec
     raw = os.path.splitext(os.path.basename(spec or ""))[0]
     for cand in (spec, raw, raw.lower(), fallback_glyph, "default"):
         if cand and os.path.isfile(os.path.join(theme_apps, f"{cand}.svg")):
@@ -234,9 +247,6 @@ def read_music_and_art():
         pass
     return "󰓛 Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART
 
-# ==============================================================================
-# МУЛЬТИ-ПРОВАЙДЕРНЫЙ ШЛЮЗ ИИ (БЕЗ ОШИБКИ 45 СЕКУНД)
-# ==============================================================================
 def load_ai_models():
     try:
         if os.path.isfile(MODELS_FILE):
@@ -281,9 +291,7 @@ def query_duckduckgo_ai(sys_prompt, messages):
         if not vqd:
             return None
 
-        ddg_msgs = []
-        for m in messages[-6:]:
-            ddg_msgs.append({"role": m["role"], "content": m["content"]})
+        ddg_msgs = [{"role": m["role"], "content": m["content"]} for m in messages[-6:]]
         if ddg_msgs:
             ddg_msgs[-1]["content"] = f"{sys_prompt}\n\nЗапрос пользователя: {ddg_msgs[-1]['content']}"
 
@@ -310,7 +318,7 @@ def query_duckduckgo_ai(sys_prompt, messages):
                         break
                     try:
                         obj = json.loads(data_str)
-                        if "message" in obj and obj["message"]:
+                        if obj.get("message"):
                             chunks.append(obj["message"])
                     except Exception:
                         pass
@@ -426,9 +434,6 @@ def query_ai_llm(model_meta, messages, session_topic=""):
 
     return "Все облачные каналы временно заняты, повторите отправку через пару секунд."
 
-# ==============================================================================
-# КАРТОЧКА ВИДЖЕТА С СОХРАНЕНИЕМ ПОЗИЦИИ И ПРОПОРЦИОНАЛЬНЫМ МАСШТАБОМ
-# ==============================================================================
 class OverlayWidgetCard:
     def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False, extra_hdr_btns=None):
         self.app = app
@@ -568,16 +573,17 @@ class OverlayWidgetCard:
         cfg = self.st[self.wid]
         w = max(int(cfg.get("min_w", 210)), int(cfg.get("w", 280)))
         h = max(int(cfg.get("min_h", 110)), int(cfg.get("h", 180)))
-        x = max(4, min(W_MON - w - 4, int(cfg.get("x", 18))))
-        y = max(36, min(H_MON - (26 if is_col else h) - 4, int(cfg.get("y", 46))))
         is_col = bool(cfg.get("collapsed", False)) and not self.is_standalone
+        eff_h = 26 if is_col else h
+        x = max(4, min(W_MON - w - 4, int(cfg.get("x", 18))))
+        y = max(36, min(H_MON - eff_h - 4, int(cfg.get("y", 46))))
 
         if not self.is_standalone:
             self.frame.set_margin_start(x)
             self.frame.set_margin_top(y)
 
         self.body_wrap.set_visible(not is_col)
-        self.frame.set_size_request(w, 26 if is_col else h)
+        self.frame.set_size_request(w, eff_h)
         self.update_proportional_scale(w, h)
 
     def on_move_begin(self, _g, _x, _y):
@@ -595,7 +601,7 @@ class OverlayWidgetCard:
             nx = self.m_start_xy[0] + int(off_x)
             ny = self.m_start_xy[1] + int(off_y)
         cfg["x"] = max(4, min(W_MON - int(cfg["w"]) - 4, nx))
-        cfg["y"] = max(36, min(H_MON - 36, ny))
+        cfg["y"] = max(36, min(H_MON - 40, ny))
         self.frame.set_margin_start(cfg["x"])
         self.frame.set_margin_top(cfg["y"])
 
@@ -616,8 +622,10 @@ class OverlayWidgetCard:
         else:
             nw = self.r_start_wh[0] + int(off_x)
             nh = self.r_start_wh[1] + int(off_y)
-        cfg["w"] = max(int(cfg.get("min_w", 210)), min(1100, nw))
-        cfg["h"] = max(int(cfg.get("min_h", 110)), min(920, nh))
+        max_w = max(240, W_MON - int(cfg.get("x", 18)) - 6)
+        max_h = max(140, H_MON - int(cfg.get("y", 46)) - 6)
+        cfg["w"] = max(int(cfg.get("min_w", 210)), min(max_w, nw))
+        cfg["h"] = max(int(cfg.get("min_h", 110)), min(max_h, nh))
         self.frame.set_size_request(cfg["w"], cfg["h"])
         self.update_proportional_scale(cfg["w"], cfg["h"])
 
@@ -639,9 +647,6 @@ class OverlayWidgetCard:
         self.apply_geometry()
         save_widgets_state(self.st)
 
-# ==============================================================================
-# ГЛАВНОЕ ПРИЛОЖЕНИЕ РАБОЧЕГО СТОЛА И ВИДЖЕТОВ
-# ==============================================================================
 class StudioDesktopApp(Gtk.Application):
     def __init__(self):
         app_id = f"org.alpora.PinWidget.{SINGLE_PIN_WID}.{os.getpid()}" if SINGLE_PIN_WID else "org.alpora.WorkDeckLayer"
@@ -676,7 +681,6 @@ class StudioDesktopApp(Gtk.Application):
 
         if SINGLE_PIN_WID is None:
             atexit.register(lambda: save_widgets_state(self.st))
-            signal.signal(signal.SIGHUP, signal.SIG_IGN)
             for sig_num in (signal.SIGTERM, signal.SIGINT):
                 try:
                     signal.signal(sig_num, self._on_exit_signal)
@@ -714,9 +718,6 @@ class StudioDesktopApp(Gtk.Application):
         try: json.dump(sorted(list(self.hidden_notifs))[-200:], open(HIDDEN_NOTIF, "w", encoding="utf-8"))
         except Exception: pass
 
-    # ==========================================================================
-    # БАЗА МУЛЬТИ-ЧАТОВ ИИ (РАЗРАБОТКА ИГРЫ / ОКРУЖЕНИЕ / СВОИ ЧАТЫ)
-    # ==========================================================================
     def load_chats_db(self):
         try:
             if os.path.isfile(CHATS_DB):
@@ -726,7 +727,6 @@ class StudioDesktopApp(Gtk.Application):
         except Exception:
             pass
 
-        # Переносим старую историю чата, если она была
         old_msgs = [{"role": "assistant", "content": "Чат «Разработка игры» активен. Напишите задачу по Pygame, физике или архитектуре кода."}]
         if os.path.isfile(CHAT_FILE):
             try:
@@ -740,25 +740,9 @@ class StudioDesktopApp(Gtk.Application):
         default_db = {
             "active_idx": 0,
             "sessions": [
-                {
-                    "id": "gamedev",
-                    "title": "🎮 Разработка игры",
-                    "messages": old_msgs,
-                },
-                {
-                    "id": "linux-env",
-                    "title": "🖥 Окружение и Linux",
-                    "messages": [
-                        {"role": "assistant", "content": "Чат «Окружение и Linux» активен. Здесь можно обсуждать настройку Hyprland, Waybar, скриптов и системы."}
-                    ],
-                },
-                {
-                    "id": "college-code",
-                    "title": "📚 Учёба и алгоритмы",
-                    "messages": [
-                        {"role": "assistant", "content": "Чат «Учёба и алгоритмы» активен. Задавайте вопросы по Python, C#, C++, Java или 1С."}
-                    ],
-                },
+                {"id": "gamedev", "title": "🎮 Разработка игры", "messages": old_msgs},
+                {"id": "linux-env", "title": "🖥 Окружение и Linux", "messages": [{"role": "assistant", "content": "Чат «Окружение и Linux» активен. Здесь можно обсуждать настройку Hyprland, Waybar, скриптов и системы."}]},
+                {"id": "college-code", "title": "📚 Учёба и алгоритмы", "messages": [{"role": "assistant", "content": "Чат «Учёба и алгоритмы» активен. Задавайте вопросы по Python, C#, C++, Java или 1С."}]},
             ]
         }
         self.save_chats_db(default_db)
@@ -783,64 +767,50 @@ class StudioDesktopApp(Gtk.Application):
         self.chats_data["active_idx"] = idx
         return idx, sessions[idx]
 
-    # --- 1. ВИДЖЕТ НЕЙРОСЕТЕЙ С ПЕРЕКЛЮЧЕНИЕМ ЧАТОВ ---
     def build_ai_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
 
-        # Строка 1: Переключатель чатов (◀ | 💬 Название чата (1/3) ▾ | ▶ | + Чат)
         chat_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
-
-        b_prev_c = Gtk.Button(label="◀")
-        b_prev_c.add_css_class("mini-btn")
+        b_prev_c = Gtk.Button(label="◀"); b_prev_c.add_css_class("mini-btn")
         b_prev_c.set_tooltip_text("Предыдущий чат")
         b_prev_c.connect("clicked", lambda _b: self.shift_chat_session(-1))
         chat_row.append(b_prev_c)
 
         self.chat_sel_btn = Gtk.Button(label="💬 Чат ▾")
-        self.chat_sel_btn.add_css_class("mini-btn")
-        self.chat_sel_btn.set_hexpand(True)
-        self.chat_sel_btn.set_tooltip_text("ЛКМ: Меню всех чатов (выбрать / переименовать / удалить)\nПКМ: Следующий чат")
+        self.chat_sel_btn.add_css_class("mini-btn"); self.chat_sel_btn.set_hexpand(True)
+        self.chat_sel_btn.set_tooltip_text("ЛКМ: Меню всех чатов • ПКМ: Следующий чат")
         self.chat_sel_btn.connect("clicked", self.on_open_chats_rofi_menu)
         rc_c = Gtk.GestureClick.new(); rc_c.set_button(3)
         rc_c.connect("pressed", lambda *_a: self.shift_chat_session(1))
         self.chat_sel_btn.add_controller(rc_c)
         chat_row.append(self.chat_sel_btn)
 
-        b_next_c = Gtk.Button(label="▶")
-        b_next_c.add_css_class("mini-btn")
+        b_next_c = Gtk.Button(label="▶"); b_next_c.add_css_class("mini-btn")
         b_next_c.set_tooltip_text("Следующий чат")
         b_next_c.connect("clicked", lambda _b: self.shift_chat_session(1))
         chat_row.append(b_next_c)
 
-        b_new_c = Gtk.Button(label="+ Чат")
-        b_new_c.add_css_class("mini-btn")
-        b_new_c.set_tooltip_text("Создать новый тематический чат с нейросетью")
+        b_new_c = Gtk.Button(label="+ Чат"); b_new_c.add_css_class("mini-btn")
+        b_new_c.set_tooltip_text("Создать новый чат")
         b_new_c.connect("clicked", self.on_create_new_chat_dialog)
         chat_row.append(b_new_c)
-
         box.append(chat_row)
 
-        # Строка 2: Выбор модели ИИ + кнопка «+ ИИ»
         top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         cur_m_name = self.ai_models[self.active_model_idx]["name"] if self.ai_models else "Gemini Argon"
         self.model_sel_btn = Gtk.Button(label=f"󰚩 {cur_m_name[:25]} ▾")
-        self.model_sel_btn.add_css_class("mini-btn")
-        self.model_sel_btn.set_hexpand(True)
-        self.model_sel_btn.set_tooltip_text("ЛКМ: Открыть список доступных нейросетей • ПКМ: Следующая модель")
+        self.model_sel_btn.add_css_class("mini-btn"); self.model_sel_btn.set_hexpand(True)
         self.model_sel_btn.connect("clicked", self.on_open_model_list_rofi)
         rc_m = Gtk.GestureClick.new(); rc_m.set_button(3)
         rc_m.connect("pressed", lambda *_a: self.cycle_next_model())
         self.model_sel_btn.add_controller(rc_m)
         top_row.append(self.model_sel_btn)
 
-        b_manage = Gtk.Button(label="+ ИИ")
-        b_manage.add_css_class("mini-btn")
-        b_manage.set_tooltip_text("Добавить свою нейросеть или выбрать из каталога")
+        b_manage = Gtk.Button(label="+ ИИ"); b_manage.add_css_class("mini-btn")
         b_manage.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/studio-ai-manager"))
         top_row.append(b_manage)
         box.append(top_row)
 
-        # Окно сообщений активного чата
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
         self.chat_tv = Gtk.TextView()
         self.chat_tv.set_editable(False); self.chat_tv.set_cursor_visible(False)
@@ -850,7 +820,6 @@ class StudioDesktopApp(Gtk.Application):
         sc.set_child(self.chat_tv)
         box.append(sc)
 
-        # Поле ввода
         in_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self.ai_entry = Gtk.Entry()
         self.ai_entry.add_css_class("compact-entry"); self.ai_entry.set_hexpand(True)
@@ -863,12 +832,10 @@ class StudioDesktopApp(Gtk.Application):
         in_row.append(b_send)
 
         b_copy = Gtk.Button(label="󰆏"); b_copy.add_css_class("mini-btn")
-        b_copy.set_tooltip_text("Скопировать последний ответ из этого чата")
         b_copy.connect("clicked", self.on_copy_last_ai)
         in_row.append(b_copy)
 
         b_clr = Gtk.Button(label="󰩺"); b_clr.add_css_class("mini-btn")
-        b_clr.set_tooltip_text("Очистить сообщения текущего чата")
         b_clr.connect("clicked", self.on_clear_ai_chat)
         in_row.append(b_clr)
 
@@ -880,29 +847,22 @@ class StudioDesktopApp(Gtk.Application):
     def shift_chat_session(self, delta):
         sessions = self.chats_data.get("sessions", [])
         if not sessions: return
-        idx = (int(self.chats_data.get("active_idx", 0)) + delta) % len(sessions)
-        self.chats_data["active_idx"] = idx
+        self.chats_data["active_idx"] = (int(self.chats_data.get("active_idx", 0)) + delta) % len(sessions)
         self.save_chats_db()
         self.render_chat_log()
 
     def on_create_new_chat_dialog(self, _b):
         def _worker():
-            title = rofi_prompt("💬 Название нового чата", [
-                "🎮 Механики и физика игры",
-                "🖥 Кастомизация Hyprland",
-                "🐍 Скрипты и автоматизация",
-                "📚 Подготовка к экзаменам",
-            ])
+            title = rofi_prompt("💬 Название нового чата", ["🎮 Механики игры", "🖥 Кастомизация Linux", "🐍 Скрипты и код", "📚 Учёба"])
             if title:
                 GLib.idle_add(self._finish_create_chat, title)
         threading.Thread(target=_worker, daemon=True).start()
 
     def _finish_create_chat(self, title):
-        new_id = f"chat-{int(time.time())}"
         self.chats_data["sessions"].append({
-            "id": new_id,
+            "id": f"chat-{int(time.time())}",
             "title": title,
-            "messages": [{"role": "assistant", "content": f"Создан новый чат «{title}». Чем помочь по этой теме?"}],
+            "messages": [{"role": "assistant", "content": f"Создан новый чат «{title}». Чем помочь?"}],
         })
         self.chats_data["active_idx"] = len(self.chats_data["sessions"]) - 1
         self.save_chats_db()
@@ -913,74 +873,55 @@ class StudioDesktopApp(Gtk.Application):
         def _worker():
             sessions = self.chats_data.get("sessions", [])
             cur_idx = int(self.chats_data.get("active_idx", 0))
-            lines = []
-            for i, s in enumerate(sessions):
-                mark = "  [● АКТИВЕН]" if i == cur_idx else f"  ({len(s.get('messages', []))} сообщ.)"
-                lines.append(f"{i+1}. 💬 {s['title']}{mark}")
-            lines.append("➕ Создать новый чат...")
-            lines.append("✎ Переименовать текущий чат...")
+            lines = [f"{i+1}. 💬 {s['title']}" + ("  [● АКТИВЕН]" if i == cur_idx else f"  ({len(s.get('messages', []))} сообщ.)") for i, s in enumerate(sessions)]
+            lines += ["➕ Создать новый чат...", "✎ Переименовать текущий чат..."]
             if len(sessions) > 1:
                 lines.append("🗑 Удалить текущий чат")
-
             ch = rofi_prompt("💬 ЧАТЫ И ПРОЕКТЫ ИИ", lines)
-            if not ch:
-                return
+            if not ch: return
             if "Создать новый" in ch:
                 new_t = rofi_prompt("💬 Название нового чата", ["🎮 Новый проект"])
-                if new_t:
-                    GLib.idle_add(self._finish_create_chat, new_t)
+                if new_t: GLib.idle_add(self._finish_create_chat, new_t)
             elif "Переименовать" in ch:
-                cur_t = sessions[cur_idx]["title"]
-                ren_t = rofi_prompt("✎ Новое название чата", [cur_t])
-                if ren_t:
-                    GLib.idle_add(self._finish_rename_chat, cur_idx, ren_t)
+                ren_t = rofi_prompt("✎ Новое название чата", [sessions[cur_idx]["title"]])
+                if ren_t: GLib.idle_add(self._finish_rename_chat, cur_idx, ren_t)
             elif "Удалить текущий" in ch and len(sessions) > 1:
                 GLib.idle_add(self._finish_delete_chat, cur_idx)
             elif "." in ch:
                 try:
                     sel_i = int(ch.split(".", 1)[0]) - 1
-                    if 0 <= sel_i < len(sessions):
-                        GLib.idle_add(self._finish_select_chat, sel_i)
-                except Exception:
-                    pass
+                    if 0 <= sel_i < len(sessions): GLib.idle_add(self._finish_select_chat, sel_i)
+                except Exception: pass
         threading.Thread(target=_worker, daemon=True).start()
 
     def _finish_select_chat(self, idx):
         self.chats_data["active_idx"] = idx
-        self.save_chats_db()
-        self.render_chat_log()
+        self.save_chats_db(); self.render_chat_log()
         return False
 
     def _finish_rename_chat(self, idx, new_title):
         self.chats_data["sessions"][idx]["title"] = new_title
-        self.save_chats_db()
-        self.render_chat_log()
+        self.save_chats_db(); self.render_chat_log()
         return False
 
     def _finish_delete_chat(self, idx):
-        if len(self.chats_data["sessions"]) <= 1:
-            return False
-        self.chats_data["sessions"].pop(idx)
-        self.chats_data["active_idx"] = max(0, min(idx, len(self.chats_data["sessions"]) - 1))
-        self.save_chats_db()
-        self.render_chat_log()
+        if len(self.chats_data["sessions"]) > 1:
+            self.chats_data["sessions"].pop(idx)
+            self.chats_data["active_idx"] = max(0, min(idx, len(self.chats_data["sessions"]) - 1))
+            self.save_chats_db(); self.render_chat_log()
         return False
 
     def cycle_next_model(self):
         self.ai_models = load_ai_models()
         if not self.ai_models: return
         self.active_model_idx = (self.active_model_idx + 1) % len(self.ai_models)
-        cur_m_name = self.ai_models[self.active_model_idx]["name"]
-        self.model_sel_btn.set_label(f"󰚩 {cur_m_name[:25]} ▾")
+        self.model_sel_btn.set_label(f"󰚩 {self.ai_models[self.active_model_idx]['name'][:25]} ▾")
         self.render_chat_log()
 
     def on_open_model_list_rofi(self, _b):
         self.ai_models = load_ai_models()
         def _pick():
-            lines = []
-            for idx, m in enumerate(self.ai_models):
-                mark = " [● АКТИВНА]" if idx == self.active_model_idx else ""
-                lines.append(f"{idx+1}. 󰚩 {m['name']}{mark}")
+            lines = [f"{idx+1}. 󰚩 {m['name']}" + (" [● АКТИВНА]" if idx == self.active_model_idx else "") for idx, m in enumerate(self.ai_models)]
             lines.append("➕ Добавить новую нейросеть в список...")
             ch = rofi_prompt("󰚩 ВЫБОР НЕЙРОСЕТИ", lines)
             if ch:
@@ -989,16 +930,13 @@ class StudioDesktopApp(Gtk.Application):
                 elif "." in ch:
                     try:
                         sel_i = int(ch.split(".", 1)[0]) - 1
-                        if 0 <= sel_i < len(self.ai_models):
-                            GLib.idle_add(self.set_active_model_idx, sel_i)
-                    except Exception:
-                        pass
+                        if 0 <= sel_i < len(self.ai_models): GLib.idle_add(self.set_active_model_idx, sel_i)
+                    except Exception: pass
         threading.Thread(target=_pick, daemon=True).start()
 
     def set_active_model_idx(self, idx):
         self.active_model_idx = idx
-        cur_m_name = self.ai_models[self.active_model_idx]["name"]
-        self.model_sel_btn.set_label(f"󰚩 {cur_m_name[:25]} ▾")
+        self.model_sel_btn.set_label(f"󰚩 {self.ai_models[self.active_model_idx]['name'][:25]} ▾")
         self.render_chat_log()
         return False
 
@@ -1028,15 +966,12 @@ class StudioDesktopApp(Gtk.Application):
     def on_send_ai_msg(self, *_args):
         _, sess = self.get_active_chat_session()
         sid = sess["id"]
-        if sid in self.ai_busy_sessions:
-            return
+        if sid in self.ai_busy_sessions: return
         q = self.ai_entry.get_text().strip()
-        if not q:
-            return
+        if not q: return
         self.ai_entry.set_text("")
         sess.setdefault("messages", []).append({"role": "user", "content": q})
         self.save_chats_db()
-
         self.ai_busy_sessions.add(sid)
         self.render_chat_log()
 
@@ -1074,9 +1009,6 @@ class StudioDesktopApp(Gtk.Application):
         self.save_chats_db()
         self.render_chat_log()
 
-    # ==========================================================================
-    # БАЗА МУЛЬТИ-ВКЛАДОК ЗАМЕТОК (ИГРА / ОКРУЖЕНИЕ / УЧЁБА / СВОИ ЛИСТЫ)
-    # ==========================================================================
     def load_notes_db(self):
         try:
             if os.path.isfile(NOTES_PAGES):
@@ -1086,48 +1018,32 @@ class StudioDesktopApp(Gtk.Application):
         except Exception:
             pass
 
-        first_text = "[x] Настроить серое окружение студии\n[ ] Доработать физику прыжка и коллизии в игре\n[ ] Добавить новые карточки артефактов\n"
+        first_text = "[x] Настроить серое окружение студии\n[ ] Доработать физику прыжка в игре\n[ ] Подготовить зачёты\n"
         if os.path.isfile(NOTES_FILE):
             try:
                 raw_t = open(NOTES_FILE, "r", encoding="utf-8").read().strip()
-                if raw_t:
-                    first_text = raw_t + "\n"
-            except Exception:
-                pass
+                if raw_t: first_text = raw_t + "\n"
+            except Exception: pass
 
         default_notes = {
             "active_idx": 0,
             "pages": [
-                {
-                    "id": "game-notes",
-                    "title": "🎮 Разработка игры",
-                    "content": first_text,
-                },
-                {
-                    "id": "env-notes",
-                    "title": "🖥 Окружение Linux",
-                    "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Пропорциональное масштабирование виджетов\n[x] Мульти-чаты в ИИ и вкладки в заметках\n",
-                },
-                {
-                    "id": "study-notes",
-                    "title": "📚 Учёба и зачёты",
-                    "content": "[ ] Зачёты в середине декабря (Python, C#, C++)\n[ ] Практические работы по JS, Java, HTML и 1С\n",
-                },
+                {"id": "game-notes", "title": "🎮 Разработка игры", "content": first_text},
+                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Мульти-чаты в ИИ и вкладки в заметках\n"},
+                {"id": "study-notes", "title": "📚 Учёба и зачёты", "content": "[ ] Зачёты в декабре (Python, C#, C++)\n"},
             ]
         }
         self.save_notes_db(default_notes)
         return default_notes
 
     def save_notes_db(self, data=None):
-        if data is None:
-            data = self.notes_data
+        if data is None: data = self.notes_data
         try:
             tmp_p = NOTES_PAGES + ".tmp"
             with open(tmp_p, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             os.replace(tmp_p, NOTES_PAGES)
-        except Exception:
-            pass
+        except Exception: pass
 
     def get_active_note_page(self):
         pages = self.notes_data.get("pages", [])
@@ -1137,41 +1053,29 @@ class StudioDesktopApp(Gtk.Application):
         self.notes_data["active_idx"] = idx
         return idx, pages[idx]
 
-    # --- 2. ВИДЖЕТ ЗАМЕТОК С ПЕРЕКЛЮЧЕНИЕМ ВКЛАДОК ---
     def build_notes_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
 
-        # Верхняя панель переключения листов заметок: ◀ | 📑 Название (1/3) ▾ | ▶ | + Лист
         nav_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
-
-        b_prev_n = Gtk.Button(label="◀")
-        b_prev_n.add_css_class("mini-btn")
-        b_prev_n.set_tooltip_text("Предыдущая заметка")
+        b_prev_n = Gtk.Button(label="◀"); b_prev_n.add_css_class("mini-btn")
         b_prev_n.connect("clicked", lambda _b: self.shift_note_page(-1))
         nav_row.append(b_prev_n)
 
         self.note_sel_btn = Gtk.Button(label="📑 Заметка ▾")
-        self.note_sel_btn.add_css_class("mini-btn")
-        self.note_sel_btn.set_hexpand(True)
-        self.note_sel_btn.set_tooltip_text("ЛКМ: Список всех заметок (выбрать / переименовать / удалить)\nПКМ: Следующая заметка")
+        self.note_sel_btn.add_css_class("mini-btn"); self.note_sel_btn.set_hexpand(True)
         self.note_sel_btn.connect("clicked", self.on_open_notes_rofi_menu)
         rc_n = Gtk.GestureClick.new(); rc_n.set_button(3)
         rc_n.connect("pressed", lambda *_a: self.shift_note_page(1))
         self.note_sel_btn.add_controller(rc_n)
         nav_row.append(self.note_sel_btn)
 
-        b_next_n = Gtk.Button(label="▶")
-        b_next_n.add_css_class("mini-btn")
-        b_next_n.set_tooltip_text("Следующая заметка")
+        b_next_n = Gtk.Button(label="▶"); b_next_n.add_css_class("mini-btn")
         b_next_n.connect("clicked", lambda _b: self.shift_note_page(1))
         nav_row.append(b_next_n)
 
-        b_new_n = Gtk.Button(label="+ Лист")
-        b_new_n.add_css_class("mini-btn")
-        b_new_n.set_tooltip_text("Создать новую вкладку заметок")
+        b_new_n = Gtk.Button(label="+ Лист"); b_new_n.add_css_class("mini-btn")
         b_new_n.connect("clicked", self.on_create_new_note_dialog)
         nav_row.append(b_new_n)
-
         box.append(nav_row)
 
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
@@ -1186,7 +1090,6 @@ class StudioDesktopApp(Gtk.Application):
         b_cp = Gtk.Button(label="󰆏 Копировать"); b_cp.add_css_class("mini-btn"); b_cp.set_hexpand(True)
         b_cp.connect("clicked", lambda _b: subprocess.run(["wl-copy"], input=self.notes_buf.get_text(self.notes_buf.get_start_iter(), self.notes_buf.get_end_iter(), False), text=True))
         b_clr = Gtk.Button(label="󰩺"); b_clr.add_css_class("mini-btn")
-        b_clr.set_tooltip_text("Очистить текст текущего листа")
         b_clr.connect("clicked", lambda _b: self.notes_buf.set_text(""))
         row.append(b_add); row.append(b_cp); row.append(b_clr)
         box.append(row)
@@ -1195,16 +1098,13 @@ class StudioDesktopApp(Gtk.Application):
         return box
 
     def on_notes_buffer_changed(self, buf):
-        if self.updating_notes_ui:
-            return
+        if self.updating_notes_ui: return
         _, page = self.get_active_note_page()
         txt = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False)
         page["content"] = txt
         self.save_notes_db()
-        try:
-            open(NOTES_FILE, "w", encoding="utf-8").write(txt)
-        except Exception:
-            pass
+        try: open(NOTES_FILE, "w", encoding="utf-8").write(txt)
+        except Exception: pass
 
     def refresh_note_page_ui(self):
         idx, page = self.get_active_note_page()
@@ -1220,90 +1120,61 @@ class StudioDesktopApp(Gtk.Application):
         pages = self.notes_data.get("pages", [])
         if not pages: return
         self.notes_data["active_idx"] = (int(self.notes_data.get("active_idx", 0)) + delta) % len(pages)
-        self.save_notes_db()
-        self.refresh_note_page_ui()
+        self.save_notes_db(); self.refresh_note_page_ui()
 
     def on_create_new_note_dialog(self, _b):
         def _worker():
-            title = rofi_prompt("📑 Название новой заметки", [
-                "🎮 Идеи для игры",
-                "🖥 Команды и конфиги",
-                "📚 Конспект по коду",
-                "📌 Список дел",
-            ])
-            if title:
-                GLib.idle_add(self._finish_create_note, title)
+            title = rofi_prompt("📑 Название новой заметки", ["🎮 Идеи для игры", "🖥 Команды", "📚 Конспект"])
+            if title: GLib.idle_add(self._finish_create_note, title)
         threading.Thread(target=_worker, daemon=True).start()
 
     def _finish_create_note(self, title):
-        self.notes_data["pages"].append({
-            "id": f"note-{int(time.time())}",
-            "title": title,
-            "content": f"# {title}\n[ ] ",
-        })
+        self.notes_data["pages"].append({"id": f"note-{int(time.time())}", "title": title, "content": f"# {title}\n[ ] "})
         self.notes_data["active_idx"] = len(self.notes_data["pages"]) - 1
-        self.save_notes_db()
-        self.refresh_note_page_ui()
+        self.save_notes_db(); self.refresh_note_page_ui()
         return False
 
     def on_open_notes_rofi_menu(self, _b):
         def _worker():
             pages = self.notes_data.get("pages", [])
             cur_idx = int(self.notes_data.get("active_idx", 0))
-            lines = []
-            for i, p in enumerate(pages):
-                mark = "  [● АКТИВНА]" if i == cur_idx else ""
-                lines.append(f"{i+1}. 📑 {p['title']}{mark}")
-            lines.append("➕ Создать новую вкладку заметок...")
-            lines.append("✎ Переименовать текущую заметку...")
-            if len(pages) > 1:
-                lines.append("🗑 Удалить текущую заметку")
-
+            lines = [f"{i+1}. 📑 {p['title']}" + ("  [● АКТИВНА]" if i == cur_idx else "") for i, p in enumerate(pages)]
+            lines += ["➕ Создать новую вкладку заметок...", "✎ Переименовать текущую заметку..."]
+            if len(pages) > 1: lines.append("🗑 Удалить текущую заметку")
             ch = rofi_prompt("📑 ВКЛАДКИ ЗАМЕТОК", lines)
-            if not ch:
-                return
+            if not ch: return
             if "Создать новую" in ch:
                 new_t = rofi_prompt("📑 Название новой заметки", ["📌 Новая заметка"])
-                if new_t:
-                    GLib.idle_add(self._finish_create_note, new_t)
+                if new_t: GLib.idle_add(self._finish_create_note, new_t)
             elif "Переименовать" in ch:
-                cur_t = pages[cur_idx]["title"]
-                ren_t = rofi_prompt("✎ Новое название заметки", [cur_t])
-                if ren_t:
-                    GLib.idle_add(self._finish_rename_note, cur_idx, ren_t)
+                ren_t = rofi_prompt("✎ Новое название заметки", [pages[cur_idx]["title"]])
+                if ren_t: GLib.idle_add(self._finish_rename_note, cur_idx, ren_t)
             elif "Удалить текущую" in ch and len(pages) > 1:
                 GLib.idle_add(self._finish_delete_note, cur_idx)
             elif "." in ch:
                 try:
                     sel_i = int(ch.split(".", 1)[0]) - 1
-                    if 0 <= sel_i < len(pages):
-                        GLib.idle_add(self._finish_select_note, sel_i)
-                except Exception:
-                    pass
+                    if 0 <= sel_i < len(pages): GLib.idle_add(self._finish_select_note, sel_i)
+                except Exception: pass
         threading.Thread(target=_worker, daemon=True).start()
 
     def _finish_select_note(self, idx):
         self.notes_data["active_idx"] = idx
-        self.save_notes_db()
-        self.refresh_note_page_ui()
+        self.save_notes_db(); self.refresh_note_page_ui()
         return False
 
     def _finish_rename_note(self, idx, new_title):
         self.notes_data["pages"][idx]["title"] = new_title
-        self.save_notes_db()
-        self.refresh_note_page_ui()
+        self.save_notes_db(); self.refresh_note_page_ui()
         return False
 
     def _finish_delete_note(self, idx):
-        if len(self.notes_data["pages"]) <= 1:
-            return False
-        self.notes_data["pages"].pop(idx)
-        self.notes_data["active_idx"] = max(0, min(idx, len(self.notes_data["pages"]) - 1))
-        self.save_notes_db()
-        self.refresh_note_page_ui()
+        if len(self.notes_data["pages"]) > 1:
+            self.notes_data["pages"].pop(idx)
+            self.notes_data["active_idx"] = max(0, min(idx, len(self.notes_data["pages"]) - 1))
+            self.save_notes_db(); self.refresh_note_page_ui()
         return False
 
-    # --- 3. ПРОПОРЦИОНАЛЬНО МАСШТАБИРУЕМЫЙ ВИДЖЕТ КАЛЕНДАРЯ ---
     def build_calendar_widget(self, card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         box.set_hexpand(True); box.set_vexpand(True)
@@ -1364,7 +1235,6 @@ class StudioDesktopApp(Gtk.Application):
                 lbl.add_css_class("cal-today" if is_t else "cal-day")
                 self.cal_grid.attach(lbl, c_i, r_i, 1, 1)
 
-    # --- 4. ПРОПОРЦИОНАЛЬНО МАСШТАБИРУЕМЫЙ ВИДЖЕТ МУЗЫКИ С ОБЛОЖКОЙ ---
     def build_media_widget(self, card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         box.set_hexpand(True); box.set_vexpand(True)
@@ -1403,7 +1273,6 @@ class StudioDesktopApp(Gtk.Application):
         init_v = cur_mv if cur_mv is not None else 85.0
         self.media_vol_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         self.media_vol_scale.set_draw_value(False); self.media_vol_scale.set_hexpand(True); self.media_vol_scale.set_value(init_v)
-        self.media_vol_scale.set_tooltip_text("Громкость только активного видео/плеера (системный звук не меняется)")
         self.media_vol_lbl = Gtk.Label(label=f"{int(init_v)}%", css_classes=["mono-sub"])
         self.media_vol_scale.connect("value-changed", self.on_media_vol_changed)
         v_row.append(self.media_vol_scale); v_row.append(self.media_vol_lbl)
@@ -1417,17 +1286,14 @@ class StudioDesktopApp(Gtk.Application):
         return box
 
     def on_media_vol_changed(self, scale):
-        if self.updating_vol_ui:
-            return
+        if self.updating_vol_ui: return
         val = int(scale.get_value())
         self.media_vol_lbl.set_label(f"{val}%")
         set_media_stream_only_volume(val)
 
-    # --- 5. УВЕЛИЧЕННЫЙ ВИДЖЕТ ЦЕНТРА УВЕДОМЛЕНИЙ ---
     def build_notif_widget_body(self, _card):
         body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         body.set_hexpand(True); body.set_vexpand(True)
-
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
         self.notif_list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
         sc.set_child(self.notif_list_box)
@@ -1442,9 +1308,7 @@ class StudioDesktopApp(Gtk.Application):
                     nid = blk.strip().splitlines()[0].split(":", 1)[0].strip()
                     self.hidden_notifs.add(nid)
             self.save_hidden_notifs()
-        except Exception:
-            pass
-
+        except Exception: pass
         subprocess.run(["makoctl", "dismiss", "-a"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["pkill", "-x", "mako"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.Popen(["mako"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -1462,15 +1326,12 @@ class StudioDesktopApp(Gtk.Application):
             c = self.notif_list_box.get_first_child()
             if c is None: break
             self.notif_list_box.remove(c)
-        try:
-            raw = subprocess.check_output(["makoctl", "history"], text=True, stderr=subprocess.DEVNULL)
-        except Exception:
-            raw = ""
+        try: raw = subprocess.check_output(["makoctl", "history"], text=True, stderr=subprocess.DEVNULL)
+        except Exception: raw = ""
 
         blocks = []
         for b in raw.split("Notification "):
-            if not b.strip():
-                continue
+            if not b.strip(): continue
             nid = b.strip().splitlines()[0].split(":", 1)[0].strip()
             if nid not in self.hidden_notifs:
                 blocks.append((nid, b.strip()))
@@ -1485,28 +1346,20 @@ class StudioDesktopApp(Gtk.Application):
             lines = blk.splitlines()
             head = lines[0] if lines else "Уведомление"
             summary = head.split(":", 1)[1].strip() if ":" in head else head
-
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             card.add_css_class("notif-card")
-
             top_r = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             t_l = Gtk.Label(label=f"▣  {summary[:48]}", xalign=0, hexpand=True, css_classes=["notif-title"])
             t_l.set_ellipsize(Pango.EllipsizeMode.END)
             top_r.append(t_l)
-
-            del_b = Gtk.Button(label="✕")
-            del_b.add_css_class("w-hdr-btn")
-            del_b.set_tooltip_text("Удалить это уведомление")
+            del_b = Gtk.Button(label="✕"); del_b.add_css_class("w-hdr-btn")
             del_b.connect("clicked", self.on_dismiss_single_notif, nid)
             top_r.append(del_b)
             card.append(top_r)
-
             for ln in lines[1:4]:
-                clean_ln = ln.strip()
-                if clean_ln:
-                    b_l = Gtk.Label(label=clean_ln[:70], xalign=0, css_classes=["notif-body"])
-                    b_l.set_wrap(True)
-                    card.append(b_l)
+                if ln.strip():
+                    b_l = Gtk.Label(label=ln.strip()[:70], xalign=0, css_classes=["notif-body"])
+                    b_l.set_wrap(True); card.append(b_l)
             self.notif_list_box.append(card)
 
     def populate_dock(self):
@@ -1551,10 +1404,8 @@ class StudioDesktopApp(Gtk.Application):
         prov = Gtk.CssProvider()
         css_p = os.path.join(CFG_DIR, "active_hub.css")
         if os.path.isfile(css_p):
-            try:
-                prov.load_from_string(open(css_p, "r", encoding="utf-8").read())
-            except Exception:
-                pass
+            try: prov.load_from_string(open(css_p, "r", encoding="utf-8").read())
+            except Exception: pass
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 25)
 
         builders = {
@@ -1597,18 +1448,13 @@ class StudioDesktopApp(Gtk.Application):
             self.cards[wid] = card
             overlay.add_overlay(card.frame)
 
-        b_dnd = Gtk.Button(label="󰂛 DND")
-        b_dnd.add_css_class("w-hdr-btn")
-        b_dnd.set_tooltip_text("Включить / выключить режим «Не беспокоить»")
+        b_dnd = Gtk.Button(label="󰂛 DND"); b_dnd.add_css_class("w-hdr-btn")
         b_dnd.connect("clicked", lambda _b: self.spawn_raw("makoctl mode -t do-not-disturb"))
 
-        b_clr_all = Gtk.Button(label="󰩺 Очистить всё")
-        b_clr_all.add_css_class("w-hdr-btn")
-        b_clr_all.set_tooltip_text("Полностью очистить список и историю уведомлений")
+        b_clr_all = Gtk.Button(label="󰩺 Очистить всё"); b_clr_all.add_css_class("w-hdr-btn")
         b_clr_all.connect("clicked", self.on_clear_all_notifications)
 
-        b_hide_n = Gtk.Button(label="✕")
-        b_hide_n.add_css_class("w-hdr-btn")
+        b_hide_n = Gtk.Button(label="✕"); b_hide_n.add_css_class("w-hdr-btn")
         b_hide_n.connect("clicked", lambda _b: self.notif_card.frame.set_visible(False))
 
         self.notif_card = OverlayWidgetCard(
@@ -1626,9 +1472,7 @@ class StudioDesktopApp(Gtk.Application):
         self.dock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         dock_wrap.append(self.dock_box)
 
-        add_b = Gtk.Button(label="+")
-        add_b.add_css_class("dock-item")
-        add_b.set_tooltip_text("Закрепить / открепить приложения в доке")
+        add_b = Gtk.Button(label="+"); add_b.add_css_class("dock-item")
         add_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
         dock_wrap.append(add_b)
         dock_align.append(dock_wrap)
