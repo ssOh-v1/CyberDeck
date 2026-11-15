@@ -210,3 +210,48 @@ tooltip label {
     color: #d4d8de;
     border-color: #383d47;
 }
+
+/* Системный трей и его контекстное меню */
+#tray {
+    background-color: #16181c;
+    border: 1px solid #24272c;
+    border-radius: 4px;
+    padding: 0px 8px;
+    margin: 3px 1px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: #262a33;
+    border-radius: 3px;
+}
+
+#tray menu {
+    background-color: #14161a;
+    color: #d4d8de;
+    border: 1px solid #343842;
+    border-radius: 6px;
+    padding: 4px;
+}
+
+#tray menu menuitem {
+    background-color: transparent;
+    color: #d4d8de;
+    border-radius: 4px;
+    padding: 5px 10px;
+}
+
+#tray menu menuitem:hover {
+    background-color: #262a33;
+    color: #ffffff;
+}
+
+#tray menu separator {
+    background-color: #24272e;
+    min-height: 1px;
+    margin: 3px 4px;
+}

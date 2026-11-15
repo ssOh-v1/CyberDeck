@@ -22,6 +22,7 @@
 
   "modules-right": [
     "custom/media",
+    "tray",
     "backlight",
     "backlight/slider",
     "pulseaudio",
@@ -74,6 +75,12 @@
     "on-click": "playerctl play-pause",
     "on-scroll-up": "playerctl previous",
     "on-scroll-down": "playerctl next"
+  },
+
+  "tray": {
+    "icon-size": 15,
+    "spacing": 8,
+    "show-passive-items": true
   },
 
   "backlight": {
