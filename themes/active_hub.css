@@ -153,3 +153,20 @@ scale { padding: 0px 2px; }
 scale trough    { background-color: #1b1d22; border-radius: 3px; min-height: 5px; }
 scale highlight { background-color: #7a818e; border-radius: 3px; }
 scale slider    { background-color: #d4d8de; border: 2px solid #454a52; border-radius: 4px; min-width: 10px; min-height: 10px; margin: -4px 0px; }
+
+.notif-card {
+    background-color: #17191f;
+    border: 1px solid #2c3038;
+    border-left: 3px solid #7a818e;
+    border-radius: 6px;
+    padding: 9px 12px;
+}
+.notif-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #e6e9ef;
+}
+.notif-body {
+    font-size: 11.5px;
+    color: #a3abb6;
+}

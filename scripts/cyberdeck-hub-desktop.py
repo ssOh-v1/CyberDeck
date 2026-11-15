@@ -5,21 +5,22 @@ try:
 except Exception:
     pass
 
-import os, sys, re, glob, json, socket, hashlib, urllib.request, urllib.parse, calendar, threading, subprocess, datetime
+import os, sys, re, glob, json, time, random, socket, signal, atexit, hashlib, urllib.request, urllib.parse, calendar, threading, subprocess, datetime
 
 HOME = os.path.expanduser("~")
 UID = os.getuid()
-CFG_DIR     = os.path.join(HOME, ".config/cyberdeck")
-CACHE_DIR   = os.path.join(HOME, ".cache/cyberdeck")
-BG_PNG      = os.path.join(CACHE_DIR, "work_hud_bg.png")
-NOTES_FILE  = os.path.join(CFG_DIR, "studio_notes.txt")
-PIN_FILE    = os.path.join(CFG_DIR, "pinned_work_apps.json")
-STATE_FILE  = os.path.join(CFG_DIR, "widgets_state.json")
-CHAT_FILE   = os.path.join(CFG_DIR, "ai_chat_history.json")
-MODELS_FILE = os.path.join(CFG_DIR, "ai_models.json")
-ROFI_T      = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
-NOTIF_TRIG  = "/tmp/studio_toggle_notif_center"
-ART_CACHE   = "/tmp/studio_art_cache"
+CFG_DIR      = os.path.join(HOME, ".config/cyberdeck")
+CACHE_DIR    = os.path.join(HOME, ".cache/cyberdeck")
+BG_PNG       = os.path.join(CACHE_DIR, "work_hud_bg.png")
+NOTES_FILE   = os.path.join(CFG_DIR, "studio_notes.txt")
+PIN_FILE     = os.path.join(CFG_DIR, "pinned_work_apps.json")
+STATE_FILE   = os.path.join(CFG_DIR, "widgets_state.json")
+CHAT_FILE    = os.path.join(CFG_DIR, "ai_chat_history.json")
+MODELS_FILE  = os.path.join(CFG_DIR, "ai_models.json")
+HIDDEN_NOTIF = os.path.join(CFG_DIR, "hidden_notifications.json")
+ROFI_T       = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
+NOTIF_TRIG   = "/tmp/studio_toggle_notif_center"
+ART_CACHE    = "/tmp/studio_art_cache"
 os.makedirs(ART_CACHE, exist_ok=True)
 os.makedirs(CFG_DIR, exist_ok=True)
 
@@ -53,24 +54,30 @@ if SINGLE_PIN_WID is None:
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
 def get_logical_monitor_size():
-    try:
-        raw = subprocess.check_output(["hyprctl", "monitors", "-j"], text=True, stderr=subprocess.DEVNULL)
-        mons = json.loads(raw)
-        if mons:
-            m = mons[0]
-            sc = float(m.get("scale", 1.0)) or 1.0
-            return int(round(m.get("width", 1920) / sc)), int(round(m.get("height", 1080) / sc))
-    except Exception:
-        pass
+    for _ in range(10):
+        try:
+            raw = subprocess.check_output(["hyprctl", "monitors", "-j"], text=True, stderr=subprocess.DEVNULL)
+            mons = json.loads(raw)
+            if mons:
+                m = mons[0]
+                sc = float(m.get("scale", 1.0)) or 1.0
+                w = int(round(m.get("width", 1920) / sc))
+                h = int(round(m.get("height", 1080) / sc))
+                if w >= 800 and h >= 600:
+                    return w, h
+        except Exception:
+            pass
+        time.sleep(0.1)
     return 1920, 1080
 
 W_MON, H_MON = get_logical_monitor_size()
 
 DEFAULT_WIDGETS = {
-    "ai":       {"title": "▣ AI STUDIO",  "x": 18,            "y": 46,  "w": 335, "h": 295, "base_w": 335, "base_h": 295, "min_w": 240, "min_h": 180, "collapsed": False},
-    "notes":    {"title": "▣ ЗАМЕТКИ",    "x": 18,            "y": 352, "w": 335, "h": 205, "base_w": 335, "base_h": 205, "min_w": 210, "min_h": 130, "collapsed": False},
-    "calendar": {"title": "▣ КАЛЕНДАРЬ",  "x": W_MON - 298,   "y": 46,  "w": 280, "h": 205, "base_w": 280, "base_h": 205, "min_w": 220, "min_h": 160, "collapsed": False},
-    "media":    {"title": "▣ МЕДИАПЛЕЕР", "x": W_MON - 298,   "y": 262, "w": 280, "h": 128, "base_w": 280, "base_h": 128, "min_w": 230, "min_h": 110, "collapsed": False},
+    "ai":       {"title": "▣ AI STUDIO",          "x": 18,          "y": 46,  "w": 340, "h": 300, "base_w": 335, "base_h": 295, "min_w": 240, "min_h": 180, "collapsed": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",            "x": 18,          "y": 358, "w": 340, "h": 210, "base_w": 335, "base_h": 205, "min_w": 210, "min_h": 130, "collapsed": False},
+    "calendar": {"title": "▣ КАЛЕНДАРЬ",          "x": W_MON - 298, "y": 46,  "w": 280, "h": 210, "base_w": 280, "base_h": 205, "min_w": 220, "min_h": 160, "collapsed": False},
+    "media":    {"title": "▣ МЕДИАПЛЕЕР",         "x": W_MON - 298, "y": 268, "w": 280, "h": 130, "base_w": 280, "base_h": 128, "min_w": 230, "min_h": 110, "collapsed": False},
+    "notif":    {"title": "󰂚 ЦЕНТР УВЕДОМЛЕНИЙ", "x": W_MON - 478, "y": 44,  "w": 460, "h": 540, "base_w": 460, "base_h": 540, "min_w": 340, "min_h": 300, "collapsed": False},
 }
 
 FALLBACK_ART = os.path.join(ART_CACHE, "fallback_vinyl.svg")
@@ -82,28 +89,22 @@ open(FALLBACK_ART, "w", encoding="utf-8").write("""<svg xmlns="http://www.w3.org
   <circle cx="26" cy="26" r="2" fill="#16181d"/>
 </svg>""")
 
-def get_hypr_sock():
+def get_cursor_screen_pos():
     sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
     xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{UID}")
-    for p in (os.path.join(xdg, "hypr", sig, ".socket.sock"), f"/tmp/hypr/{sig}/.socket.sock"):
-        if os.path.exists(p): return p
-    return None
-
-HYPR_SOCK = get_hypr_sock()
-
-def get_cursor_screen_pos():
-    if HYPR_SOCK:
-        try:
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-                s.settimeout(0.05)
-                s.connect(HYPR_SOCK)
-                s.sendall(b"cursorpos")
-                raw = s.recv(64).decode("utf-8", errors="ignore").strip()
-                parts = raw.split(",")
-                if len(parts) == 2:
-                    return int(parts[0].strip()), int(parts[1].strip())
-        except Exception:
-            pass
+    for sock_p in (os.path.join(xdg, "hypr", sig, ".socket.sock"), f"/tmp/hypr/{sig}/.socket.sock"):
+        if os.path.exists(sock_p):
+            try:
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.05)
+                    s.connect(sock_p)
+                    s.sendall(b"cursorpos")
+                    raw = s.recv(64).decode("utf-8", errors="ignore").strip()
+                    parts = raw.split(",")
+                    if len(parts) == 2:
+                        return int(parts[0].strip()), int(parts[1].strip())
+            except Exception:
+                pass
     return None
 
 def load_widgets_state():
@@ -113,23 +114,28 @@ def load_widgets_state():
             saved = json.load(open(STATE_FILE, encoding="utf-8"))
             for k in list(st.keys()):
                 if k in saved and isinstance(saved[k], dict):
-                    st[k].update(saved[k])
-                    st[k]["title"] = DEFAULT_WIDGETS[k]["title"]
-                    st[k]["base_w"] = DEFAULT_WIDGETS[k]["base_w"]
-                    st[k]["base_h"] = DEFAULT_WIDGETS[k]["base_h"]
-                    # Гарантируем, что виджет находится в пределах видимой области экрана
-                    w = int(st[k].get("w", 280))
-                    h = int(st[k].get("h", 180))
-                    st[k]["x"] = max(6, min(W_MON - w - 6, int(st[k].get("x", 18))))
-                    st[k]["y"] = max(40, min(H_MON - 60, int(st[k].get("y", 46))))
+                    # Сохраняем пользовательские координаты x, y, w, h, collapsed без перезаписи!
+                    for field in ("x", "y", "w", "h", "collapsed"):
+                        if field in saved[k]:
+                            st[k][field] = saved[k][field]
+                    st[k]["x"] = max(0, min(W_MON - 80, int(st[k]["x"])))
+                    st[k]["y"] = max(34, min(H_MON - 36, int(st[k]["y"])))
     except Exception:
         pass
     return st
 
 def save_widgets_state(st):
-    os.makedirs(CFG_DIR, exist_ok=True)
-    clean_st = {k: st[k] for k in DEFAULT_WIDGETS if k in st}
-    json.dump(clean_st, open(STATE_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    try:
+        os.makedirs(CFG_DIR, exist_ok=True)
+        clean_st = {k: st[k] for k in DEFAULT_WIDGETS if k in st}
+        tmp_p = STATE_FILE + ".tmp"
+        with open(tmp_p, "w", encoding="utf-8") as f:
+            json.dump(clean_st, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_p, STATE_FILE)
+    except Exception:
+        pass
 
 def resolve_cyber_svg(spec, fallback_glyph="default"):
     theme_apps = os.path.join(HOME, ".local/share/icons/CyberDeck-Icons/scalable/apps")
@@ -225,6 +231,9 @@ def read_music_and_art():
         pass
     return "󰓛 Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART
 
+# ==============================================================================
+# МУЛЬТИ-ПРОВАЙДЕРНЫЙ ШЛЮЗ ИИ (БЕЗ ОШИБКИ 45 СЕКУНД!)
+# ==============================================================================
 def load_ai_models():
     try:
         if os.path.isfile(MODELS_FILE):
@@ -235,18 +244,120 @@ def load_ai_models():
         pass
     return [{"id": "gemini-argon", "name": "Gemini Argon (Флагманский ИИ и Код)", "provider": "pollinations", "model": "gemini"}]
 
+def is_rate_limited_or_bad(text):
+    if not text or len(text.strip()) < 2:
+        return True
+    low = text.lower()
+    bad_markers = (
+        "free limit reached",
+        "1 reply every",
+        "enter.pollinations.ai",
+        "pollen key",
+        "rate limit",
+        "too many requests",
+        "<!doctype",
+        "<html",
+        "502 bad gateway",
+        "504 gateway",
+        "error 52",
+    )
+    return any(b in low for b in bad_markers)
+
+def query_duckduckgo_ai(sys_prompt, messages):
+    # Независимый быстрый канал DuckDuckGo AI Chat (VQD API) — без лимита 45 секунд
+    try:
+        req_st = urllib.request.Request(
+            "https://duckduckgo.com/duckchat/v1/status",
+            headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0",
+                "Accept": "*/*",
+                "x-vqd-accept": "1",
+            }
+        )
+        with urllib.request.urlopen(req_st, timeout=6) as resp:
+            vqd = resp.headers.get("x-vqd-4", "")
+        if not vqd:
+            return None
+
+        ddg_msgs = []
+        for m in messages[-6:]:
+            ddg_msgs.append({"role": m["role"], "content": m["content"]})
+        if ddg_msgs:
+            ddg_msgs[-1]["content"] = f"{sys_prompt}\n\nЗапрос пользователя: {ddg_msgs[-1]['content']}"
+
+        payload = json.dumps({"model": "gpt-4o-mini", "messages": ddg_msgs}).encode("utf-8")
+        req_chat = urllib.request.Request(
+            "https://duckduckgo.com/duckchat/v1/chat",
+            data=payload,
+            headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0",
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream",
+                "x-vqd-4": vqd,
+                "Origin": "https://duckduckgo.com",
+                "Referer": "https://duckduckgo.com/",
+            }
+        )
+        chunks = []
+        with urllib.request.urlopen(req_chat, timeout=25) as r_chat:
+            for raw_line in r_chat:
+                ln = raw_line.decode("utf-8", errors="ignore").strip()
+                if ln.startswith("data: "):
+                    data_str = ln[6:].strip()
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        obj = json.loads(data_str)
+                        if "message" in obj and obj["message"]:
+                            chunks.append(obj["message"])
+                    except Exception:
+                        pass
+        ans = "".join(chunks).strip()
+        if not is_rate_limited_or_bad(ans):
+            return ans
+    except Exception:
+        pass
+    return None
+
+def query_blackbox_ai(sys_prompt, messages):
+    # Независимый канал Blackbox AI
+    try:
+        bb_msgs = [{"role": "user", "content": sys_prompt}] + messages[-5:]
+        payload = {
+            "messages": bb_msgs,
+            "model": "deepseek-v3",
+            "max_tokens": 1024,
+        }
+        res = subprocess.run(
+            ["curl", "-s", "-L", "--connect-timeout", "6", "--max-time", "25",
+             "-X", "POST", "https://api.blackbox.ai/api/chat",
+             "-H", "Content-Type: application/json",
+             "-H", "Origin: https://www.blackbox.ai",
+             "-H", "Referer: https://www.blackbox.ai/",
+             "-A", "Mozilla/5.0 (X11; Linux x86_64)",
+             "-d", json.dumps(payload, ensure_ascii=False)],
+            capture_output=True, text=True
+        )
+        ans = re.sub(r"\$@\$.*?\$@\$", "", res.stdout or "", flags=re.S).strip()
+        if not is_rate_limited_or_bad(ans):
+            return ans
+    except Exception:
+        pass
+    return None
+
 def query_ai_llm(model_meta, messages):
     prov = model_meta.get("provider", "pollinations")
     mod_name = model_meta.get("model", "gemini")
-    m_title = model_meta.get("name", "Gemini Argon")
+    m_title = model_meta.get("name", "Gemini Argon").split("(")[0].strip()
 
+    # 1. Локальная Ollama
     if prov == "ollama":
         try:
             if mod_name == "auto":
                 tags = json.loads(urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2.0).read().decode())
                 mlist = [x["name"] for x in tags.get("models", [])]
                 if not mlist:
-                    return "В Ollama нет скачанных моделей. Выполните: ollama run qwen2.5-coder:7b (или выберите Gemini Argon сверху)."
+                    return "В Ollama нет скачанных моделей. Выполните: ollama run qwen2.5-coder:7b (или выберите облачную модель сверху)."
                 mod_name = mlist[0]
             req = urllib.request.Request(
                 "http://127.0.0.1:11434/api/chat",
@@ -256,8 +367,9 @@ def query_ai_llm(model_meta, messages):
             resp = json.loads(urllib.request.urlopen(req, timeout=60).read().decode("utf-8"))
             return resp.get("message", {}).get("content", "").strip()
         except Exception:
-            return "Локальный сервер Ollama не запущен. Запустите `ollama serve` или выберите Gemini Argon сверху."
+            return "Локальный сервер Ollama не запущен. Запустите `ollama serve` или выберите облачную модель сверху."
 
+    # 2. Пользовательский Custom API
     if prov == "custom" and model_meta.get("url"):
         try:
             payload = {"model": mod_name, "messages": messages[-8:]}
@@ -274,51 +386,58 @@ def query_ai_llm(model_meta, messages):
             return f"Ошибка пользовательского API: {e}"
 
     sys_prompt = f"Ты — {m_title}. Отвечай чётко, лаконично и по делу на русском языке. При написании кода выдавай чистый рабочий код."
-    payload = {"model": mod_name, "messages": [{"role": "system", "content": sys_prompt}] + messages[-6:]}
-    try:
-        res = subprocess.run(
-            ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "35",
-             "-X", "POST", "https://text.pollinations.ai/openai",
-             "-H", "Content-Type: application/json",
-             "-A", "Mozilla/5.0 (X11; Linux x86_64)",
-             "-d", json.dumps(payload, ensure_ascii=False)],
-            capture_output=True, text=True
-        )
-        if res.returncode == 0 and res.stdout.strip():
-            raw = res.stdout.strip()
-            try:
-                data = json.loads(raw)
-                if "choices" in data and data["choices"]:
-                    content = data["choices"][0].get("message", {}).get("content", "").strip()
-                    if content:
-                        return content
-            except Exception:
-                if not raw.startswith("<!DOCTYPE") and len(raw) > 2:
-                    return raw
-    except Exception:
-        pass
 
-    try:
-        last_q = messages[-1]["content"]
-        enc_q = urllib.parse.quote(f"Ответь на русском языке как {m_title}: {last_q}")
-        res2 = subprocess.run(
-            ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "30",
-             "-A", "Mozilla/5.0",
-             f"https://text.pollinations.ai/{enc_q}?model={mod_name}"],
-            capture_output=True, text=True
-        )
-        if res2.returncode == 0 and res2.stdout.strip():
-            return res2.stdout.strip()
-    except Exception as e:
-        return f"Не удалось получить ответ: {e}"
+    # Канал А: DuckDuckGo VQD Chat (мгновенный ответ без 45-секундного лимита Pollinations!)
+    ans_ddg = query_duckduckgo_ai(sys_prompt, messages)
+    if ans_ddg:
+        return ans_ddg
 
-    return "Сервер модели перегружен, попробуйте повторить запрос через пару секунд."
+    # Канал Б: Blackbox AI
+    ans_bb = query_blackbox_ai(sys_prompt, messages)
+    if ans_bb:
+        return ans_bb
+
+    # Канал В: Pollinations с рандомизацией seed и заголовком Referer
+    seed = random.randint(10000, 9999999)
+    for try_model in (mod_name, "openai", "qwen-coder", "mistral"):
+        try:
+            payload = {
+                "model": try_model,
+                "seed": seed,
+                "private": True,
+                "messages": [{"role": "system", "content": sys_prompt}] + messages[-5:],
+            }
+            res = subprocess.run(
+                ["curl", "-s", "-L", "--connect-timeout", "7", "--max-time", "25",
+                 "-X", "POST", "https://text.pollinations.ai/openai?referrer=https://pollinations.ai",
+                 "-H", "Content-Type: application/json",
+                 "-H", "Referer: https://pollinations.ai/",
+                 "-H", "Origin: https://pollinations.ai",
+                 "-A", f"Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Studio/{seed}",
+                 "-d", json.dumps(payload, ensure_ascii=False)],
+                capture_output=True, text=True
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                raw = res.stdout.strip()
+                try:
+                    data = json.loads(raw)
+                    if "choices" in data and data["choices"]:
+                        content = data["choices"][0].get("message", {}).get("content", "").strip()
+                        if not is_rate_limited_or_bad(content):
+                            return content
+                except Exception:
+                    if not is_rate_limited_or_bad(raw):
+                        return raw
+        except Exception:
+            pass
+
+    return "Все облачные каналы временно заняты, повторите отправку через пару секунд."
 
 # ==============================================================================
-# КАРТОЧКА ВИДЖЕТА (ПРЯМОЕ ПОЗИЦИОНИРОВАНИЕ В OVERLAY + ПРОПОРЦИОНАЛЬНЫЙ МАСШТАБ)
+# КАРТОЧКА ВИДЖЕТА С СОХРАНЕНИЕМ ПОЗИЦИИ И ПРОПОРЦИОНАЛЬНЫМ МАСШТАБОМ
 # ==============================================================================
 class OverlayWidgetCard:
-    def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False):
+    def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False, extra_hdr_btns=None):
         self.app = app
         self.wid = wid
         self.st = state_dict
@@ -338,7 +457,7 @@ class OverlayWidgetCard:
             pass
 
         self.frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self.frame.add_css_class("widget-frame-top" if is_standalone else "widget-frame")
+        self.frame.add_css_class("widget-frame-top" if (is_standalone or wid == "notif") else "widget-frame")
         self.frame.add_css_class(f"wscale-{wid}")
 
         if not is_standalone:
@@ -353,7 +472,7 @@ class OverlayWidgetCard:
         drag_lbl = Gtk.Label(label=f"⠿ {self.st[wid].get('title', wid.upper())}", xalign=0, hexpand=True)
         drag_lbl.add_css_class("widget-title")
         drag_box.append(drag_lbl)
-        drag_box.set_tooltip_text("Зажмите ЛКМ и перетащите виджет в любое место экрана")
+        drag_box.set_tooltip_text("Зажмите ЛКМ и перетащите виджет (позиция сохраняется навсегда)")
         hdr.append(drag_box)
 
         if not is_standalone:
@@ -364,19 +483,23 @@ class OverlayWidgetCard:
             move_gest.connect("drag-end", self.on_move_end)
             drag_box.add_controller(move_gest)
 
-        # Монохромная иконка булавки 󰐃 для закрепления поверх окон
-        self.pin_btn = Gtk.Button(label="󰐃" if not is_standalone else "✕")
-        self.pin_btn.add_css_class("w-pin-active" if is_standalone else "w-hdr-btn")
-        self.pin_btn.set_tooltip_text("Закрепить виджет ПОВЕРХ открытых приложений" if not is_standalone else "Закрыть окно поверх приложений")
-        self.pin_btn.connect("clicked", self.on_toggle_pin_top)
-        hdr.append(self.pin_btn)
+        if extra_hdr_btns:
+            for b in extra_hdr_btns:
+                hdr.append(b)
 
-        if not is_standalone:
-            col_btn = Gtk.Button(label="—")
-            col_btn.add_css_class("w-hdr-btn")
-            col_btn.set_tooltip_text("Свернуть / развернуть виджет")
-            col_btn.connect("clicked", self.on_toggle_collapse)
-            hdr.append(col_btn)
+        if wid != "notif":
+            self.pin_btn = Gtk.Button(label="󰐃" if not is_standalone else "✕")
+            self.pin_btn.add_css_class("w-pin-active" if is_standalone else "w-hdr-btn")
+            self.pin_btn.set_tooltip_text("Закрепить виджет ПОВЕРХ открытых приложений" if not is_standalone else "Закрыть окно поверх приложений")
+            self.pin_btn.connect("clicked", self.on_toggle_pin_top)
+            hdr.append(self.pin_btn)
+
+            if not is_standalone:
+                col_btn = Gtk.Button(label="—")
+                col_btn.add_css_class("w-hdr-btn")
+                col_btn.set_tooltip_text("Свернуть / развернуть виджет")
+                col_btn.connect("clicked", self.on_toggle_collapse)
+                hdr.append(col_btn)
 
         self.frame.append(hdr)
 
@@ -395,7 +518,7 @@ class OverlayWidgetCard:
             grip = Gtk.Label(label="◢")
             grip.add_css_class("resize-grip")
             grip_box.append(grip)
-            grip_box.set_tooltip_text("Потяните ЛКМ за уголок — всё содержимое масштабируется пропорционально!")
+            grip_box.set_tooltip_text("Потяните ЛКМ за уголок для изменения размера (масштаб сохраняется)")
 
             rsz_gest = Gtk.GestureDrag.new()
             rsz_gest.set_button(1)
@@ -452,8 +575,8 @@ class OverlayWidgetCard:
         cfg = self.st[self.wid]
         w = max(int(cfg.get("min_w", 210)), int(cfg.get("w", 280)))
         h = max(int(cfg.get("min_h", 110)), int(cfg.get("h", 180)))
-        x = max(6, min(W_MON - w - 6, int(cfg.get("x", 18))))
-        y = max(40, min(H_MON - 40, int(cfg.get("y", 46))))
+        x = max(4, min(W_MON - 60, int(cfg.get("x", 18))))
+        y = max(36, min(H_MON - 36, int(cfg.get("y", 46))))
         is_col = bool(cfg.get("collapsed", False)) and not self.is_standalone
 
         if not self.is_standalone:
@@ -478,8 +601,8 @@ class OverlayWidgetCard:
         else:
             nx = self.m_start_xy[0] + int(off_x)
             ny = self.m_start_xy[1] + int(off_y)
-        cfg["x"] = max(6, min(W_MON - int(cfg["w"]) - 6, nx))
-        cfg["y"] = max(40, min(H_MON - 40, ny))
+        cfg["x"] = max(4, min(W_MON - int(cfg["w"]) - 4, nx))
+        cfg["y"] = max(36, min(H_MON - 36, ny))
         self.frame.set_margin_start(cfg["x"])
         self.frame.set_margin_top(cfg["y"])
 
@@ -500,8 +623,8 @@ class OverlayWidgetCard:
         else:
             nw = self.r_start_wh[0] + int(off_x)
             nh = self.r_start_wh[1] + int(off_y)
-        cfg["w"] = max(int(cfg.get("min_w", 210)), min(960, nw))
-        cfg["h"] = max(int(cfg.get("min_h", 110)), min(880, nh))
+        cfg["w"] = max(int(cfg.get("min_w", 210)), min(1100, nw))
+        cfg["h"] = max(int(cfg.get("min_h", 110)), min(920, nh))
         self.frame.set_size_request(cfg["w"], cfg["h"])
         self.update_proportional_scale(cfg["w"], cfg["h"])
 
@@ -524,7 +647,7 @@ class OverlayWidgetCard:
         save_widgets_state(self.st)
 
 # ==============================================================================
-# ГЛАВНОЕ ПРИЛОЖЕНИЕ РАБОЧЕГО СТОЛА И ВИДЖЕТОВ (НА LAYER.BOTTOM НАД SWAYBG)
+# ГЛАВНОЕ ПРИЛОЖЕНИЕ РАБОЧЕГО СТОЛА И ВИДЖЕТОВ
 # ==============================================================================
 class StudioDesktopApp(Gtk.Application):
     def __init__(self):
@@ -533,6 +656,7 @@ class StudioDesktopApp(Gtk.Application):
         self.st = load_widgets_state()
         self.cards = {}
         self.pinned = self.load_pinned()
+        self.hidden_notifs = self.load_hidden_notifs()
         self.last_pin_mtime = 0
         self.last_models_mtime = 0
 
@@ -545,7 +669,7 @@ class StudioDesktopApp(Gtk.Application):
         self.cal_year, self.cal_month = now.year, now.month
         self.last_art_path = ""
         self.updating_vol_ui = False
-        self.notif_frame = None
+        self.notif_card = None
 
         self.bg_surface = None
         if SINGLE_PIN_WID is None and os.path.isfile(BG_PNG):
@@ -553,6 +677,19 @@ class StudioDesktopApp(Gtk.Application):
                 self.bg_surface = cairo.ImageSurface.create_from_png(BG_PNG)
             except Exception:
                 self.bg_surface = None
+
+        # Гарантируем сохранение позиций виджетов при завершении сессии или перезагрузке ПК
+        if SINGLE_PIN_WID is None:
+            atexit.register(lambda: save_widgets_state(self.st))
+            for sig_num in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+                try:
+                    signal.signal(sig_num, self._on_exit_signal)
+                except Exception:
+                    pass
+
+    def _on_exit_signal(self, *_args):
+        save_widgets_state(self.st)
+        sys.exit(0)
 
     def on_draw_bg(self, _area, cr, w, h, *_args):
         cr.save()
@@ -573,13 +710,25 @@ class StudioDesktopApp(Gtk.Application):
         os.makedirs(os.path.dirname(PIN_FILE), exist_ok=True)
         json.dump(sorted(self.pinned), open(PIN_FILE, "w", encoding="utf-8"), ensure_ascii=False)
 
+    def load_hidden_notifs(self):
+        try: return set(json.load(open(HIDDEN_NOTIF, encoding="utf-8"))) if os.path.isfile(HIDDEN_NOTIF) else set()
+        except Exception: return set()
+
+    def save_hidden_notifs(self):
+        try: json.dump(sorted(list(self.hidden_notifs))[-200:], open(HIDDEN_NOTIF, "w", encoding="utf-8"))
+        except Exception: pass
+
     def load_chat_history(self):
         try:
             if os.path.isfile(CHAT_FILE):
-                return json.load(open(CHAT_FILE, encoding="utf-8"))[-12:]
+                hist = json.load(open(CHAT_FILE, encoding="utf-8"))[-12:]
+                # Убираем старое сообщение об ошибке 45 секунд из сохранённой истории, если оно там было
+                hist = [m for m in hist if "free limit reached" not in m.get("content", "").lower()]
+                if hist:
+                    return hist
         except Exception:
             pass
-        return [{"role": "assistant", "content": "Gemini Argon готов к работе! Нажмите на кнопку модели сверху для смены ИИ (или «+ ИИ» для добавления своей) и введите запрос ниже."}]
+        return [{"role": "assistant", "content": "Gemini Argon готов к работе! Напишите любой вопрос или задачу по коду."}]
 
     def save_chat_history(self):
         try:
@@ -587,7 +736,7 @@ class StudioDesktopApp(Gtk.Application):
         except Exception:
             pass
 
-    # --- 1. ВИДЖЕТ НЕЙРОСЕТЕЙ (GEMINI ARGON ПО УМОЛЧАНИЮ + МОНОХРОМНЫЕ ИКОНКИ) ---
+    # --- 1. ВИДЖЕТ НЕЙРОСЕТЕЙ ---
     def build_ai_widget(self, _card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
@@ -735,7 +884,7 @@ class StudioDesktopApp(Gtk.Application):
                 break
 
     def on_clear_ai_chat(self, _b):
-        self.chat_history = [{"role": "assistant", "content": "Диалог очищен. Введите новый вопрос."}]
+        self.chat_history = [{"role": "assistant", "content": "Диалог очищен. Напишите новый вопрос."}]
         self.save_chat_history()
         self.render_chat_log()
 
@@ -856,7 +1005,6 @@ class StudioDesktopApp(Gtk.Application):
         top_h.append(meta_v)
         box.append(top_h)
 
-        # Ползунок громкости ТОЛЬКО для музыки/видео (с монохромной иконкой 󰕾)
         v_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         v_row.append(Gtk.Label(label="󰕾 Медиа", css_classes=["mono-sub"]))
         _, cur_mv = get_media_sink_inputs()
@@ -883,48 +1031,42 @@ class StudioDesktopApp(Gtk.Application):
         self.media_vol_lbl.set_label(f"{val}%")
         set_media_stream_only_volume(val)
 
-    # --- ЦЕНТР УВЕДОМЛЕНИЙ (ПО КЛИКУ НА 󰂚 / 󰂜 НА WAYBAR) ---
-    def build_notification_center_card(self):
-        frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        frame.add_css_class("widget-frame-top")
-        frame.set_halign(Gtk.Align.START)
-        frame.set_valign(Gtk.Align.START)
-        frame.set_margin_start(max(10, W_MON - 334))
-        frame.set_margin_top(44)
-        frame.set_size_request(320, 320)
+    # --- 5. УВЕЛИЧЕННЫЙ ВИДЖЕТ ЦЕНТРА УВЕДОМЛЕНИЙ (460x540 + ПОЛНАЯ ОЧИСТКА ИСТОРИИ MAKO) ---
+    def build_notif_widget_body(self, _card):
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        body.set_hexpand(True); body.set_vexpand(True)
 
-        hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        hdr.add_css_class("widget-header")
-        hdr.append(Gtk.Label(label="󰂚 ЦЕНТР УВЕДОМЛЕНИЙ", xalign=0, hexpand=True, css_classes=["widget-title"]))
-
-        b_dnd = Gtk.Button(label="󰂛 DND")
-        b_dnd.add_css_class("w-hdr-btn")
-        b_dnd.connect("clicked", lambda _b: self.spawn_raw("makoctl mode -t do-not-disturb"))
-        hdr.append(b_dnd)
-
-        b_clr = Gtk.Button(label="Очистить")
-        b_clr.add_css_class("w-hdr-btn")
-        b_clr.connect("clicked", lambda _b: (self.spawn_raw("makoctl dismiss -a"), self.refresh_notif_list()))
-        hdr.append(b_clr)
-
-        b_close = Gtk.Button(label="✕")
-        b_close.add_css_class("w-hdr-btn")
-        b_close.connect("clicked", lambda _b: frame.set_visible(False))
-        hdr.append(b_close)
-        frame.append(hdr)
-
-        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        body.add_css_class("widget-body")
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
-        self.notif_list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.notif_list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
         sc.set_child(self.notif_list_box)
         body.append(sc)
-        frame.append(body)
-        frame.set_visible(False)
-        return frame
+        return body
+
+    def on_clear_all_notifications(self, *_args):
+        # 1. Закрываем активные тосты и перезапускаем демон mako, чтобы полностью очистить его буфер памяти history!
+        try:
+            raw = subprocess.check_output(["makoctl", "history"], text=True, stderr=subprocess.DEVNULL)
+            for blk in raw.split("Notification "):
+                if blk.strip():
+                    nid = blk.strip().splitlines()[0].split(":", 1)[0].strip()
+                    self.hidden_notifs.add(nid)
+            self.save_hidden_notifs()
+        except Exception:
+            pass
+
+        subprocess.run(["makoctl", "dismiss", "-a"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-x", "mako"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(["mako"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.refresh_notif_list()
+
+    def on_dismiss_single_notif(self, _b, nid):
+        self.hidden_notifs.add(nid)
+        self.save_hidden_notifs()
+        subprocess.run(["makoctl", "dismiss", "-n", str(nid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.refresh_notif_list()
 
     def refresh_notif_list(self):
-        if not self.notif_frame: return
+        if not hasattr(self, "notif_list_box"): return
         while True:
             c = self.notif_list_box.get_first_child()
             if c is None: break
@@ -933,23 +1075,47 @@ class StudioDesktopApp(Gtk.Application):
             raw = subprocess.check_output(["makoctl", "history"], text=True, stderr=subprocess.DEVNULL)
         except Exception:
             raw = ""
-        blocks = [b.strip() for b in raw.split("Notification ") if b.strip()]
+
+        blocks = []
+        for b in raw.split("Notification "):
+            if not b.strip():
+                continue
+            nid = b.strip().splitlines()[0].split(":", 1)[0].strip()
+            if nid not in self.hidden_notifs:
+                blocks.append((nid, b.strip()))
+
         if not blocks:
-            lbl = Gtk.Label(label="Нет новых уведомлений", css_classes=["mono-sub"])
+            lbl = Gtk.Label(label="󰂜  Список уведомлений чист", css_classes=["mono-sub"])
             lbl.set_valign(Gtk.Align.CENTER); lbl.set_vexpand(True)
             self.notif_list_box.append(lbl)
             return
-        for blk in blocks[:12]:
+
+        for nid, blk in blocks[:20]:
             lines = blk.splitlines()
             head = lines[0] if lines else "Уведомление"
             summary = head.split(":", 1)[1].strip() if ":" in head else head
-            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+
+            card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             card.add_css_class("notif-card")
-            t_l = Gtk.Label(label=summary[:38], xalign=0, css_classes=["track-title"])
+
+            top_r = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            t_l = Gtk.Label(label=f"▣  {summary[:48]}", xalign=0, hexpand=True, css_classes=["notif-title"])
             t_l.set_ellipsize(Pango.EllipsizeMode.END)
-            card.append(t_l)
-            for ln in lines[1:3]:
-                card.append(Gtk.Label(label=ln.strip()[:44], xalign=0, css_classes=["track-artist"]))
+            top_r.append(t_l)
+
+            del_b = Gtk.Button(label="✕")
+            del_b.add_css_class("w-hdr-btn")
+            del_b.set_tooltip_text("Удалить это уведомление")
+            del_b.connect("clicked", self.on_dismiss_single_notif, nid)
+            top_r.append(del_b)
+            card.append(top_r)
+
+            for ln in lines[1:4]:
+                clean_ln = ln.strip()
+                if clean_ln:
+                    b_l = Gtk.Label(label=clean_ln[:70], xalign=0, css_classes=["notif-body"])
+                    b_l.set_wrap(True)
+                    card.append(b_l)
             self.notif_list_box.append(card)
 
     def populate_dock(self):
@@ -1017,7 +1183,6 @@ class StudioDesktopApp(Gtk.Application):
             GLib.timeout_add(600, self.tick_fast)
             return
 
-        # Размещаем слой виджетов на Layer.BOTTOM (строго НАД swaybg и ПОД обычными окнами!)
         win = Gtk.ApplicationWindow(application=self, title="WorkHubDesktop")
         win.set_default_size(W_MON, H_MON)
         Gtk4LayerShell.init_for_window(win)
@@ -1036,17 +1201,33 @@ class StudioDesktopApp(Gtk.Application):
         bg_area.set_draw_func(self.on_draw_bg)
         overlay.set_child(bg_area)
 
-        # Добавляем все 4 виджета напрямую как независимые слои Gtk.Overlay (проверенный механизм!)
         for wid, b_fn in builders.items():
             card = OverlayWidgetCard(self, wid, self.st, b_fn, is_standalone=False)
             self.cards[wid] = card
             overlay.add_overlay(card.frame)
 
-        # Центр уведомлений
-        self.notif_frame = self.build_notification_center_card()
-        overlay.add_overlay(self.notif_frame)
+        # Крупный перемещаемый и масштабируемый Центр уведомлений (460x540)
+        b_dnd = Gtk.Button(label="󰂛 DND")
+        b_dnd.add_css_class("w-hdr-btn")
+        b_dnd.set_tooltip_text("Включить / выключить режим «Не беспокоить»")
+        b_dnd.connect("clicked", lambda _b: self.spawn_raw("makoctl mode -t do-not-disturb"))
 
-        # Нижний док закреплённых приложений
+        b_clr_all = Gtk.Button(label="󰩺 Очистить всё")
+        b_clr_all.add_css_class("w-hdr-btn")
+        b_clr_all.set_tooltip_text("Полностью очистить список и историю уведомлений")
+        b_clr_all.connect("clicked", self.on_clear_all_notifications)
+
+        b_hide_n = Gtk.Button(label="✕")
+        b_hide_n.add_css_class("w-hdr-btn")
+        b_hide_n.connect("clicked", lambda _b: self.notif_card.frame.set_visible(False))
+
+        self.notif_card = OverlayWidgetCard(
+            self, "notif", self.st, self.build_notif_widget_body,
+            is_standalone=False, extra_hdr_btns=[b_dnd, b_clr_all, b_hide_n]
+        )
+        self.notif_card.frame.set_visible(False)
+        overlay.add_overlay(self.notif_card.frame)
+
         dock_align = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         dock_align.set_valign(Gtk.Align.END); dock_align.set_halign(Gtk.Align.CENTER)
         dock_align.set_margin_bottom(12)
@@ -1073,10 +1254,10 @@ class StudioDesktopApp(Gtk.Application):
         if os.path.exists(NOTIF_TRIG):
             try: os.remove(NOTIF_TRIG)
             except Exception: pass
-            if self.notif_frame:
-                vis = not self.notif_frame.get_visible()
+            if self.notif_card:
+                vis = not self.notif_card.frame.get_visible()
                 if vis: self.refresh_notif_list()
-                self.notif_frame.set_visible(vis)
+                self.notif_card.frame.set_visible(vis)
 
         try:
             mt = os.path.getmtime(PIN_FILE) if os.path.isfile(PIN_FILE) else 0
