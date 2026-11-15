@@ -5,7 +5,7 @@ try:
 except Exception:
     pass
 
-import os, sys, re, glob, json, time, socket, signal, atexit, hashlib, urllib.parse, calendar, threading, subprocess, datetime
+import os, sys, re, glob, json, math, time, socket, signal, atexit, hashlib, urllib.parse, calendar, threading, subprocess, datetime
 
 signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
@@ -35,8 +35,9 @@ os.environ["GTK_THEME"] = "Adwaita:dark"
 
 import gi
 gi.require_version("Gtk", "4.0")
+gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gtk, Gdk, GLib, Gio, Pango, Gtk4LayerShell
+from gi.repository import Gtk, Gdk, GLib, Gio, Pango, GdkPixbuf, Gtk4LayerShell
 import cairo
 
 os.environ.pop("LD_PRELOAD", None)
@@ -81,11 +82,10 @@ def get_logical_monitor_size():
 W_MON, H_MON = get_logical_monitor_size()
 
 DEFAULT_WIDGETS = {
-    "notes":    {"title": "▣ ЗАМЕТКИ",      "x": 18,                  "y": 46,          "w": 340, "h": 250, "base_w": 340, "base_h": 250, "min_w": 220, "min_h": 145, "collapsed": False, "visible": True},
-    "calendar": {"title": "▣ КАЛЕНДАРЬ",    "x": W_MON - 300,         "y": 46,          "w": 282, "h": 210, "base_w": 282, "base_h": 210, "min_w": 220, "min_h": 160, "collapsed": False, "visible": True},
-    "media":    {"title": "▣ МЕДИАПЛЕЕР",   "x": W_MON - 300,         "y": 268,         "w": 282, "h": 135, "base_w": 282, "base_h": 135, "min_w": 235, "min_h": 115, "collapsed": False, "visible": True},
-    "dock":     {"title": "▣ ПРИЛОЖЕНИЯ",   "x": (W_MON - 540) // 2,  "y": H_MON - 118, "w": 540, "h": 98,  "base_w": 540, "base_h": 98,  "min_w": 240, "min_h": 82,  "collapsed": False, "visible": True},
-    "notif":    {"title": "▣ УВЕДОМЛЕНИЯ",  "x": W_MON - 470,         "y": 415,         "w": 452, "h": 360, "base_w": 452, "base_h": 360, "min_w": 320, "min_h": 220, "collapsed": False, "visible": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",            "x": 18,          "y": 46,  "w": 340, "h": 250, "base_w": 340, "base_h": 250, "min_w": 220, "min_h": 145, "collapsed": False},
+    "calendar": {"title": "▣ КАЛЕНДАРЬ",          "x": W_MON - 300, "y": 46,  "w": 282, "h": 210, "base_w": 282, "base_h": 210, "min_w": 220, "min_h": 160, "collapsed": False},
+    "media":    {"title": "▣ МЕДИАПЛЕЕР",         "x": W_MON - 300, "y": 268, "w": 282, "h": 135, "base_w": 282, "base_h": 135, "min_w": 235, "min_h": 115, "collapsed": False},
+    "notif":    {"title": "󰂚 ЦЕНТР УВЕДОМЛЕНИЙ", "x": W_MON - 472, "y": 46,  "w": 452, "h": 480, "base_w": 452, "base_h": 480, "min_w": 320, "min_h": 240, "collapsed": False},
 }
 
 FALLBACK_ART = os.path.join(ART_CACHE, "fallback_vinyl.svg")
@@ -112,7 +112,7 @@ def get_cursor_screen_pos():
         if os.path.exists(sock_p):
             try:
                 with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-                    s.settimeout(0.05)
+                    s.settimeout(0.04)
                     s.connect(sock_p)
                     s.sendall(b"cursorpos")
                     raw = s.recv(64).decode("utf-8", errors="ignore").strip()
@@ -130,7 +130,7 @@ def load_widgets_state():
             saved = json.load(open(STATE_FILE, encoding="utf-8"))
             for k in list(st.keys()):
                 if k in saved and isinstance(saved[k], dict):
-                    for field in ("x", "y", "w", "h", "collapsed", "visible"):
+                    for field in ("x", "y", "w", "h", "collapsed"):
                         if field in saved[k]:
                             st[k][field] = saved[k][field]
                     st[k]["title"] = DEFAULT_WIDGETS[k]["title"]
@@ -140,14 +140,6 @@ def load_widgets_state():
                     st[k]["h"] = h
                     st[k]["x"] = max(4, min(W_MON - w - 4, int(st[k]["x"])))
                     st[k]["y"] = max(36, min(H_MON - h - 4, int(st[k]["y"])))
-            # Гарантируем, что основные 4 виджета всегда видимы на рабочем столе
-            for main_k in ("notes", "calendar", "media", "dock"):
-                st[main_k]["visible"] = True
-                st[main_k]["collapsed"] = False
-            # Если календарь в старом конфиге перекрывал медиаплеер — аккуратно разводим их по вертикали
-            cal_bottom = int(st["calendar"]["y"]) + int(st["calendar"]["h"])
-            if abs(int(st["calendar"]["x"]) - int(st["media"]["x"])) < 180 and int(st["media"]["y"]) < cal_bottom + 8:
-                st["media"]["y"] = min(H_MON - int(st["media"]["h"]) - 8, cal_bottom + 10)
     except Exception:
         pass
     return st
@@ -186,7 +178,7 @@ def resolve_cyber_svg(spec, fallback_glyph="default"):
             return os.path.join(theme_apps, f"{cand}.svg")
     return None
 
-def make_cyber_icon_widget(icon_spec, size=20):
+def make_cyber_icon_widget(icon_spec, size=18):
     svg_path = resolve_cyber_svg(icon_spec)
     img = Gtk.Image.new_from_file(svg_path) if svg_path else Gtk.Image.new_from_icon_name("application-x-executable")
     img.set_pixel_size(size)
@@ -257,17 +249,18 @@ def read_music_and_art():
                         ["curl", "-L", "-s", "--max-time", "4", "-o", cached_p, art_url],
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                     )
-            return f"{ic} {title[:28]}", f"{artist[:28] or 'Медиапоток'}", art_file
+            return f"{ic} {title[:32]}", f"{artist[:32] or 'Медиапоток'}", art_file
     except Exception:
         pass
     return "󰓛 Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART
 
 class OverlayWidgetCard:
-    def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False, extra_hdr_btns=None):
+    def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False, extra_hdr_btns=None, layer_win=None):
         self.app = app
         self.wid = wid
         self.st = state_dict
         self.is_standalone = is_standalone
+        self.layer_win = layer_win
         self.m_start_xy = (0, 0)
         self.m_start_cursor = None
         self.r_start_wh = (280, 180)
@@ -283,10 +276,10 @@ class OverlayWidgetCard:
             pass
 
         self.frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        self.frame.add_css_class("widget-frame-top" if (is_standalone or wid == "notif") else "widget-frame")
+        self.frame.add_css_class("widget-frame-top" if (is_standalone or layer_win is not None) else "widget-frame")
         self.frame.add_css_class(f"wscale-{wid}")
 
-        if not is_standalone:
+        if not is_standalone and layer_win is None:
             self.frame.set_halign(Gtk.Align.START)
             self.frame.set_valign(Gtk.Align.START)
 
@@ -314,25 +307,25 @@ class OverlayWidgetCard:
                 b.set_has_tooltip(False)
                 hdr.append(b)
 
-        self.pin_btn = Gtk.Button(label="󰐃" if not is_standalone else "✕")
-        self.pin_btn.add_css_class("w-pin-active" if is_standalone else "w-hdr-btn")
-        self.pin_btn.set_has_tooltip(False)
-        self.pin_btn.connect("clicked", self.on_toggle_pin_top)
-        hdr.append(self.pin_btn)
+        if wid != "notif":
+            self.pin_btn = Gtk.Button(label="󰐃" if not is_standalone else "✕")
+            self.pin_btn.add_css_class("w-pin-active" if is_standalone else "w-hdr-btn")
+            self.pin_btn.set_has_tooltip(False)
+            self.pin_btn.connect("clicked", self.on_toggle_pin_top)
+            hdr.append(self.pin_btn)
 
-        if not is_standalone:
-            if wid == "notif":
-                close_n = Gtk.Button(label="✕")
-                close_n.add_css_class("w-hdr-btn")
-                close_n.set_has_tooltip(False)
-                close_n.connect("clicked", self.on_hide_notif_card)
-                hdr.append(close_n)
-            else:
+            if not is_standalone:
                 col_btn = Gtk.Button(label="—")
                 col_btn.add_css_class("w-hdr-btn")
                 col_btn.set_has_tooltip(False)
                 col_btn.connect("clicked", self.on_toggle_collapse)
                 hdr.append(col_btn)
+        else:
+            close_n = Gtk.Button(label="✕")
+            close_n.add_css_class("w-hdr-btn")
+            close_n.set_has_tooltip(False)
+            close_n.connect("clicked", lambda _b: self.layer_win.set_visible(False) if self.layer_win else None)
+            hdr.append(close_n)
 
         self.frame.append(hdr)
 
@@ -365,11 +358,6 @@ class OverlayWidgetCard:
         self.frame.append(self.body_wrap)
         self.apply_geometry()
 
-    def on_hide_notif_card(self, _b):
-        self.st["notif"]["visible"] = False
-        self.frame.set_visible(False)
-        save_widgets_state(self.st)
-
     def update_proportional_scale(self, w, h):
         cfg = self.st[self.wid]
         bw = float(cfg.get("base_w", 280))
@@ -385,7 +373,6 @@ class OverlayWidgetCard:
         f_artist  = max(9,  int(round(10.0 * scale)))
         f_ntitle  = max(10, int(round(12.0 * scale)))
         f_nbody   = max(9,  int(round(11.0 * scale)))
-        f_dock    = max(9,  int(round(11.0 * scale)))
         pad_v     = max(2,  int(round(2.5  * scale)))
         pad_h     = max(4,  int(round(5.5  * scale)))
         cell_w    = max(20, int(round(26.0 * scale)))
@@ -397,7 +384,6 @@ class OverlayWidgetCard:
         .wscale-{self.wid} entry.compact-entry {{ font-size: {f_text}px; }}
         .wscale-{self.wid} button.mini-btn,
         .wscale-{self.wid} button.del-btn {{ font-size: {f_btn}px; padding: {pad_v}px {pad_h}px; min-height: {int(20 * scale)}px; }}
-        .wscale-{self.wid} button.dock-item {{ font-size: {f_dock}px; padding: {max(3, int(3 * scale))}px {max(7, int(9 * scale))}px; min-height: {int(28 * scale)}px; }}
         .wscale-{self.wid} .cal-dow {{ font-size: {f_cal_w}px; min-width: {cell_w}px; }}
         .wscale-{self.wid} .cal-day,
         .wscale-{self.wid} .cal-today {{ font-size: {f_cal_d}px; min-width: {cell_w}px; min-height: {cell_h}px; }}
@@ -418,13 +404,17 @@ class OverlayWidgetCard:
     def apply_geometry(self):
         cfg = self.st[self.wid]
         w = max(int(cfg.get("min_w", 210)), int(cfg.get("w", 280)))
-        h = max(int(cfg.get("min_h", 82)),  int(cfg.get("h", 180)))
+        h = max(int(cfg.get("min_h", 110)), int(cfg.get("h", 180)))
         is_col = bool(cfg.get("collapsed", False)) and not self.is_standalone
         eff_h = 26 if is_col else h
         x = max(4, min(W_MON - w - 4, int(cfg.get("x", 18))))
         y = max(36, min(H_MON - eff_h - 4, int(cfg.get("y", 46))))
 
-        if not self.is_standalone:
+        if self.layer_win is not None:
+            Gtk4LayerShell.set_margin(self.layer_win, Gtk4LayerShell.Edge.LEFT, x)
+            Gtk4LayerShell.set_margin(self.layer_win, Gtk4LayerShell.Edge.TOP, y)
+            self.layer_win.set_default_size(w, eff_h)
+        elif not self.is_standalone:
             self.frame.set_margin_start(x)
             self.frame.set_margin_top(y)
 
@@ -446,10 +436,17 @@ class OverlayWidgetCard:
         else:
             nx = self.m_start_xy[0] + int(off_x)
             ny = self.m_start_xy[1] + int(off_y)
-        cfg["x"] = max(4, min(W_MON - int(cfg["w"]) - 4, nx))
-        cfg["y"] = max(36, min(H_MON - 40, ny))
-        self.frame.set_margin_start(cfg["x"])
-        self.frame.set_margin_top(cfg["y"])
+        w = int(cfg.get("w", 280))
+        h = 26 if bool(cfg.get("collapsed", False)) else int(cfg.get("h", 180))
+        cfg["x"] = max(4, min(W_MON - w - 4, nx))
+        cfg["y"] = max(36, min(H_MON - h - 4, ny))
+
+        if self.layer_win is not None:
+            Gtk4LayerShell.set_margin(self.layer_win, Gtk4LayerShell.Edge.LEFT, cfg["x"])
+            Gtk4LayerShell.set_margin(self.layer_win, Gtk4LayerShell.Edge.TOP, cfg["y"])
+        else:
+            self.frame.set_margin_start(cfg["x"])
+            self.frame.set_margin_top(cfg["y"])
 
     def on_move_end(self, _g, _ox, _oy):
         save_widgets_state(self.st)
@@ -469,10 +466,12 @@ class OverlayWidgetCard:
             nw = self.r_start_wh[0] + int(off_x)
             nh = self.r_start_wh[1] + int(off_y)
         max_w = max(240, W_MON - int(cfg.get("x", 18)) - 6)
-        max_h = max(82,  H_MON - int(cfg.get("y", 46)) - 6)
+        max_h = max(115, H_MON - int(cfg.get("y", 46)) - 6)
         cfg["w"] = max(int(cfg.get("min_w", 210)), min(max_w, nw))
-        cfg["h"] = max(int(cfg.get("min_h", 82)),  min(max_h, nh))
+        cfg["h"] = max(int(cfg.get("min_h", 110)), min(max_h, nh))
         self.frame.set_size_request(cfg["w"], cfg["h"])
+        if self.layer_win is not None:
+            self.layer_win.set_default_size(cfg["w"], cfg["h"])
         self.update_proportional_scale(cfg["w"], cfg["h"])
 
     def on_resize_end(self, _g, _ox, _oy):
@@ -502,17 +501,27 @@ class StudioDesktopApp(Gtk.Application):
         self.pinned = self.load_pinned()
         self.hidden_notifs = self.load_hidden_notifs()
         self.last_pin_mtime = 0
-        self.dock_icon_size = 20
-        self.dock_imgs = []
 
         self.notes_data = self.load_notes_db()
         self.updating_notes_ui = False
 
         now = datetime.date.today()
         self.cal_year, self.cal_month = now.year, now.month
+
+        # Фиксированный рендерер обложки через GdkPixbuf + DrawingArea (не меняет размер виджета!)
+        self.art_size = 54
         self.last_art_path = ""
+        self.last_loaded_art_sz = 0
+        self.art_pixbuf = None
         self.updating_vol_ui = False
+
+        self.notif_win = None
         self.notif_card = None
+
+        # Состояние автоскрывающегося нижнего дока
+        self.dock_win = None
+        self.dock_pos = 0.0
+        self.dock_target = 0.0
 
         self._cached_media = ("󰓛 Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART, None)
 
@@ -586,7 +595,7 @@ class StudioDesktopApp(Gtk.Application):
         except Exception: pass
 
     # ==========================================================================
-    # 1. ВИДЖЕТ ЗАМЕТОК С ПЕРЕКЛЮЧЕНИЕМ И УДАЛЕНИЕМ ВКЛАДОК
+    # 1. ВИДЖЕТ ЗАМЕТОК
     # ==========================================================================
     def load_notes_db(self):
         try:
@@ -608,7 +617,7 @@ class StudioDesktopApp(Gtk.Application):
             "active_idx": 0,
             "pages": [
                 {"id": "game-notes", "title": "🎮 Разработка игры", "content": first_text},
-                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Пропорциональные виджеты без подсказок\n"},
+                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Автоскрытие дока и уведомления поверх окон\n"},
                 {"id": "study-notes", "title": "📚 Учёба и зачёты", "content": "[ ] Зачёты в декабре (Python, C#, C++)\n"},
             ]
         }
@@ -877,29 +886,83 @@ class StudioDesktopApp(Gtk.Application):
                 self.cal_grid.attach(lbl, c_i, r_i, 1, 1)
 
     # ==========================================================================
-    # 3. ВИДЖЕТ МЕДИАПЛЕЕРА НА РАБОЧЕМ СТОЛЕ
+    # 3. ВИДЖЕТ МЕДИАПЛЕЕРА (С CAIRO/PIXBUF ПРЕВЬЮ БЕЗ БАГА ИЗМЕНЕНИЯ РАЗМЕРА!)
     # ==========================================================================
+    def _reload_art_pixbuf(self, path, sz):
+        if not path or not os.path.isfile(path):
+            path = FALLBACK_ART
+        try:
+            self.art_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, sz, sz, False)
+            self.last_art_path = path
+            self.last_loaded_art_sz = sz
+        except Exception:
+            try:
+                self.art_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(FALLBACK_ART, sz, sz, False)
+            except Exception:
+                self.art_pixbuf = None
+        if hasattr(self, "art_area"):
+            self.art_area.queue_draw()
+
+    def _on_draw_art(self, _area, cr, w, h, *_args):
+        r = 6.0
+        cr.new_sub_path()
+        cr.arc(w - r, r, r, -math.pi / 2, 0)
+        cr.arc(w - r, h - r, r, 0, math.pi / 2)
+        cr.arc(r, h - r, r, math.pi / 2, math.pi)
+        cr.arc(r, r, r, math.pi, 3 * math.pi / 2)
+        cr.close_path()
+        cr.save()
+        cr.clip()
+        if self.art_pixbuf is not None:
+            Gdk.cairo_set_source_pixbuf(cr, self.art_pixbuf, 0, 0)
+            cr.paint()
+        else:
+            cr.set_source_rgb(0.09, 0.10, 0.12)
+            cr.paint()
+        cr.restore()
+
+        cr.new_sub_path()
+        cr.arc(w - r, r, r, -math.pi / 2, 0)
+        cr.arc(w - r, h - r, r, 0, math.pi / 2)
+        cr.arc(r, h - r, r, math.pi / 2, math.pi)
+        cr.arc(r, r, r, math.pi, 3 * math.pi / 2)
+        cr.close_path()
+        cr.set_line_width(1.2)
+        cr.set_source_rgba(0.24, 0.27, 0.32, 0.95)
+        cr.stroke()
+
     def build_media_widget(self, card):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         box.set_hexpand(True); box.set_vexpand(True)
 
         top_h = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        top_h.set_vexpand(True)
-        self.art_pic = Gtk.Picture()
-        self.art_pic.set_size_request(54, 54)
-        self.art_pic.add_css_class("cover-frame")
-        if hasattr(Gtk, "ContentFit"):
-            self.art_pic.set_content_fit(Gtk.ContentFit.COVER)
-        self.art_pic.set_filename(FALLBACK_ART)
-        top_h.append(self.art_pic)
+        top_h.set_vexpand(True); top_h.set_hexpand(True)
+
+        self.art_area = Gtk.DrawingArea()
+        self.art_area.set_size_request(54, 54)
+        self.art_area.set_hexpand(False); self.art_area.set_vexpand(False)
+        self.art_area.set_halign(Gtk.Align.START); self.art_area.set_valign(Gtk.Align.CENTER)
+        self.art_area.set_draw_func(self._on_draw_art)
+        self._reload_art_pixbuf(FALLBACK_ART, 54)
+        top_h.append(self.art_area)
 
         meta_v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         meta_v.set_hexpand(True); meta_v.set_valign(Gtk.Align.CENTER)
         t_s, a_s, _, cur_mv = self._cached_media
+
+        # max_width_chars(1) + hexpand(True) гарантирует, что длинные названия треков не растягивают виджет!
         self.track_lbl = Gtk.Label(label=t_s, xalign=0, css_classes=["track-title"])
         self.track_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        self.track_lbl.set_width_chars(1)
+        self.track_lbl.set_max_width_chars(1)
+        self.track_lbl.set_hexpand(True)
+
         self.artist_lbl = Gtk.Label(label=a_s, xalign=0, css_classes=["track-artist"])
         self.artist_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        self.artist_lbl.set_width_chars(1)
+        self.artist_lbl.set_max_width_chars(1)
+        self.artist_lbl.set_hexpand(True)
+
         meta_v.append(self.track_lbl); meta_v.append(self.artist_lbl)
 
         ctrl_r = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
@@ -923,7 +986,10 @@ class StudioDesktopApp(Gtk.Application):
 
         def _on_media_scale(scale, _w, _h):
             art_sz = max(44, min(140, int(round(54 * scale))))
-            self.art_pic.set_size_request(art_sz, art_sz)
+            self.art_size = art_sz
+            self.art_area.set_size_request(art_sz, art_sz)
+            if abs(art_sz - self.last_loaded_art_sz) >= 2:
+                self._reload_art_pixbuf(self.last_art_path or FALLBACK_ART, art_sz)
 
         card.on_scale_hook = _on_media_scale
         return box
@@ -935,44 +1001,13 @@ class StudioDesktopApp(Gtk.Application):
         set_media_stream_only_volume(val)
 
     # ==========================================================================
-    # 4. ВИДЖЕТ ЗАКРЕПЛЁННЫХ ПРИЛОЖЕНИЙ (ПЕРЕМЕЩАЕМЫЙ И ПРОПОРЦИОНАЛЬНЫЙ)
+    # 4. АВТОСКРЫВАЮЩИЙСЯ ЦЕНТРАЛЬНЫЙ НИЖНИЙ ДОК (НЕДВИЖИМЫЙ, ВЫДВИГАЕТСЯ МЫШКОЙ)
     # ==========================================================================
-    def build_dock_widget(self, card):
-        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        outer.set_hexpand(True); outer.set_vexpand(True)
-
-        sc = Gtk.ScrolledWindow()
-        sc.set_hexpand(True); sc.set_vexpand(True)
-        sc.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-
-        self.dock_flow = Gtk.FlowBox()
-        self.dock_flow.set_valign(Gtk.Align.CENTER)
-        self.dock_flow.set_halign(Gtk.Align.CENTER)
-        self.dock_flow.set_max_children_per_line(12)
-        self.dock_flow.set_min_children_per_line(1)
-        self.dock_flow.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.dock_flow.set_column_spacing(6)
-        self.dock_flow.set_row_spacing(6)
-        sc.set_child(self.dock_flow)
-        outer.append(sc)
-
-        def _on_dock_scale(scale, _w, _h):
-            new_ic_sz = max(16, min(42, int(round(20 * scale))))
-            if new_ic_sz != self.dock_icon_size:
-                self.dock_icon_size = new_ic_sz
-                for img in self.dock_imgs:
-                    img.set_pixel_size(self.dock_icon_size)
-
-        card.on_scale_hook = _on_dock_scale
-        self.populate_dock()
-        return outer
-
     def parse_desktop_app_entry(self, df):
         try:
             txt = open(df, "r", encoding="utf-8", errors="ignore").read()
         except Exception:
             return None
-        # Читаем ТОЛЬКО главную секцию [Desktop Entry], игнорируя [Desktop Action ...]
         main_sec = txt.split("\n[Desktop Action")[0]
         if re.search(r"^NoDisplay\s*=\s*true", main_sec, re.M | re.I) or re.search(r"^Hidden\s*=\s*true", main_sec, re.M | re.I):
             return None
@@ -988,7 +1023,7 @@ class StudioDesktopApp(Gtk.Application):
         return (name, clean_exec, icon_spec)
 
     def populate_dock(self):
-        if not hasattr(self, "dock_flow"):
+        if not hasattr(self, "dock_box"):
             return
         items, seen = [], set()
         for ad in (os.path.join(HOME, ".local/share/applications"), "/usr/share/applications", "/var/lib/flatpak/exports/share/applications"):
@@ -1002,11 +1037,10 @@ class StudioDesktopApp(Gtk.Application):
 
         self.last_pin_mtime = os.path.getmtime(PIN_FILE) if os.path.isfile(PIN_FILE) else 0
         while True:
-            c = self.dock_flow.get_first_child()
+            c = self.dock_box.get_first_child()
             if c is None:
                 break
-            self.dock_flow.remove(c)
-        self.dock_imgs = []
+            self.dock_box.remove(c)
 
         pinned_items = [it for it in items if it[0] in self.pinned]
         for name, cmd, icon_spec in pinned_items:
@@ -1014,26 +1048,16 @@ class StudioDesktopApp(Gtk.Application):
             db.add_css_class("dock-item")
             db.set_has_tooltip(False)
             hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=7)
-            img = make_cyber_icon_widget(icon_spec, self.dock_icon_size)
-            self.dock_imgs.append(img)
-            hb.append(img)
+            hb.append(make_cyber_icon_widget(icon_spec, 18))
             hb.append(Gtk.Label(label=name[:16]))
             db.set_child(hb)
             db.connect("clicked", lambda _b, c=cmd: self.spawn_raw(c))
 
-            # ПКМ по приложению в виджете — мгновенно открепить
             rc = Gtk.GestureClick.new()
             rc.set_button(3)
             rc.connect("pressed", lambda _g, _n, _x, _y, nm=name: self.toggle_pin(nm))
             db.add_controller(rc)
-            self.dock_flow.append(db)
-
-        # Кнопка «+» для добавления/удаления приложений через меню Rofi
-        add_b = Gtk.Button(label="+")
-        add_b.add_css_class("dock-item")
-        add_b.set_has_tooltip(False)
-        add_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
-        self.dock_flow.append(add_b)
+            self.dock_box.append(db)
 
     def toggle_pin(self, name):
         if name in self.pinned:
@@ -1043,13 +1067,107 @@ class StudioDesktopApp(Gtk.Application):
         self.save_pinned()
         self.populate_dock()
 
+    def init_autohide_dock_window(self):
+        self.dock_win = Gtk.Window(application=self, title="StudioAutoHideDock")
+        Gtk4LayerShell.init_for_window(self.dock_win)
+        Gtk4LayerShell.set_namespace(self.dock_win, "studio-autohide-dock")
+        Gtk4LayerShell.set_layer(self.dock_win, Gtk4LayerShell.Layer.TOP)
+        # Привязываем ТОЛЬКО к нижнему краю (Edge.BOTTOM): Wayland автоматически центрирует док ровно посередине экрана!
+        Gtk4LayerShell.set_anchor(self.dock_win, Gtk4LayerShell.Edge.BOTTOM, True)
+        Gtk4LayerShell.set_anchor(self.dock_win, Gtk4LayerShell.Edge.LEFT, False)
+        Gtk4LayerShell.set_anchor(self.dock_win, Gtk4LayerShell.Edge.RIGHT, False)
+        Gtk4LayerShell.set_anchor(self.dock_win, Gtk4LayerShell.Edge.TOP, False)
+        Gtk4LayerShell.set_exclusive_zone(self.dock_win, -1)
+        Gtk4LayerShell.set_keyboard_mode(self.dock_win, Gtk4LayerShell.KeyboardMode.NONE)
+        Gtk4LayerShell.set_margin(self.dock_win, Gtk4LayerShell.Edge.BOTTOM, -70)
+
+        dock_wrap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        dock_wrap.add_css_class("bottom-dock")
+        self.dock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        dock_wrap.append(self.dock_box)
+
+        add_b = Gtk.Button(label="+")
+        add_b.add_css_class("dock-item")
+        add_b.set_has_tooltip(False)
+        add_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
+        dock_wrap.append(add_b)
+
+        self.dock_win.set_child(dock_wrap)
+        self.populate_dock()
+        self.dock_win.present()
+        self.dock_win.set_visible(False)
+
+        GLib.timeout_add(30, self.tick_dock_autohide)
+
+    def tick_dock_autohide(self):
+        cur = get_cursor_screen_pos()
+        if cur:
+            cx, cy = cur
+            center_x = W_MON // 2
+            # Определяем ширину центральной зоны срабатывания у нижней кромки экрана
+            half_zone = max(220, len(self.pinned) * 58)
+            if not self.dock_win.get_visible():
+                # Если курсор подведён к середине самого низа экрана — выдвигаем док!
+                if cy >= H_MON - 10 and abs(cx - center_x) <= half_zone:
+                    self.dock_target = 1.0
+                    self.dock_pos = 0.05
+                    Gtk4LayerShell.set_margin(self.dock_win, Gtk4LayerShell.Edge.BOTTOM, -60)
+                    self.dock_win.set_visible(True)
+            else:
+                # Пока курсор находится над выдвинутым доком — удерживаем его открытым
+                if cy >= H_MON - 78 and abs(cx - center_x) <= (half_zone + 50):
+                    self.dock_target = 1.0
+                else:
+                    self.dock_target = 0.0
+
+        if self.dock_win and self.dock_win.get_visible():
+            diff = self.dock_target - self.dock_pos
+            if abs(diff) > 0.01:
+                self.dock_pos += diff * 0.30
+                margin_b = int(round(-68 * (1.0 - self.dock_pos) + 10 * self.dock_pos))
+                Gtk4LayerShell.set_margin(self.dock_win, Gtk4LayerShell.Edge.BOTTOM, margin_b)
+            elif self.dock_target == 0.0:
+                self.dock_pos = 0.0
+                Gtk4LayerShell.set_margin(self.dock_win, Gtk4LayerShell.Edge.BOTTOM, -70)
+                self.dock_win.set_visible(False)
+
+        return True
+
     # ==========================================================================
-    # 5. ВИДЖЕТ УВЕДОМЛЕНИЙ (ЕДИНЫЙ ХЕШ С WAYBAR + ПОЛНАЯ ОЧИСТКА)
+    # 5. ВИДЖЕТ УВЕДОМЛЕНИЙ ПОВЕРХ ВСЕХ ОКОН (LAYER.OVERLAY)
     # ==========================================================================
+    def init_top_notif_window(self):
+        self.notif_win = Gtk.Window(application=self, title="StudioNotifOverlay")
+        Gtk4LayerShell.init_for_window(self.notif_win)
+        Gtk4LayerShell.set_namespace(self.notif_win, "studio-notif-overlay")
+        # Layer.OVERLAY гарантирует отображение ПОВЕРХ любых открытых окон!
+        Gtk4LayerShell.set_layer(self.notif_win, Gtk4LayerShell.Layer.OVERLAY)
+        Gtk4LayerShell.set_anchor(self.notif_win, Gtk4LayerShell.Edge.TOP, True)
+        Gtk4LayerShell.set_anchor(self.notif_win, Gtk4LayerShell.Edge.LEFT, True)
+        Gtk4LayerShell.set_anchor(self.notif_win, Gtk4LayerShell.Edge.RIGHT, False)
+        Gtk4LayerShell.set_anchor(self.notif_win, Gtk4LayerShell.Edge.BOTTOM, False)
+        Gtk4LayerShell.set_exclusive_zone(self.notif_win, -1)
+        Gtk4LayerShell.set_keyboard_mode(self.notif_win, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
+
+        b_dnd = Gtk.Button(label="󰂛 DND"); b_dnd.add_css_class("w-hdr-btn"); b_dnd.set_has_tooltip(False)
+        b_dnd.connect("clicked", lambda _b: self.spawn_raw("makoctl mode -t do-not-disturb"))
+
+        b_clr_all = Gtk.Button(label="󰩺 Очистить всё"); b_clr_all.add_css_class("w-hdr-btn"); b_clr_all.set_has_tooltip(False)
+        b_clr_all.connect("clicked", self.on_clear_all_notifications)
+
+        self.notif_card = OverlayWidgetCard(
+            self, "notif", self.st, self.build_notif_widget_body,
+            is_standalone=False, extra_hdr_btns=[b_dnd, b_clr_all], layer_win=self.notif_win
+        )
+        self.notif_win.set_child(self.notif_card.frame)
+        self.notif_win.present()
+        self.notif_win.set_visible(False)
+
     def build_notif_widget_body(self, _card):
         body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         body.set_hexpand(True); body.set_vexpand(True)
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
+        sc.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.notif_list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
         sc.set_child(self.notif_list_box)
         body.append(sc)
@@ -1123,6 +1241,8 @@ class StudioDesktopApp(Gtk.Application):
             top_r = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             t_l = Gtk.Label(label=f"▣  {summary[:48]}", xalign=0, hexpand=True, css_classes=["notif-title"])
             t_l.set_ellipsize(Pango.EllipsizeMode.END)
+            t_l.set_width_chars(1)
+            t_l.set_max_width_chars(1)
             top_r.append(t_l)
 
             del_b = Gtk.Button(label="✕"); del_b.add_css_class("w-hdr-btn"); del_b.set_has_tooltip(False)
@@ -1134,6 +1254,8 @@ class StudioDesktopApp(Gtk.Application):
                 if ln and not ln.startswith(("Desktop entry:", "Urgency:", "Actions:")):
                     b_l = Gtk.Label(label=ln[:72], xalign=0, css_classes=["notif-body"])
                     b_l.set_wrap(True)
+                    b_l.set_width_chars(1)
+                    b_l.set_max_width_chars(1)
                     card.append(b_l)
             self.notif_list_box.append(card)
 
@@ -1141,25 +1263,24 @@ class StudioDesktopApp(Gtk.Application):
         prov = Gtk.CssProvider()
         css_p = os.path.join(CFG_DIR, "active_hub.css")
         if os.path.isfile(css_p):
-            try: prov.load_from_string(open(css_p, "r", encoding="utf-8").read())
+            try: prov.load_from_string(open(css_p, "r", encoding="utf-8").read() + "\nwindow { background-color: transparent; }\n")
             except Exception: pass
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 25)
 
         builders = {
-            "notes":    (self.build_notes_widget, None),
-            "calendar": (self.build_calendar_widget, None),
-            "media":    (self.build_media_widget, None),
-            "dock":     (self.build_dock_widget, None),
+            "notes":    self.build_notes_widget,
+            "calendar": self.build_calendar_widget,
+            "media":    self.build_media_widget,
         }
 
         if SINGLE_PIN_WID in builders:
             cfg = self.st[SINGLE_PIN_WID]
             pwin = Gtk.ApplicationWindow(application=self, title=f"Pinned-{SINGLE_PIN_WID}")
             pwin.set_default_size(int(cfg["w"]), int(cfg["h"]))
-            card = OverlayWidgetCard(self, SINGLE_PIN_WID, self.st, builders[SINGLE_PIN_WID][0], is_standalone=True)
+            card = OverlayWidgetCard(self, SINGLE_PIN_WID, self.st, builders[SINGLE_PIN_WID], is_standalone=True)
             pwin.set_child(card.frame)
             pwin.present()
-            GLib.timeout_add(600, self.tick_fast)
+            GLib.timeout_add(450, self.tick_fast)
             return
 
         win = Gtk.ApplicationWindow(application=self, title="WorkHubDesktop")
@@ -1180,33 +1301,17 @@ class StudioDesktopApp(Gtk.Application):
         bg_area.set_draw_func(self.on_draw_bg)
         overlay.set_child(bg_area)
 
-        # Кнопка «+ Приложение» прямо в шапке виджета закреплённых приложений
-        b_add_app = Gtk.Button(label="+ Приложение")
-        b_add_app.add_css_class("w-hdr-btn")
-        b_add_app.set_has_tooltip(False)
-        b_add_app.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
-        builders["dock"] = (self.build_dock_widget, [b_add_app])
-
-        for wid, (b_fn, extra_b) in builders.items():
-            card = OverlayWidgetCard(self, wid, self.st, b_fn, is_standalone=False, extra_hdr_btns=extra_b)
+        for wid, b_fn in builders.items():
+            card = OverlayWidgetCard(self, wid, self.st, b_fn, is_standalone=False)
             self.cards[wid] = card
             overlay.add_overlay(card.frame)
 
-        b_dnd = Gtk.Button(label="󰂛 DND"); b_dnd.add_css_class("w-hdr-btn"); b_dnd.set_has_tooltip(False)
-        b_dnd.connect("clicked", lambda _b: self.spawn_raw("makoctl mode -t do-not-disturb"))
-
-        b_clr_all = Gtk.Button(label="󰩺 Очистить всё"); b_clr_all.add_css_class("w-hdr-btn"); b_clr_all.set_has_tooltip(False)
-        b_clr_all.connect("clicked", self.on_clear_all_notifications)
-
-        self.notif_card = OverlayWidgetCard(
-            self, "notif", self.st, self.build_notif_widget_body,
-            is_standalone=False, extra_hdr_btns=[b_dnd, b_clr_all]
-        )
-        self.notif_card.frame.set_visible(bool(self.st["notif"].get("visible", False)))
-        overlay.add_overlay(self.notif_card.frame)
-
         win.set_child(overlay)
         win.present()
+
+        # Инициализируем отдельный автоскрывающийся нижний док и Центр уведомлений поверх всех окон
+        self.init_autohide_dock_window()
+        self.init_top_notif_window()
 
         GLib.timeout_add(450, self.tick_fast)
 
@@ -1214,15 +1319,13 @@ class StudioDesktopApp(Gtk.Application):
         if os.path.exists(NOTIF_TRIG):
             try: os.remove(NOTIF_TRIG)
             except Exception: pass
-            if self.notif_card:
-                vis = not self.notif_card.frame.get_visible()
-                self.st["notif"]["visible"] = vis
+            if self.notif_win:
+                vis = not self.notif_win.get_visible()
                 if vis:
                     self.refresh_notif_list()
-                self.notif_card.frame.set_visible(vis)
-                save_widgets_state(self.st)
+                self.notif_win.set_visible(vis)
 
-        if self.notif_card and self.notif_card.frame.get_visible():
+        if self.notif_win and self.notif_win.get_visible():
             self.refresh_notif_list()
 
         try:
@@ -1240,8 +1343,7 @@ class StudioDesktopApp(Gtk.Application):
             if self.artist_lbl.get_label() != a_s:
                 self.artist_lbl.set_label(a_s)
             if art_p != self.last_art_path and os.path.isfile(art_p):
-                self.last_art_path = art_p
-                self.art_pic.set_filename(art_p)
+                self._reload_art_pixbuf(art_p, self.art_size)
 
             if mv is not None and abs(self.media_vol_scale.get_value() - mv) > 2.0:
                 self.updating_vol_ui = True
