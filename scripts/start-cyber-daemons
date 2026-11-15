@@ -1,15 +1,15 @@
 #!/bin/bash
 unset LD_PRELOAD
-xrdb -merge "$HOME/.Xresources" 2>/dev/null || true
-
-for rival in dunst swaync fnott xfce4-notifyd; do
-    pkill -x "$rival" 2>/dev/null || true
-done
-
-if pgrep -x mako >/dev/null 2>&1; then
-    makoctl reload >/dev/null 2>&1 || true
-else
-    nohup mako >/dev/null 2>&1 &
+# 1. Гарантируем, что фоновые обои студии отображаются всегда и никогда не пропадают
+if ! pgrep -x swaybg >/dev/null 2>&1; then
+    nohup swaybg -i "$HOME/.cache/cyberdeck/work_hud_bg.png" -m fill >/dev/null 2>&1 &
 fi
 
-nohup /usr/bin/python3 "$HOME/.local/bin/cyber-kb-osd" >/dev/null 2>&1 &
+# 2. Запускаем системную верхнюю панель Waybar (всегда видна над окнами, скрывается в fullscreen)
+if ! pgrep -x waybar >/dev/null 2>&1; then
+    nohup waybar >/dev/null 2>&1 &
+fi
+
+# 3. Демон уведомлений Mako и индикатор раскладки клавиатуры
+pgrep -x mako >/dev/null 2>&1 || nohup mako >/dev/null 2>&1 &
+pgrep -f "cyber-kb-osd" >/dev/null 2>&1 || nohup "$HOME/.local/bin/cyber-kb-osd" >/dev/null 2>&1 &

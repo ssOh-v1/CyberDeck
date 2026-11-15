@@ -341,39 +341,8 @@ class GameDevStudioHub(Gtk.Application):
         root_box.set_hexpand(True); root_box.set_vexpand(True)
 
         # ======================================================================
-        # 1. ВЕРХНИЙ ТУЛБАР СТУДИИ
-        # ======================================================================
-        bar = Gtk.CenterBox(); bar.add_css_class("ide-toolbar"); bar.set_vexpand(False)
-        lz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        lz.append(Gtk.Label(label="▣ STUDIO // WORKSPACE", css_classes=["panel-header"]))
-        self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); lz.append(self.ws_box)
-        nb = Gtk.Button(label="+ Стол"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(nb)
-        self.bg_menu_btn = Gtk.Button(label="📦 Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
-        pin_b = Gtk.Button(label="📌 Док"); pin_b.add_css_class("ctrl-pill"); pin_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu")); lz.append(pin_b)
-        bar.set_start_widget(lz)
-
-        play_c = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        for bl, bc, bcls in [
-            ("▶ Терминал", "foot", "ide-play-btn"),
-            ("📁 Проводник", "~/.local/bin/cyber-fm ~", "ide-build-btn"),
-            ("◈ Поверх окон", "~/.local/bin/hyprwork-pin-window", "ctrl-pill"),
-        ]:
-            b = Gtk.Button(label=bl); b.add_css_class(bcls); b.connect("clicked", lambda _b, c=bc: self.spawn_raw(c)); play_c.append(b)
-        self.pwr_btn = Gtk.Button(); self.pwr_btn.add_css_class("ctrl-pill"); self.pwr_btn.connect("clicked", self.on_toggle_power); self.update_pwr_label()
-        play_c.append(self.pwr_btn)
-        bar.set_center_widget(play_c)
-
-        rz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
-        self.wifi_btn = Gtk.Button(); self.wifi_btn.add_css_class("wifi-btn"); self.wifi_btn.set_child(ui_svg("wifi-high.svg", 14))
-        self.wifi_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-wifi-menu")); rz.append(self.wifi_btn)
-        self.kb_btn = Gtk.Button(label="EN"); self.kb_btn.add_css_class("kb-btn"); self.kb_btn.connect("clicked", lambda _b: self.spawn_raw("hyprctl switchxkblayout all next")); rz.append(self.kb_btn)
-        rz.append(self.make_sliders_pair(44))
-        rz.append(self.make_sys_power_capsule())
-        cbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6); cbox.add_css_class("clock-pill")
-        self.clock_lbl = Gtk.Label(label="00:00", css_classes=["clock-time"]); cbox.append(self.clock_lbl)
-        rz.append(cbox)
-        bar.set_end_widget(rz)
-        root_box.append(bar)
+        # 1. Верхний отступ под системный Waybar
+        top_spacer = Gtk.Box(); top_spacer.set_size_request(-1, 42); root_box.append(top_spacer)
 
         # ======================================================================
         # 2. БОКОВЫЕ КОЛОНКИ ВИДЖЕТОВ (СЛЕВА: КАЛЕНДАРЬ + ИИ + КОД/ИГРЫ | СПРАВА: МУЗЫКА + ЗАМЕТКИ + РЕСУРСЫ)
@@ -585,31 +554,13 @@ class GameDevStudioHub(Gtk.Application):
         try:
             if os.path.isfile(KB_FILE):
                 kb_code = open(KB_FILE).read().strip() or "EN"
-                if self.kb_btn.get_label() != kb_code: self.kb_btn.set_label(kb_code)
+                pass
         except Exception: pass
         try:
             bg_list = cyber_bg.get_bg_and_open_items()
             cnt = sum(i.get("count", 1) for i in bg_list)
             lbl_bg = f"📦 Фон [{cnt}]"
-            if self.bg_menu_btn.get_label() != lbl_bg:
-                self.bg_menu_btn.set_label(lbl_bg)
-
-            clients = cyber_bg.hypr_ipc_json("clients")
-            ws_map = {}
-            for cl in clients:
-                wid = cl.get("workspace", {}).get("id", -1)
-                if wid > 0 and wid not in ws_map: ws_map[wid] = (cl.get("class") or cl.get("title") or "App")[:8]
-            sig = tuple(sorted(ws_map.items()))
-            if sig != self.last_ws_sig:
-                self.last_ws_sig = sig
-                while True:
-                    ch = self.ws_box.get_first_child()
-                    if ch is None: break
-                    self.ws_box.remove(ch)
-                for wid, cname in sig:
-                    b = Gtk.Button(label=f"[{wid}] {cname}"); b.add_css_class("ws-btn")
-                    b.connect("clicked", lambda _b, w=wid: self.spawn_raw(f"hyprctl dispatch workspace {w}"))
-                    self.ws_box.append(b)
+            pass
         except Exception: pass
         return True
 
@@ -629,7 +580,7 @@ class GameDevStudioHub(Gtk.Application):
 
     def on_toggle_power(self, _b):
         subprocess.run([os.path.join(HOME, ".local/bin/cyber-power"), "toggle"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.update_pwr_label()
+        pass
 
     def get_current_bri(self):
         try:
@@ -668,7 +619,7 @@ class GameDevStudioHub(Gtk.Application):
         subprocess.Popen(["pamixer", "--set-volume", str(val)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def refresh_status(self):
-        self.clock_lbl.set_label(datetime.datetime.now().strftime("%H:%M"))
+        pass
         idle, total = read_cpu_stat()
         dt, di = total - self.prev_total, idle - self.prev_idle
         self.prev_idle, self.prev_total = idle, total
@@ -687,7 +638,7 @@ class GameDevStudioHub(Gtk.Application):
 
         self.ports_lbl.set_label(f"Локальные порты: {scan_dev_ports()}")
         self.git_lbl.set_label(read_git_projects_status())
-        self.update_pwr_label()
+        pass
         return True
 
     def spawn_raw(self, cmd):

@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+import os, json, subprocess
+HOME = os.path.expanduser("~")
+try:
+    d = json.loads(subprocess.check_output([os.path.join(HOME, ".local/bin/wifi-status")], text=True, stderr=subprocess.DEVNULL, timeout=1.2))
+    if not d.get("enabled", True):
+        print(json.dumps({"text": "󰖪 Выкл", "tooltip": "Wi-Fi выключен (ЛКМ — меню сети)"}))
+    elif d.get("connected", False):
+        ssid = d.get("ssid", "Wi-Fi")[:12]
+        sig = d.get("signal", 0)
+        print(json.dumps({"text": f"󰖩 {ssid}", "tooltip": f"Сеть: {d.get('ssid')} ({sig}%)\nЛКМ — меню Wi-Fi"}))
+    else:
+        print(json.dumps({"text": "󰖩 Сеть", "tooltip": "Не подключено (ЛКМ — выбрать Wi-Fi)"}))
+except Exception:
+    print(json.dumps({"text": "󰖩 Сеть", "tooltip": "Меню Wi-Fi"}))
