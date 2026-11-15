@@ -13,22 +13,19 @@
 
   "modules-left": [
     "custom/launcher",
-    "hyprland/workspaces",
-    "custom/widgets",
-    "custom/pin-dock",
-    "custom/bg-nodes"
+    "hyprland/workspaces"
   ],
 
-  "modules-center": [
-    "hyprland/window"
-  ],
+  "modules-center": [],
 
   "modules-right": [
     "custom/media",
     "cpu",
     "memory",
     "backlight",
+    "backlight/slider",
     "pulseaudio",
+    "pulseaudio/slider",
     "custom/wifi",
     "custom/power-mode",
     "hyprland/language",
@@ -40,7 +37,7 @@
 
   "custom/launcher": {
     "format": "▣",
-    "tooltip-format": "ЛКМ: Меню приложений (Rofi)\nПКМ: Системный монитор Btop",
+    "tooltip-format": "ЛКМ: Лаунчер приложений (Rofi)\nПКМ: Системный монитор Btop",
     "on-click": "rofi -show drun -theme ~/.config/hypr/gaming_launcher.rasi",
     "on-click-right": "~/.local/bin/cyber-tool btop"
   },
@@ -52,36 +49,6 @@
     "on-scroll-down": "hyprctl dispatch workspace e+1",
     "all-outputs": true,
     "sort-by-number": true
-  },
-
-  "custom/widgets": {
-    "format": "󰕮 Виджеты",
-    "tooltip-format": "ЛКМ: Меню виджетов • ПКМ: Все виджеты поверх окон • СКМ: Скрыть/показать все",
-    "on-click": "/usr/bin/python3 ~/.local/bin/studio-widgets-ctl menu",
-    "on-click-right": "/usr/bin/python3 ~/.local/bin/studio-widgets-ctl pin-all",
-    "on-click-middle": "/usr/bin/python3 ~/.local/bin/studio-widgets-ctl toggle-all"
-  },
-
-  "custom/pin-dock": {
-    "format": "󰐃 Док",
-    "tooltip-format": "Настроить закреплённые программы в нижнем доке",
-    "on-click": "/usr/bin/python3 ~/.local/bin/cyber-pin-menu"
-  },
-
-  "custom/bg-nodes": {
-    "exec": "~/.local/bin/waybar-bg-nodes",
-    "return-type": "json",
-    "interval": 2,
-    "on-click": "~/.local/bin/cyber-bg-menu"
-  },
-
-  "hyprland/window": {
-    "format": "{title}",
-    "max-length": 48,
-    "separate-outputs": true,
-    "rewrite": {
-      "": "▣ STUDIO // WORKSPACE"
-    }
   },
 
   "custom/media": {
@@ -110,20 +77,32 @@
 
   "backlight": {
     "format": "󰃠 {percent}%",
-    "tooltip-format": "Яркость: {percent}% (Колёсико — плавно, ЛКМ — 100%/60%)",
+    "tooltip-format": "Яркость экрана: {percent}% (ЛКМ — 100%/60%)",
     "on-scroll-up": "brightnessctl -q set +5%",
     "on-scroll-down": "brightnessctl -q set 5%-",
     "on-click": "sh -c 'CUR=$(brightnessctl -m | cut -d, -f4 | tr -d \"%\"); [ \"$CUR\" -lt 95 ] && brightnessctl -q set 100% || brightnessctl -q set 60%'"
   },
 
+  "backlight/slider": {
+    "min": 5,
+    "max": 100,
+    "orientation": "horizontal"
+  },
+
   "pulseaudio": {
     "format": "󰕾 {volume}%",
     "format-muted": "󰝟 MUTE",
-    "tooltip-format": "Звук: {volume}% (ЛКМ — микшер, ПКМ — Mute, Колёсико — уровень)",
+    "tooltip-format": "Звук: {volume}% (ЛКМ — микшер, ПКМ — Mute)",
     "on-click": "~/.local/bin/cyber-audio-menu",
     "on-click-right": "pamixer -t",
     "on-scroll-up": "pamixer -i 5",
     "on-scroll-down": "pamixer -d 5"
+  },
+
+  "pulseaudio/slider": {
+    "min": 0,
+    "max": 100,
+    "orientation": "horizontal"
   },
 
   "custom/wifi": {

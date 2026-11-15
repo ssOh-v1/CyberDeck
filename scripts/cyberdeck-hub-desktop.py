@@ -5,7 +5,7 @@ try:
 except Exception:
     pass
 
-import os, sys, re, glob, json, socket, signal, urllib.request, urllib.parse, calendar, threading, subprocess, datetime
+import os, sys, re, glob, json, socket, urllib.request, urllib.parse, calendar, threading, subprocess, datetime
 
 HOME = os.path.expanduser("~")
 UID = os.getuid()
@@ -41,11 +41,11 @@ for _p in os.listdir("/proc"):
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
 DEFAULT_WIDGETS = {
-    "ai":       {"title": "▣ AI CHAT",   "x": 18,   "y": 46,  "w": 320, "h": 275, "min_w": 240, "min_h": 170, "top": False, "collapsed": False, "visible": True},
-    "notes":    {"title": "▣ NOTES",     "x": 18,   "y": 332, "w": 280, "h": 185, "min_w": 200, "min_h": 120, "top": False, "collapsed": False, "visible": True},
-    "gamedev":  {"title": "▣ DEV & GIT", "x": 18,   "y": 528, "w": 280, "h": 145, "min_w": 210, "min_h": 115, "top": False, "collapsed": False, "visible": True},
-    "calendar": {"title": "▣ CALENDAR",  "x": 1642, "y": 46,  "w": 260, "h": 175, "min_w": 210, "min_h": 150, "top": False, "collapsed": False, "visible": True},
-    "media":    {"title": "▣ MEDIA",     "x": 1642, "y": 232, "w": 260, "h": 105, "min_w": 200, "min_h": 88,  "top": False, "collapsed": False, "visible": True},
+    "ai":       {"title": "▣ AI CHAT",       "x": 18,   "y": 46,  "w": 325, "h": 285, "min_w": 240, "min_h": 175, "top": False, "collapsed": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",       "x": 18,   "y": 342, "w": 285, "h": 185, "min_w": 210, "min_h": 120, "top": False, "collapsed": False},
+    "gamedev":  {"title": "▣ DEV & GIT",     "x": 18,   "y": 538, "w": 285, "h": 145, "min_w": 210, "min_h": 115, "top": False, "collapsed": False},
+    "calendar": {"title": "▣ КАЛЕНДАРЬ",     "x": 1632, "y": 46,  "w": 270, "h": 180, "min_w": 220, "min_h": 155, "top": False, "collapsed": False},
+    "media":    {"title": "▣ МУЗЫКА И ЗВУК", "x": 1632, "y": 238, "w": 270, "h": 165, "min_w": 220, "min_h": 145, "top": False, "collapsed": False},
 }
 
 def get_hypr_sock():
@@ -78,8 +78,9 @@ def load_widgets_state():
         if os.path.isfile(STATE_FILE):
             saved = json.load(open(STATE_FILE, encoding="utf-8"))
             for k, v in saved.items():
-                if k in st:
+                if k in st and isinstance(v, dict):
                     st[k].update(v)
+                    st[k]["title"] = DEFAULT_WIDGETS[k]["title"]
     except Exception:
         pass
     return st
@@ -153,8 +154,30 @@ def read_music_status():
         pass
     return "󰓛 Нет активного трека", "Ожидание воспроизведения"
 
+def get_current_bri():
+    try:
+        for bdir in sorted(glob.glob("/sys/class/backlight/*")):
+            cur = float(open(os.path.join(bdir, "brightness")).read().strip())
+            mx = float(open(os.path.join(bdir, "max_brightness")).read().strip())
+            if mx > 0: return max(5.0, min(100.0, round(cur * 100.0 / mx)))
+    except Exception: pass
+    return 90.0
+
+def set_hw_bri(val):
+    val = max(5, min(100, int(val)))
+    for bdir in sorted(glob.glob("/sys/class/backlight/*")):
+        try:
+            mx = int(open(os.path.join(bdir, "max_brightness")).read().strip())
+            open(os.path.join(bdir, "brightness"), "w").write(str(max(1, int(round(mx * val / 100.0)))))
+            return
+        except Exception: pass
+    subprocess.Popen(["brightnessctl", "-q", "set", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def get_current_vol():
+    try: return float(subprocess.check_output(["pamixer", "--get-volume"], text=True, stderr=subprocess.DEVNULL).strip())
+    except Exception: return 50.0
+
 def query_ai_llm(model_key, messages):
-    # 1. Если выбрана локальная Ollama или она запущена при выборе local
     if model_key == "ollama":
         try:
             models_out = json.loads(urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=1.5).read().decode())
@@ -168,14 +191,9 @@ def query_ai_llm(model_key, messages):
             resp = json.loads(urllib.request.urlopen(req, timeout=45).read().decode("utf-8"))
             return resp.get("message", {}).get("content", "").strip()
         except Exception:
-            return "Локальный сервер Ollama не запущен (выполните `ollama serve` или переключите вкладку модели на Coder / GPT-4o / DeepSeek)."
+            return "Локальный сервер Ollama не запущен (выполните `ollama serve` или выберите вкладку Coder / GPT-4o / DeepSeek)."
 
-    # 2. Облачные модели без ключей (Pollinations OpenAI-compatible API + текстовый фоллбэк)
-    model_map = {
-        "coder":    "qwen-coder",
-        "gpt":      "openai",
-        "deepseek": "deepseek",
-    }
+    model_map = {"coder": "qwen-coder", "gpt": "openai", "deepseek": "deepseek"}
     api_model = model_map.get(model_key, "openai")
 
     try:
@@ -196,7 +214,6 @@ def query_ai_llm(model_key, messages):
     except Exception:
         pass
 
-    # Резервный прямой GET-канал
     try:
         last_q = messages[-1]["content"]
         url = f"https://text.pollinations.ai/{urllib.parse.quote(last_q)}?model={api_model}"
@@ -206,19 +223,21 @@ def query_ai_llm(model_key, messages):
         return f"Ошибка соединения с нейросетью: {e}"
 
 # ==============================================================================
-# КЛАСС ПЕРЕМЕЩАЕМОГО, МАСШТАБИРУЕМОГО И ЗАКРЕПЛЯЕМОГО ВИДЖЕТА
+# КОМПАКТНЫЙ ВИДЖЕТ НА РАБОЧЕМ СТОЛЕ (ВСЕГДА ВИДЕН, ПЕРЕМЕЩАЕМЫЙ, ПОВЕРХ ОКОН)
 # ==============================================================================
 class MovableStudioWidget:
     def __init__(self, app, wid, state_dict, build_body_fn):
         self.app = app
         self.wid = wid
         self.st = state_dict
+        self.m_start_xy = (0, 0)
+        self.m_start_cursor = None
+        self.r_start_wh = (280, 180)
+        self.r_start_cursor = None
 
         self.win = Gtk.Window(application=app, title=f"StudioWidget-{wid}")
         Gtk4LayerShell.init_for_window(self.win)
         Gtk4LayerShell.set_namespace(self.win, f"studio-widget-{wid}")
-
-        # Anchor TOP + LEFT позволяет свободно двигать виджет через отступы Margin
         Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.TOP, True)
         Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.LEFT, True)
         Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.RIGHT, False)
@@ -229,46 +248,41 @@ class MovableStudioWidget:
         self.frame = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.frame.add_css_class("widget-frame")
 
-        # --- ШАПКА ВИДЖЕТА (ПЕРЕТАСКИВАНИЕ + КНОПКА «ПОВЕРХ ОКОН» + СВЕРНУТЬ + СКРЫТЬ) ---
+        # Шапка виджета: перетаскивание ⠿ + кнопка «Поверх окон» [󰐃] + кнопка свернуть [—]
         hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         hdr.add_css_class("widget-header")
 
+        drag_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        drag_box.set_hexpand(True)
         drag_lbl = Gtk.Label(label=f"⠿ {self.st[wid].get('title', wid.upper())}", xalign=0, hexpand=True)
         drag_lbl.add_css_class("widget-title")
-        drag_lbl.set_tooltip_text("Зажмите ЛКМ и перетащите, чтобы переместить виджет")
-        hdr.append(drag_lbl)
+        drag_box.append(drag_lbl)
+        drag_box.set_tooltip_text("Зажмите ЛКМ и перетащите в любое место рабочего стола")
+        hdr.append(drag_box)
 
-        # Жест перемещения виджета по экрану
         move_gest = Gtk.GestureDrag.new()
         move_gest.set_button(1)
         move_gest.connect("drag-begin", self.on_move_begin)
         move_gest.connect("drag-update", self.on_move_update)
         move_gest.connect("drag-end", self.on_move_end)
-        drag_lbl.add_controller(move_gest)
+        drag_box.add_controller(move_gest)
 
-        # Кнопка «Поверх приложений» (Layer.BOTTOM <-> Layer.TOP)
+        # Кнопка закрепления виджета ПОВЕРХ ВСЕХ ПРИЛОЖЕНИЙ (Always on Top)
         self.pin_btn = Gtk.Button(label="󰐃")
-        self.pin_btn.set_tooltip_text("Закрепить виджет ПОВЕРХ всех приложений (Always on Top)")
+        self.pin_btn.set_tooltip_text("Закрепить виджет ПОВЕРХ открытых приложений / вернуть на стол")
         self.pin_btn.connect("clicked", self.on_toggle_top)
         hdr.append(self.pin_btn)
 
-        # Кнопка сворачивания виджета в компактную полоску
+        # Кнопка компактного сворачивания в полоску
         col_btn = Gtk.Button(label="—")
         col_btn.add_css_class("w-hdr-btn")
         col_btn.set_tooltip_text("Свернуть / развернуть содержимое виджета")
         col_btn.connect("clicked", self.on_toggle_collapse)
         hdr.append(col_btn)
 
-        # Кнопка скрытия виджета
-        close_btn = Gtk.Button(label="✕")
-        close_btn.add_css_class("w-hdr-btn")
-        close_btn.set_tooltip_text("Скрыть виджет (вернуть можно через кнопку «󰕮 Виджеты» на Waybar)")
-        close_btn.connect("clicked", self.on_hide_widget)
-        hdr.append(close_btn)
-
         self.frame.append(hdr)
 
-        # --- ТЕЛО ВИДЖЕТА + УГОЛОК ИЗМЕНЕНИЯ РАЗМЕРА (◢) ---
+        # Тело виджета + уголок изменения размера ◢
         self.body_wrap = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
         self.body_wrap.add_css_class("widget-body")
         self.body_wrap.set_vexpand(True); self.body_wrap.set_hexpand(True)
@@ -277,19 +291,21 @@ class MovableStudioWidget:
         content_w.set_vexpand(True); content_w.set_hexpand(True)
         self.body_wrap.append(content_w)
 
-        # Нижняя строка с уголком растягивания размера ◢
         btm_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         sp = Gtk.Box(); sp.set_hexpand(True); btm_row.append(sp)
+        grip_box = Gtk.Box()
         grip = Gtk.Label(label="◢")
         grip.add_css_class("resize-grip")
-        grip.set_tooltip_text("Потяните ЛКМ за уголок, чтобы изменить размер виджета")
+        grip_box.append(grip)
+        grip_box.set_tooltip_text("Потяните ЛКМ за уголок, чтобы изменить размер виджета")
+
         rsz_gest = Gtk.GestureDrag.new()
         rsz_gest.set_button(1)
         rsz_gest.connect("drag-begin", self.on_resize_begin)
         rsz_gest.connect("drag-update", self.on_resize_update)
         rsz_gest.connect("drag-end", self.on_resize_end)
-        grip.add_controller(rsz_gest)
-        btm_row.append(grip)
+        grip_box.add_controller(rsz_gest)
+        btm_row.append(grip_box)
         self.body_wrap.append(btm_row)
 
         self.frame.append(self.body_wrap)
@@ -298,13 +314,12 @@ class MovableStudioWidget:
 
     def apply_geometry_and_layer(self):
         cfg = self.st[self.wid]
-        x = max(4, min(1860, int(cfg.get("x", 20))))
-        y = max(38, min(1040, int(cfg.get("y", 50))))
-        w = max(int(cfg.get("min_w", 200)), int(cfg.get("w", 280)))
-        h = max(int(cfg.get("min_h", 95)), int(cfg.get("h", 180)))
+        x = max(4, min(1840, int(cfg.get("x", 20))))
+        y = max(38, min(1030, int(cfg.get("y", 50))))
+        w = max(int(cfg.get("min_w", 210)), int(cfg.get("w", 280)))
+        h = max(int(cfg.get("min_h", 105)), int(cfg.get("h", 180)))
         is_top = bool(cfg.get("top", False))
         is_col = bool(cfg.get("collapsed", False))
-        is_vis = bool(cfg.get("visible", True))
 
         Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.LEFT, x)
         Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.TOP, y)
@@ -326,8 +341,6 @@ class MovableStudioWidget:
             self.frame.set_size_request(w, h)
             self.win.set_default_size(w, h)
 
-        self.win.set_visible(is_vis)
-
     def on_move_begin(self, _g, _x, _y):
         cfg = self.st[self.wid]
         self.m_start_xy = (int(cfg.get("x", 20)), int(cfg.get("y", 50)))
@@ -340,8 +353,8 @@ class MovableStudioWidget:
             nx = self.m_start_xy[0] + (cur[0] - self.m_start_cursor[0])
             ny = self.m_start_xy[1] + (cur[1] - self.m_start_cursor[1])
         else:
-            nx = cfg["x"] + int(off_x)
-            ny = cfg["y"] + int(off_y)
+            nx = self.m_start_xy[0] + int(off_x)
+            ny = self.m_start_xy[1] + int(off_y)
         cfg["x"] = max(4, min(1920 - int(cfg["w"]) - 4, nx))
         cfg["y"] = max(38, min(1080 - 36, ny))
         Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.LEFT, cfg["x"])
@@ -364,8 +377,8 @@ class MovableStudioWidget:
         else:
             nw = self.r_start_wh[0] + int(off_x)
             nh = self.r_start_wh[1] + int(off_y)
-        cfg["w"] = max(int(cfg.get("min_w", 200)), min(900, nw))
-        cfg["h"] = max(int(cfg.get("min_h", 95)), min(850, nh))
+        cfg["w"] = max(int(cfg.get("min_w", 210)), min(900, nw))
+        cfg["h"] = max(int(cfg.get("min_h", 105)), min(850, nh))
         self.frame.set_size_request(cfg["w"], cfg["h"])
         self.win.set_default_size(cfg["w"], cfg["h"])
 
@@ -384,13 +397,8 @@ class MovableStudioWidget:
         self.apply_geometry_and_layer()
         save_widgets_state(self.st)
 
-    def on_hide_widget(self, _b):
-        self.st[self.wid]["visible"] = False
-        self.win.set_visible(False)
-        save_widgets_state(self.st)
-
 # ==============================================================================
-# ГЛАВНЫЙ МЕНЕДЖЕР КОМПАКТНЫХ ВИДЖЕТОВ И НИЖНЕГО ДОКА
+# МЕНЕДЖЕР ПОСТОЯННЫХ ВИДЖЕТОВ И ДОКА НА РАБОЧЕМ СТОЛЕ
 # ==============================================================================
 class StudioWidgetsDaemon(Gtk.Application):
     def __init__(self):
@@ -400,7 +408,6 @@ class StudioWidgetsDaemon(Gtk.Application):
         self.pinned = self.load_pinned()
         self.last_pin_mtime = 0
 
-        # Состояние встроенного чата ИИ
         self.ai_model = "coder"
         self.model_btns = {}
         self.chat_history = self.load_chat_history()
@@ -408,16 +415,6 @@ class StudioWidgetsDaemon(Gtk.Application):
 
         now = datetime.date.today()
         self.cal_year, self.cal_month = now.year, now.month
-
-        # Перезагрузка состояния по сигналу SIGUSR1 от studio-widgets-ctl
-        GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, int(signal.SIGUSR1), self.on_sigusr1_reload)
-
-    def on_sigusr1_reload(self):
-        self.st = load_widgets_state()
-        for wid, wobj in self.widgets.items():
-            wobj.st = self.st
-            wobj.apply_geometry_and_layer()
-        return GLib.SOURCE_CONTINUE
 
     def load_pinned(self):
         try: return set(json.load(open(PIN_FILE, encoding="utf-8"))) if os.path.isfile(PIN_FILE) else set()
@@ -441,11 +438,10 @@ class StudioWidgetsDaemon(Gtk.Application):
         except Exception:
             pass
 
-    # --- 1. ВСТРОЕННЫЙ ВИДЖЕТ НЕЙРОСЕТЕЙ (ОБЩЕНИЕ ПРЯМО ВНУТРИ ВИДЖЕТА!) ---
+    # --- 1. ВИДЖЕТ НЕЙРОСЕТЕЙ (ПРЯМОЕ ОБЩЕНИЕ ВНУТРИ ВИДЖЕТА) ---
     def build_ai_widget(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
-        # Переключатель моделей прямо в виджете
         m_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         for m_id, m_lbl in [("coder", "Coder"), ("gpt", "GPT-4o"), ("deepseek", "DeepSeek"), ("ollama", "Ollama")]:
             mb = Gtk.Button(label=m_lbl)
@@ -456,7 +452,6 @@ class StudioWidgetsDaemon(Gtk.Application):
             m_row.append(mb)
         box.append(m_row)
 
-        # Поле диалога с нейросетью
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
         self.chat_tv = Gtk.TextView()
         self.chat_tv.set_editable(False); self.chat_tv.set_cursor_visible(False)
@@ -467,7 +462,6 @@ class StudioWidgetsDaemon(Gtk.Application):
         box.append(sc)
         self.render_chat_log()
 
-        # Строка ввода сообщения + кнопки Отправить / Копировать / Очистить
         in_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self.ai_entry = Gtk.Entry()
         self.ai_entry.add_css_class("compact-entry"); self.ai_entry.set_hexpand(True)
@@ -476,17 +470,16 @@ class StudioWidgetsDaemon(Gtk.Application):
         in_row.append(self.ai_entry)
 
         b_send = Gtk.Button(label="➤"); b_send.add_css_class("mini-btn")
-        b_send.set_tooltip_text("Отправить запрос")
         b_send.connect("clicked", self.on_send_ai_msg)
         in_row.append(b_send)
 
         b_copy = Gtk.Button(label="󰆏"); b_copy.add_css_class("mini-btn")
-        b_copy.set_tooltip_text("Скопировать последний ответ нейросети")
+        b_copy.set_tooltip_text("Скопировать ответ нейросети")
         b_copy.connect("clicked", self.on_copy_last_ai)
         in_row.append(b_copy)
 
         b_clr = Gtk.Button(label="󰩺"); b_clr.add_css_class("mini-btn")
-        b_clr.set_tooltip_text("Очистить историю диалога")
+        b_clr.set_tooltip_text("Очистить чат")
         b_clr.connect("clicked", self.on_clear_ai_chat)
         in_row.append(b_clr)
 
@@ -553,7 +546,7 @@ class StudioWidgetsDaemon(Gtk.Application):
         self.save_chat_history()
         self.render_chat_log()
 
-    # --- 2. КОМПАКТНЫЙ ВИДЖЕТ ЗАМЕТОК ---
+    # --- 2. ВИДЖЕТ ЗАМЕТОК ---
     def build_notes_widget(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
@@ -576,7 +569,7 @@ class StudioWidgetsDaemon(Gtk.Application):
         box.append(row)
         return box
 
-    # --- 3. КОМПАКТНЫЙ ВИДЖЕТ КАЛЕНДАРЯ ---
+    # --- 3. ВИДЖЕТ КАЛЕНДАРЯ ---
     def build_calendar_widget(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         nav = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
@@ -622,9 +615,9 @@ class StudioWidgetsDaemon(Gtk.Application):
                 lbl.add_css_class("cal-today" if is_t else "cal-day")
                 self.cal_grid.attach(lbl, c_i, r_i, 1, 1)
 
-    # --- 4. КОМПАКТНЫЙ ВИДЖЕТ МУЗЫКИ ---
+    # --- 4. ВИДЖЕТ МУЗЫКИ + ПОЛЗУНКИ ЗВУКА И ЯРКОСТИ ---
     def build_media_widget(self):
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         t_s, a_s = read_music_status()
         self.track_lbl = Gtk.Label(label=t_s, xalign=0, css_classes=["track-title"])
         self.track_lbl.set_ellipsize(Pango.EllipsizeMode.END)
@@ -633,14 +626,47 @@ class StudioWidgetsDaemon(Gtk.Application):
         box.append(self.track_lbl); box.append(self.artist_lbl)
 
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        for lbl, cmd in [("󰒮", "playerctl previous"), ("󰐎 Пауза/Пуск", "playerctl play-pause"), ("󰒭", "playerctl next"), ("󰕾", "~/.local/bin/cyber-audio-menu")]:
+        for lbl, cmd in [("󰒮", "playerctl previous"), ("󰐎 Пуск/Пауза", "playerctl play-pause"), ("󰒭", "playerctl next"), ("󰕾", "~/.local/bin/cyber-audio-menu")]:
             b = Gtk.Button(label=lbl); b.add_css_class("mini-btn"); b.set_hexpand(True)
             b.connect("clicked", lambda _b, c=cmd: self.spawn_raw(c))
             row.append(b)
         box.append(row)
+
+        # Ползунок звука
+        v_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        v_row.append(Gtk.Label(label="󰕾 Звук", css_classes=["mono-sub"]))
+        cur_v = get_current_vol()
+        self.vol_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
+        self.vol_scale.set_draw_value(False); self.vol_scale.set_hexpand(True); self.vol_scale.set_value(cur_v)
+        self.vol_lbl = Gtk.Label(label=f"{int(cur_v)}%", css_classes=["mono-sub"])
+        self.vol_scale.connect("value-changed", self.on_vol_changed)
+        v_row.append(self.vol_scale); v_row.append(self.vol_lbl)
+        box.append(v_row)
+
+        # Ползунок яркости экрана
+        b_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        b_row.append(Gtk.Label(label="󰃠 Экран", css_classes=["mono-sub"]))
+        cur_b = get_current_bri()
+        self.bri_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 5, 100, 1)
+        self.bri_scale.set_draw_value(False); self.bri_scale.set_hexpand(True); self.bri_scale.set_value(cur_b)
+        self.bri_lbl = Gtk.Label(label=f"{int(cur_b)}%", css_classes=["mono-sub"])
+        self.bri_scale.connect("value-changed", self.on_bri_changed)
+        b_row.append(self.bri_scale); b_row.append(self.bri_lbl)
+        box.append(b_row)
+
         return box
 
-    # --- 5. КОМПАКТНЫЙ ВИДЖЕТ РАЗРАБОТКИ ИГР И КОДА ---
+    def on_vol_changed(self, scale):
+        val = int(scale.get_value())
+        self.vol_lbl.set_label(f"{val}%")
+        subprocess.Popen(["pamixer", "--set-volume", str(val)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def on_bri_changed(self, scale):
+        val = int(scale.get_value())
+        self.bri_lbl.set_label(f"{val}%")
+        set_hw_bri(val)
+
+    # --- 5. ВИДЖЕТ РАЗРАБОТКИ ИГР И КОДА ---
     def build_gamedev_widget(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         self.git_lbl = Gtk.Label(label=read_git_projects_status(), xalign=0, css_classes=["mono-sub"])
@@ -672,6 +698,14 @@ class StudioWidgetsDaemon(Gtk.Application):
         wrap.add_css_class("bottom-dock")
         self.dock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         wrap.append(self.dock_box)
+
+        # Компактная кнопка + в самом доке для добавления/удаления закреплённых программ
+        add_b = Gtk.Button(label="+")
+        add_b.add_css_class("dock-item")
+        add_b.set_tooltip_text("Настроить закреплённые программы в доке")
+        add_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
+        wrap.append(add_b)
+
         self.dock_win.set_child(wrap)
         self.populate_dock()
         self.dock_win.present()
@@ -697,24 +731,18 @@ class StudioWidgetsDaemon(Gtk.Application):
             if c is None: break
             self.dock_box.remove(c)
         favs = [it for it in items if it[0] in self.pinned]
-        if not favs:
-            b = Gtk.Button(label="󰐃 Закрепить программы в доке")
-            b.add_css_class("dock-item")
-            b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
-            self.dock_box.append(b)
-        else:
-            for name, cmd, icon_spec in favs:
-                db = Gtk.Button(); db.add_css_class("dock-item")
-                db.set_tooltip_text(f"{name} (ЛКМ: запустить • ПКМ: открепить)")
-                hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=7)
-                hb.append(make_cyber_icon_widget(icon_spec, 18))
-                hb.append(Gtk.Label(label=name[:16]))
-                db.set_child(hb)
-                db.connect("clicked", lambda _b, c=cmd: self.spawn_raw(c))
-                rc = Gtk.GestureClick.new(); rc.set_button(3)
-                rc.connect("pressed", lambda _g, _n, _x, _y, nm=name: self.toggle_pin(nm))
-                db.add_controller(rc)
-                self.dock_box.append(db)
+        for name, cmd, icon_spec in favs:
+            db = Gtk.Button(); db.add_css_class("dock-item")
+            db.set_tooltip_text(f"{name} (ЛКМ: запустить • ПКМ: открепить)")
+            hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=7)
+            hb.append(make_cyber_icon_widget(icon_spec, 18))
+            hb.append(Gtk.Label(label=name[:16]))
+            db.set_child(hb)
+            db.connect("clicked", lambda _b, c=cmd: self.spawn_raw(c))
+            rc = Gtk.GestureClick.new(); rc.set_button(3)
+            rc.connect("pressed", lambda _g, _n, _x, _y, nm=name: self.toggle_pin(nm))
+            db.add_controller(rc)
+            self.dock_box.append(db)
 
     def toggle_pin(self, name):
         if name in self.pinned: self.pinned.remove(name)
@@ -754,6 +782,23 @@ class StudioWidgetsDaemon(Gtk.Application):
         t_s, a_s = read_music_status()
         if self.track_lbl.get_label() != t_s: self.track_lbl.set_label(t_s)
         if self.artist_lbl.get_label() != a_s: self.artist_lbl.set_label(a_s)
+
+        # Синхронизируем ползунки звука и яркости, если они были изменены с Waybar или клавишами
+        try:
+            v_now = get_current_vol()
+            if abs(self.vol_scale.get_value() - v_now) > 1.5:
+                self.vol_scale.handler_block_by_func(self.on_vol_changed)
+                self.vol_scale.set_value(v_now)
+                self.vol_lbl.set_label(f"{int(v_now)}%")
+                self.vol_scale.handler_unblock_by_func(self.on_vol_changed)
+            b_now = get_current_bri()
+            if abs(self.bri_scale.get_value() - b_now) > 1.5:
+                self.bri_scale.handler_block_by_func(self.on_bri_changed)
+                self.bri_scale.set_value(b_now)
+                self.bri_lbl.set_label(f"{int(b_now)}%")
+                self.bri_scale.handler_unblock_by_func(self.on_bri_changed)
+        except Exception:
+            pass
         return True
 
     def tick_slow(self):

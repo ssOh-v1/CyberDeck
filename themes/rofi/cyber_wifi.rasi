@@ -1,153 +1,108 @@
 configuration {
-    show-icons: false;
+    show-icons:                 false;
+    hover-select:               true;
+    me-select-entry:            "";
+    me-accept-entry:            "MousePrimary";
 }
 
 * {
-    bg:          #070a12;
-    bg-panel:    #0c1221;
-    bg-card:     #0d1323;
-    bg-sel:      #14233f;
-    fg:          #dce3f5;
-    fg-dim:      #6c7a9c;
-    border-col:  #253659;
-    cyan:        #22b8cf;
-    indigo:      #4c6ef5;
+    bg-main:                    #121316f8;
+    bg-header:                  #17191ef8;
+    bg-card:                    #181a20ff;
+    bg-selected:                #262a33ff;
+    bg-input:                   #111215ff;
+    fg-main:                    #e6e9efff;
+    fg-muted:                   #828894ff;
+    border-subtle:              #262930ff;
+    border-strong:              #3e434dff;
+    accent-silver:              #9ea4b0ff;
 
-    background-color: transparent;
-    text-color: @fg;
-    font: "Noto Sans 11.5";
+    background-color:           transparent;
+    text-color:                 @fg-main;
+    font:                       "Inter SemiBold 11";
 }
 
 window {
-    width: 640px;
-    background-color: @bg;
-    border: 2px;
-    border-color: @cyan;
-    border-radius: 16px;
-    padding: 18px;
+    transparency:               "real";
+    location:                   center;
+    anchor:                     center;
+    width:                      500px;
+    background-color:           @bg-main;
+    border:                     1px;
+    border-color:               @border-strong;
+    border-radius:              10px;
+    padding:                    0px;
 }
 
 mainbox {
-    spacing: 12px;
-    children: [ box-header, inputbar, listview, box-footer ];
-}
-
-box-header {
-    orientation: horizontal;
-    expand: false;
-    spacing: 10px;
-    background-color: @bg-panel;
-    border: 1px;
-    border-color: @border-col;
-    border-radius: 10px;
-    padding: 8px 14px;
-    children: [ textbox-wtitle, textbox-wtag ];
-}
-
-textbox-wtitle {
-    expand: true;
-    str: "◈ CYBER DECK // WIRELESS RADIO TELEMETRY";
-    text-color: #e5ecff;
-    font: "Noto Sans Bold 11";
-}
-
-textbox-wtag {
-    expand: false;
-    str: "802.11AX // WPA3";
-    background-color: #0e2229;
-    text-color: #63e6be;
-    border: 1px;
-    border-color: #1c4b42;
-    border-radius: 6px;
-    padding: 2px 9px;
-    font: "Noto Sans Bold 9.5";
+    spacing:                    0px;
+    padding:                    0px;
+    children:                   [ "inputbar", "listview" ];
 }
 
 inputbar {
-    background-color: @bg-panel;
-    border: 1px;
-    border-color: @indigo;
-    border-radius: 10px;
-    padding: 9px 13px;
-    spacing: 10px;
-    children: [ prompt, entry ];
+    spacing:                    10px;
+    padding:                    12px 16px;
+    background-color:           @bg-header;
+    border:                     0px 0px 1px 0px;
+    border-color:               @border-subtle;
+    children:                   [ "prompt", "entry" ];
 }
 
 prompt {
-    background-color: #132238;
-    text-color: #66d9e8;
-    border: 1px;
-    border-color: @cyan;
-    padding: 3px 10px;
-    border-radius: 6px;
-    font: "Noto Sans Bold 10";
+    background-color:           #22252dff;
+    text-color:                 @fg-main;
+    padding:                    6px 10px;
+    border:                     1px;
+    border-color:               @border-strong;
+    border-radius:              5px;
+    font:                       "JetBrainsMono Nerd Font Bold 10.5";
 }
 
 entry {
-    placeholder: "Фильтр точек доступа или ввод ключа безопасности...";
-    placeholder-color: @fg-dim;
-    text-color: #f0f4ff;
-    vertical-align: 0.5;
+    background-color:           @bg-input;
+    text-color:                 @fg-main;
+    placeholder:                "Фильтр списка...";
+    placeholder-color:          @fg-muted;
+    padding:                    6px 10px;
+    border:                     1px;
+    border-color:               @border-subtle;
+    border-radius:              5px;
 }
 
 listview {
-    lines: 8;
-    columns: 1;
-    spacing: 7px;
-    scrollbar: true;
-    fixed-height: false;
+    columns:                    1;
+    lines:                      8;
+    fixed-height:               false;
+    scrollbar:                  false;
+    spacing:                    6px;
+    padding:                    12px 16px;
 }
 
-scrollbar {
-    width: 5px;
-    handle-color: @cyan;
-    handle-width: 5px;
-    background-color: #101729;
-    border-radius: 4px;
+element {
+    padding:                    8px 12px;
+    border:                     1px;
+    border-color:               @border-subtle;
+    border-radius:              6px;
+    background-color:           @bg-card;
+    text-color:                 @fg-main;
 }
 
-element, element normal.normal, element alternate.normal {
-    padding: 10px 14px;
-    border: 1px;
-    border-color: #1c2844;
-    border-radius: 10px;
-    background-color: @bg-card;
-    text-color: @fg;
+element normal.normal,
+element alternate.normal {
+    background-color:           @bg-card;
+    text-color:                 @fg-main;
 }
 
 element selected.normal {
-    background-color: @bg-sel;
-    border: 1px;
-    border-color: @cyan;
-    text-color: #f0f4ff;
+    background-color:           @bg-selected;
+    text-color:                 #ffffffff;
+    border:                     1px 1px 1px 3px;
+    border-color:               @accent-silver;
 }
 
 element-text {
-    text-color: inherit;
-    font: "Noto Sans Bold 11";
-}
-
-box-footer {
-    orientation: horizontal;
-    expand: false;
-    background-color: #0a0f1c;
-    border: 1px;
-    border-color: #1d2945;
-    border-radius: 9px;
-    padding: 6px 14px;
-    children: [ textbox-wftr, textbox-wnode ];
-}
-
-textbox-wftr {
-    expand: true;
-    str: "[▲/▼] Выбор сети   •   [Enter] Подключить / Переключить   •   [Esc] Выход";
-    text-color: #7d89a8;
-    font: "Noto Sans Bold 9.5";
-}
-
-textbox-wnode {
-    expand: false;
-    str: "NET // MATRIX";
-    text-color: @cyan;
-    font: "Noto Sans Bold 9.5";
+    background-color:           transparent;
+    text-color:                 inherit;
+    vertical-align:             0.5;
 }

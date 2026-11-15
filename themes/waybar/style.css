@@ -8,7 +8,7 @@
 }
 
 window#waybar {
-    background-color: rgba(17, 18, 21, 0.94);
+    background-color: rgba(17, 18, 21, 0.95);
     border: 1px solid #282b30;
     border-radius: 6px;
     color: #c8ccd2;
@@ -70,33 +70,6 @@ tooltip label {
     color: #ffffff;
 }
 
-#custom-widgets,
-#custom-pin-dock,
-#custom-bg-nodes {
-    background-color: #181a1f;
-    color: #b0b6c0;
-    border: 1px solid #262930;
-    border-radius: 4px;
-    padding: 0px 8px;
-    margin: 3px 1px;
-}
-
-#custom-widgets:hover,
-#custom-pin-dock:hover,
-#custom-bg-nodes:hover {
-    background-color: #252830;
-    border-color: #5c626d;
-    color: #ffffff;
-}
-
-#window {
-    color: #9ea4b0;
-    font-family: "Inter", sans-serif;
-    font-size: 11.5px;
-    font-weight: 600;
-    padding: 0px 10px;
-}
-
 #custom-media,
 #cpu,
 #memory,
@@ -114,6 +87,42 @@ tooltip label {
     border-radius: 4px;
     padding: 0px 8px;
     margin: 3px 1px;
+}
+
+/* Встроенные ползунки яркости и звука в Waybar */
+#backlight-slider,
+#pulseaudio-slider {
+    background-color: #16181c;
+    border: 1px solid #24272c;
+    border-radius: 4px;
+    padding: 0px 7px;
+    margin: 3px 2px 3px 0px;
+}
+
+#backlight-slider slider,
+#pulseaudio-slider slider {
+    min-height: 9px;
+    min-width: 9px;
+    border-radius: 5px;
+    background-color: #e6e9ef;
+    border: 1px solid #454a52;
+    box-shadow: none;
+    margin: -3px 0px;
+}
+
+#backlight-slider trough,
+#pulseaudio-slider trough {
+    min-height: 4px;
+    min-width: 54px;
+    border-radius: 2px;
+    background-color: #24272e;
+}
+
+#backlight-slider highlight,
+#pulseaudio-slider highlight {
+    min-height: 4px;
+    border-radius: 2px;
+    background-color: #8c939e;
 }
 
 #custom-power-mode.perf {

@@ -1,165 +1,179 @@
+/*******************************************************************************
+ * STUDIO COMMAND PALETTE & 2-COLUMN APP LAUNCHER (ROFI)
+ *******************************************************************************/
 configuration {
-    modi: "drun";
-    show-icons: true;
-    icon-theme: "CyberDeck-Icons";
-    display-drun: "◈ APPS";
-    drun-display-format: "{name}";
+    modi:                       "drun,run,window";
+    show-icons:                 true;
+    icon-theme:                 "CyberDeck-Icons";
+    display-drun:               "▣ ПРИЛОЖЕНИЯ";
+    display-run:                "❯ КОМАНДЫ";
+    display-window:             "󰘔 ОКНА";
+    drun-display-format:        "{name}";
+    window-format:              "{w} · {c} · {t}";
+    hover-select:               true;
+    me-select-entry:            "";
+    me-accept-entry:            "MousePrimary";
 }
 
 * {
-    bg:          #070a12;
-    bg-panel:    #0c1221;
-    bg-card:     #0d1323;
-    bg-sel:      #14213d;
-    fg:          #dce3f5;
-    fg-dim:      #6c7a9c;
-    border-col:  #253659;
-    cyan:        #22b8cf;
-    indigo:      #4c6ef5;
+    bg-main:                    #121316f8;
+    bg-header:                  #17191ef8;
+    bg-card:                    #181a20ff;
+    bg-selected:                #262a33ff;
+    bg-input:                   #111215ff;
+    fg-main:                    #e6e9efff;
+    fg-muted:                   #828894ff;
+    border-subtle:              #262930ff;
+    border-strong:              #3e434dff;
+    accent-silver:              #9ea4b0ff;
 
-    background-color: transparent;
-    text-color: @fg;
-    font: "Noto Sans 11.5";
+    background-color:           transparent;
+    text-color:                 @fg-main;
+    font:                       "Inter SemiBold 11";
 }
 
 window {
-    width: 760px;
-    background-color: @bg;
-    border: 2px;
-    border-color: @cyan;
-    border-radius: 16px;
-    padding: 18px;
+    transparency:               "real";
+    location:                   center;
+    anchor:                     center;
+    fullscreen:                 false;
+    width:                      680px;
+    background-color:           @bg-main;
+    border:                     1px;
+    border-color:               @border-strong;
+    border-radius:              10px;
+    padding:                    0px;
 }
 
 mainbox {
-    spacing: 12px;
-    children: [ box-header, inputbar, listview, box-footer ];
-}
-
-box-header {
-    orientation: horizontal;
-    expand: false;
-    spacing: 10px;
-    background-color: @bg-panel;
-    border: 1px;
-    border-color: @border-col;
-    border-radius: 10px;
-    padding: 8px 14px;
-    children: [ textbox-hdr-title, textbox-hdr-badge ];
-}
-
-textbox-hdr-title {
-    expand: true;
-    str: "◈ CYBER DECK // APPLICATION MATRIX";
-    text-color: #e5ecff;
-    font: "Noto Sans Bold 11";
-}
-
-textbox-hdr-badge {
-    expand: false;
-    str: "FREE-WS ENGINE // READY";
-    background-color: #102334;
-    text-color: #66d9e8;
-    border: 1px;
-    border-color: #1f5068;
-    border-radius: 6px;
-    padding: 2px 9px;
-    font: "Noto Sans Bold 9.5";
+    enabled:                    true;
+    spacing:                    0px;
+    padding:                    0px;
+    background-color:           transparent;
+    children:                   [ "inputbar", "listview", "mode-switcher" ];
 }
 
 inputbar {
-    background-color: @bg-panel;
-    border: 1px;
-    border-color: @indigo;
-    border-radius: 10px;
-    padding: 10px 14px;
-    spacing: 12px;
-    children: [ prompt, entry ];
+    enabled:                    true;
+    spacing:                    12px;
+    padding:                    14px 18px;
+    background-color:           @bg-header;
+    border:                     0px 0px 1px 0px;
+    border-color:               @border-subtle;
+    children:                   [ "prompt", "entry" ];
 }
 
 prompt {
-    background-color: #13233b;
-    text-color: #66d9e8;
-    border: 1px;
-    border-color: @cyan;
-    padding: 3px 11px;
-    border-radius: 7px;
-    font: "Noto Sans Bold 10.5";
+    enabled:                    true;
+    background-color:           #22252dff;
+    text-color:                 @fg-main;
+    padding:                    7px 12px;
+    border:                     1px;
+    border-color:               @border-strong;
+    border-radius:              6px;
+    font:                       "JetBrainsMono Nerd Font Bold 10.5";
 }
 
 entry {
-    placeholder: "Введите название программы, IDE или системной утилиты...";
-    placeholder-color: @fg-dim;
-    text-color: #f0f4ff;
-    vertical-align: 0.5;
+    enabled:                    true;
+    background-color:           @bg-input;
+    text-color:                 @fg-main;
+    placeholder:                "Поиск программ, инструментов и команд...";
+    placeholder-color:          @fg-muted;
+    cursor:                     text;
+    padding:                    7px 12px;
+    border:                     1px;
+    border-color:               @border-subtle;
+    border-radius:              6px;
 }
 
 listview {
-    lines: 6;
-    columns: 2;
-    spacing: 9px;
-    scrollbar: true;
-    fixed-height: true;
+    enabled:                    true;
+    columns:                    2;
+    lines:                      6;
+    cycle:                      true;
+    dynamic:                    true;
+    scrollbar:                  false;
+    layout:                     vertical;
+    reverse:                    false;
+    fixed-height:               true;
+    fixed-columns:              true;
+    spacing:                    8px;
+    padding:                    14px 18px;
+    background-color:           transparent;
 }
 
-scrollbar {
-    width: 5px;
-    border: 0;
-    handle-color: @cyan;
-    handle-width: 5px;
-    background-color: #101729;
-    border-radius: 4px;
-    padding: 0;
+element {
+    enabled:                    true;
+    spacing:                    12px;
+    padding:                    9px 12px;
+    border:                     1px;
+    border-color:               @border-subtle;
+    border-radius:              7px;
+    background-color:           @bg-card;
+    text-color:                 @fg-main;
+    cursor:                     pointer;
+    orientation:                horizontal;
 }
 
-element, element normal.normal, element alternate.normal {
-    padding: 10px 13px;
-    spacing: 12px;
-    border: 1px;
-    border-color: #1c2844;
-    border-radius: 10px;
-    background-color: @bg-card;
-    text-color: @fg;
+element normal.normal,
+element alternate.normal {
+    background-color:           @bg-card;
+    text-color:                 @fg-main;
 }
 
 element selected.normal {
-    background-color: @bg-sel;
-    border: 1px;
-    border-color: @cyan;
-    text-color: #f0f4ff;
+    background-color:           @bg-selected;
+    text-color:                 #ffffffff;
+    border:                     1px 1px 1px 3px;
+    border-color:               @accent-silver;
 }
 
 element-icon {
-    size: 30px;
+    background-color:           transparent;
+    text-color:                 inherit;
+    size:                       28px;
+    cursor:                     inherit;
 }
 
 element-text {
-    vertical-align: 0.5;
-    text-color: inherit;
-    font: "Noto Sans Bold 11";
+    background-color:           transparent;
+    text-color:                 inherit;
+    highlight:                  bold;
+    cursor:                     inherit;
+    vertical-align:             0.5;
+    horizontal-align:           0.0;
 }
 
-box-footer {
-    orientation: horizontal;
-    expand: false;
-    background-color: #0a0f1c;
-    border: 1px;
-    border-color: #1d2945;
-    border-radius: 9px;
-    padding: 6px 14px;
-    children: [ textbox-ftr-hints, textbox-ftr-node ];
+mode-switcher {
+    enabled:                    true;
+    spacing:                    10px;
+    padding:                    10px 18px;
+    background-color:           @bg-header;
+    border:                     1px 0px 0px 0px;
+    border-color:               @border-subtle;
 }
 
-textbox-ftr-hints {
-    expand: true;
-    str: "[▲/▼/◄/►] Навигация   •   [Enter] Открыть на свободном столе   •   [Esc] Закрыть";
-    text-color: #7d89a8;
-    font: "Noto Sans Bold 9.5";
+button {
+    padding:                    6px 12px;
+    border-radius:              5px;
+    background-color:           @bg-card;
+    text-color:                 @fg-muted;
+    border:                     1px;
+    border-color:               @border-subtle;
+    cursor:                     pointer;
+    font:                       "JetBrainsMono Nerd Font Bold 10";
 }
 
-textbox-ftr-node {
-    expand: false;
-    str: "////// HUD_V2";
-    text-color: @cyan;
-    font: "Noto Sans Bold 9.5";
+button selected {
+    background-color:           @bg-selected;
+    text-color:                 @fg-main;
+    border:                     1px;
+    border-color:               @accent-silver;
+}
+
+error-message {
+    padding:                    16px;
+    background-color:           @bg-main;
+    text-color:                 @fg-main;
 }
