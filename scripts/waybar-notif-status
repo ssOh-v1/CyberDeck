@@ -7,8 +7,17 @@ try:
     hist = subprocess.check_output(["makoctl", "history"], text=True, stderr=subprocess.DEVNULL)
     cnt = hist.count("Notification ")
     if is_dnd:
-        print(json.dumps({"text": f"DND {cnt}", "class": "dnd", "tooltip": f"Не беспокоить ВКЛ (в истории: {cnt})\nЛКМ: Центр уведомлений • ПКМ: Выключить DND"}, ensure_ascii=False))
+        print(json.dumps({
+            "text": f"󰂛 {cnt}",
+            "class": "dnd",
+            "tooltip": f"Режим «Не беспокоить» активен (в истории: {cnt})\nЛКМ: Центр уведомлений • ПКМ: Включить уведомления"
+        }, ensure_ascii=False))
     else:
-        print(json.dumps({"text": f"🔔 {cnt}", "class": "normal", "tooltip": f"Уведомлений в истории: {cnt}\nЛКМ: Открыть Центр уведомлений • ПКМ: Не беспокоить"}, ensure_ascii=False))
+        ic = "󰂚" if cnt > 0 else "󰂜"
+        print(json.dumps({
+            "text": f"{ic} {cnt}",
+            "class": "normal",
+            "tooltip": f"Уведомлений в истории: {cnt}\nЛКМ: Открыть Центр уведомлений • ПКМ: Режим «Не беспокоить»"
+        }, ensure_ascii=False))
 except Exception:
-    print(json.dumps({"text": "🔔 0", "tooltip": "Центр уведомлений"}, ensure_ascii=False))
+    print(json.dumps({"text": "󰂜 0", "class": "normal", "tooltip": "Центр уведомлений"}, ensure_ascii=False))

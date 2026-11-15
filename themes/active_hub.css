@@ -1,0 +1,155 @@
+window { background-color: transparent; color: #d4d8de; }
+scrolledwindow, viewport, textview {
+    background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; padding: 0px;
+}
+button, entry { background-image: none; box-shadow: none; text-shadow: none; outline: none; }
+
+.widget-frame {
+    background-color: rgba(18, 20, 24, 0.94);
+    border: 1px solid #2e3238;
+    border-radius: 7px;
+}
+.widget-frame-top {
+    background-color: rgba(20, 22, 27, 0.98);
+    border: 1px solid #7a818e;
+    border-radius: 7px;
+}
+
+.widget-header {
+    background-color: rgba(26, 29, 35, 0.96);
+    border-bottom: 1px solid #262930;
+    border-radius: 6px 6px 0px 0px;
+    padding: 3px 7px;
+    min-height: 22px;
+}
+
+.widget-title {
+    font-family: "JetBrainsMono Nerd Font", "Inter", monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #b8bec8;
+}
+
+button.w-hdr-btn {
+    background-color: transparent;
+    color: #828894;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 0px 5px;
+    min-height: 18px;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 10.5px;
+}
+button.w-hdr-btn:hover {
+    background-color: #282c34;
+    color: #e6e9ef;
+    border-color: #454a52;
+}
+button.w-pin-active {
+    background-color: #343942;
+    color: #ffffff;
+    border: 1px solid #8c939e;
+    border-radius: 3px;
+    padding: 0px 5px;
+    min-height: 18px;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 10.5px;
+}
+
+.widget-body {
+    padding: 7px 9px 5px 9px;
+}
+
+.resize-grip {
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 10px;
+    color: #6c727d;
+    padding: 0px 3px 1px 3px;
+}
+
+.chat-view, .notes-view {
+    background-color: #141619;
+    color: #d4d8de;
+    border: 1px solid #252830;
+    border-radius: 5px;
+    padding: 6px;
+    font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
+    font-size: 11px;
+}
+
+entry.compact-entry {
+    background-color: #141619;
+    color: #e6e9ef;
+    border: 1px solid #2c3038;
+    border-radius: 4px;
+    padding: 3px 8px;
+    min-height: 24px;
+    font-size: 11px;
+}
+entry.compact-entry:focus {
+    border-color: #7a818e;
+}
+
+button.mini-btn {
+    background-color: #1c1f24;
+    color: #c8ccd2;
+    border: 1px solid #2b2e35;
+    border-radius: 4px;
+    padding: 2px 7px;
+    min-height: 22px;
+    font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
+    font-size: 10.5px;
+    font-weight: 600;
+}
+button.mini-btn:hover {
+    background-color: #2a2e36;
+    border-color: #6c727d;
+    color: #ffffff;
+}
+
+.cal-dow   { font-size: 9.5px; font-weight: 700; color: #7a818e; font-family: "JetBrainsMono Nerd Font", monospace; min-width: 24px; }
+.cal-day   { font-size: 10.5px; color: #b8bec8; font-family: "JetBrainsMono Nerd Font", monospace; min-width: 24px; min-height: 19px; }
+.cal-today {
+    background-color: #343942; color: #ffffff; font-size: 10.5px; font-weight: 700;
+    font-family: "JetBrainsMono Nerd Font", monospace; border: 1px solid #8c939e; border-radius: 3px; min-width: 24px; min-height: 19px;
+}
+
+.track-title  { font-size: 11px; font-weight: 700; color: #e6e9ef; }
+.track-artist { font-size: 10px; color: #8c939e; }
+.mono-sub     { font-family: "JetBrainsMono Nerd Font", monospace; font-size: 10px; color: #9ea4b0; }
+
+.cover-frame {
+    background-color: #141619;
+    border: 1px solid #2e3238;
+    border-radius: 6px;
+    min-width: 52px;
+    min-height: 52px;
+}
+
+.notif-card {
+    background-color: #16181d;
+    border: 1px solid #282c34;
+    border-left: 3px solid #6c727d;
+    border-radius: 5px;
+    padding: 6px 8px;
+}
+
+.bottom-dock {
+    background-color: rgba(18, 20, 24, 0.94);
+    border: 1px solid #2b2e35;
+    border-bottom: 2px solid #6c727d;
+    border-radius: 8px;
+    padding: 5px 12px;
+}
+button.dock-item {
+    background-color: #1a1d22; color: #d4d8de; border: 1px solid #282c34; border-bottom: 2px solid #525761;
+    border-radius: 5px; padding: 3px 10px; min-height: 30px; font-size: 11px; font-weight: 600;
+}
+button.dock-item:hover {
+    background-color: #282c34; color: #ffffff; border-color: #7a818e;
+}
+
+scale { padding: 0px 2px; }
+scale trough    { background-color: #1b1d22; border-radius: 3px; min-height: 5px; }
+scale highlight { background-color: #7a818e; border-radius: 3px; }
+scale slider    { background-color: #d4d8de; border: 2px solid #454a52; border-radius: 4px; min-width: 10px; min-height: 10px; margin: -4px 0px; }
