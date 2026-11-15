@@ -242,40 +242,45 @@ class WorkHubApp(Gtk.Application):
             cr.paint()
 
         if self.layout_mode == "dungeon":
-            # Лёгкая 20-FPS анимация поверх предрендеренной сцены The Dungeon of God (< 0.4 мс на кадр!)
+            # Чёткая пиксель-арт анимация (сетка 6x6 пикселей) поверх пиксель-арт обоев The Dungeon of God!
             dt = time.monotonic() - self.t0
-            cx, cy = W * 0.5, H * 0.56
+            frame = int(dt * 10)
 
-            # 1. Пульсация пламени в двух жаровнях на платформе
-            fl = 0.75 + 0.25 * math.sin(dt * 6.5)
-            for bx in (cx - 250, cx + 250):
-                by = H * 0.74 - 46
-                cr.set_source_rgba(0.98, 0.42, 0.15, 0.70 * fl)
-                cr.arc(bx, by, 16 * fl, 0, 2 * math.pi); cr.fill()
-                cr.set_source_rgba(1.0, 0.85, 0.30, 0.95)
-                cr.arc(bx, by - 4 * fl, 8 * fl, 0, 2 * math.pi); cr.fill()
+            # 1. Пиксельное пламя в двух жаровнях по бокам алтаря (координаты 106*6=636 и 214*6=1284)
+            for bx in (636, 1284):
+                by = 122 * 6
+                for px_i in range(-2, 3):
+                    fh = ((frame + px_i * 3) % 4) + 2
+                    for py_i in range(fh):
+                        if py_i == 0:
+                            cr.set_source_rgb(1.0, 0.92, 0.45)
+                        elif py_i < fh - 1:
+                            cr.set_source_rgb(0.98, 0.55, 0.18)
+                        else:
+                            cr.set_source_rgb(0.85, 0.22, 0.14)
+                        cr.rectangle(bx + px_i * 6, by - py_i * 6, 6, 6)
+                        cr.fill()
 
-            # 2. Левитирующий мифический меч над центральным алтарём
-            bob_y = math.sin(dt * 2.4) * 11.0
-            sx, sy = cx, H * 0.74 - 125 + bob_y
-            # Золотая аура вокруг клинка
-            cr.set_line_width(2.0); cr.set_source_rgba(0.96, 0.74, 0.22, 0.45 + 0.25 * math.sin(dt * 3.2))
-            cr.arc(sx, sy, 54, 0, 2 * math.pi); cr.stroke()
-            # Гарда и лезвие меча
-            cr.set_source_rgb(0.96, 0.74, 0.22)
-            cr.rectangle(sx - 4, sy - 68, 8, 22); cr.fill()
-            cr.move_to(sx - 24, sy - 46); cr.line_to(sx + 24, sy - 46); cr.line_to(sx + 16, sy - 38); cr.line_to(sx - 16, sy - 38); cr.close_path(); cr.fill()
+            # 2. Левитирующий пиксельный меч Бога Подземелья над центральным алтарём
+            bob = int(round(math.sin(dt * 3.0) * 2.0)) * 6
+            sx, sy = 960, 612 + bob
+            # Золотая рукоять и гарда (по сетке 6px)
+            cr.set_source_rgb(0.98, 0.78, 0.25)
+            cr.rectangle(sx - 3, sy - 42, 6, 18); cr.fill()
+            cr.rectangle(sx - 18, sy - 24, 36, 6); cr.fill()
+            # Багрово-золотое пиксельное лезвие
             cr.set_source_rgb(0.92, 0.24, 0.18)
-            cr.move_to(sx - 7, sy - 38); cr.line_to(sx + 7, sy - 38); cr.line_to(sx, sy + 36); cr.close_path(); cr.fill_preserve()
-            cr.set_line_width(1.6); cr.set_source_rgb(1.0, 0.82, 0.35); cr.stroke()
+            cr.rectangle(sx - 6, sy - 18, 12, 36); cr.fill()
+            cr.set_source_rgb(1.0, 0.86, 0.40)
+            cr.rectangle(sx - 3, sy - 18, 6, 42); cr.fill()
 
-            # 3. 22 лёгкие искры пламени, поднимающиеся к сводам подземелья
+            # 3. Квадратные пиксельные искры углей (6x6px), поднимающиеся из лавы
             for x0, spd, vx, sz, ph in self.embers:
                 cyc = ((dt * (spd / 280.0)) + ph) % 1.0
-                ex = (x0 * W + cyc * vx * 2.5) % W
-                ey = H - cyc * (H * 0.88)
-                cr.set_source_rgba(0.98, 0.76, 0.24, (1.0 - cyc) * 0.85)
-                cr.arc(ex, ey, sz, 0, 2 * math.pi); cr.fill()
+                ex = (int((x0 * W + cyc * vx * 2.5) // 6) * 6) % W
+                ey = int((H - cyc * (H * 0.88)) // 6) * 6
+                cr.set_source_rgba(0.98, 0.76, 0.24, (1.0 - cyc) * 0.90)
+                cr.rectangle(ex, ey, 6, 6); cr.fill()
 
         cr.restore()
 

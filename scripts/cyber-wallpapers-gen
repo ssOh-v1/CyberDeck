@@ -1,0 +1,454 @@
+#!/usr/bin/python3
+import os, sys, math, random, subprocess, cairo
+from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageChops
+
+HOME = os.path.expanduser("~")
+WALL_DIR = os.path.join(HOME, ".config/cyberdeck/wallpapers")
+CACHE_DIR = os.path.join(HOME, ".cache/cyberdeck")
+os.makedirs(WALL_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+def download_photo(urls, out_path):
+    for url in urls:
+        try:
+            res = subprocess.run(
+                ["curl", "-L", "-f", "-s", "--connect-timeout", "5", "--max-time", "15", "-A", "Mozilla/5.0", "-o", out_path, url],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            if res.returncode == 0 and os.path.isfile(out_path) and os.path.getsize(out_path) > 50000:
+                return True
+        except Exception:
+            pass
+    return False
+
+# ==============================================================================
+# ТЕМА 2: THE DUNGEON OF GOD (Настоящий 16-битный Pixel-Art 320x180 -> 1920x1080)
+# ==============================================================================
+def build_dungeon_pixel_art():
+    pw, ph = 320, 180
+    img = Image.new("RGBA", (pw, ph), (11, 7, 10, 255))
+    dr = ImageDraw.Draw(img)
+    random.seed(1337)
+
+    # 1. Пиксельная каменная кладка подземелья с трещинами и мхом
+    for by in range(0, ph, 8):
+        offset = 8 if (by // 8) % 2 else 0
+        for bx in range(-8, pw, 16):
+            x0, y0 = bx + offset, by
+            shade = random.randint(-5, 6)
+            col = (max(6, 20 + shade), max(4, 12 + shade // 2), max(8, 18 + shade), 255)
+            dr.rectangle([x0, y0, x0 + 14, y0 + 6], fill=col)
+            # Верхний блик кирпича и нижняя тень шва
+            dr.line([x0 + 1, y0, x0 + 13, y0], fill=(col[0] + 9, col[1] + 6, col[2] + 9, 255))
+            dr.line([x0, y0 + 7, x0 + 15, y0 + 7], fill=(8, 4, 6, 255))
+            dr.point((x0 + 15, y0 + 3), fill=(8, 4, 6, 255))
+
+    # 2. Дальние готические арки и колонны
+    for arch_x in (40, 110, 210, 280):
+        dr.rectangle([arch_x - 9, 18, arch_x + 9, ph], fill=(14, 8, 12, 255))
+        dr.line([arch_x - 9, 18, arch_x - 9, ph], fill=(38, 20, 24, 255))
+        dr.line([arch_x + 9, 18, arch_x + 9, ph], fill=(9, 5, 8, 255))
+
+    # 3. Центральный готический витраж-роза и Врата Босса
+    cx, cy = 160, 72
+    for r, col in [(36, (48, 18, 22, 255)), (33, (22, 10, 14, 255)), (29, (165, 38, 32, 255)), (22, (235, 145, 35, 255)), (12, (255, 220, 95, 255))]:
+        dr.ellipse([cx - r, cy - r, cx + r, cy + r], outline=col, width=2)
+    for deg in range(0, 360, 30):
+        rad = math.radians(deg)
+        dr.line([cx, cy, int(cx + 32 * math.cos(rad)), int(cy + 32 * math.sin(rad))], fill=(28, 12, 16, 255), width=1)
+
+    # Врата под витражом
+    dr.rectangle([cx - 26, cy + 28, cx + 26, 134], fill=(8, 4, 6, 255), outline=(92, 42, 32, 255))
+    for rx in range(cx - 20, cx + 24, 6):
+        dr.line([rx, cy + 30, rx, 134], fill=(42, 22, 20, 255))
+
+    # 4. Пиксельные свисающие цепи с потолка
+    for ch_x, ch_h in [(24, 68), (74, 52), (246, 56), (296, 72)]:
+        for y in range(0, ch_h, 4):
+            dr.rectangle([ch_x - 1, y, ch_x + 1, y + 2], outline=(78, 62, 58, 255))
+
+    # 5. Раскалённая лавовая бездна на дне уровня
+    dr.rectangle([0, 162, pw, ph], fill=(32, 8, 8, 255))
+    for lx in range(0, pw, 2):
+        wave = int(math.sin(lx * 0.15) * 2)
+        dr.rectangle([lx, 166 + wave, lx + 1, ph], fill=(215, 52, 24, 255))
+        dr.point((lx, 166 + wave), fill=(255, 195, 55, 255))
+
+    # Пиксельные шипы ловушек по краям бездны
+    for sx in list(range(12, 88, 6)) + list(range(232, 308, 6)):
+        dr.polygon([(sx, 164), (sx + 2, 156), (sx + 4, 164)], fill=(120, 110, 115, 255))
+        dr.point((sx + 2, 156), fill=(220, 60, 50, 255))
+
+    # 6. Тайловые каменные платформы 2D рогалика-платформера
+    def draw_pixel_platform(px, py, w_px, h_px):
+        # Тень и каменная основа
+        dr.rectangle([px + 2, py + 2, px + w_px + 2, py + h_px + 2], fill=(5, 2, 4, 220))
+        dr.rectangle([px, py, px + w_px, py + h_px], fill=(36, 22, 24, 255), outline=(18, 10, 12, 255))
+        # Золотисто-багровый рунический карниз сверху
+        dr.line([px + 1, py + 1, px + w_px - 1, py + 1], fill=(235, 165, 45, 255))
+        dr.line([px + 1, py + 2, px + w_px - 1, py + 2], fill=(165, 42, 32, 255))
+        # Разбивка на 8px тайлы
+        for tx in range(px + 8, px + w_px, 8):
+            dr.line([tx, py + 3, tx, py + h_px - 1], fill=(22, 12, 14, 255))
+
+    draw_pixel_platform(86, 134, 148, 14)   # Главная арена алтаря
+    draw_pixel_platform(18, 104, 68, 10)    # Левый средний уступ
+    draw_pixel_platform(234, 104, 68, 10)   # Правый средний уступ
+    draw_pixel_platform(46, 64, 56, 9)      # Верхний левый уступ
+    draw_pixel_platform(218, 64, 56, 9)     # Верхний правый уступ
+
+    # 7. Древний Алтарь, сундук с лутом и пиксельные жаровни
+    dr.rectangle([cx - 12, 124, cx + 12, 134], fill=(58, 34, 32, 255), outline=(235, 165, 45, 255))
+    # Сундук на левом уступе
+    dr.rectangle([38, 96, 50, 104], fill=(115, 58, 24, 255), outline=(245, 185, 50, 255))
+    dr.point((44, 100), fill=(255, 235, 90, 255))
+    # Жаровни по бокам алтаря
+    for br_x in (106, 214):
+        dr.rectangle([br_x - 3, 124, br_x + 3, 134], fill=(45, 28, 26, 255))
+        dr.line([br_x - 5, 124, br_x + 5, 124], fill=(245, 180, 50, 255))
+
+    # Апскейл 6x с сохранением идеально чётких пикселей (Nearest Neighbor) + мягкое свечение факелов
+    sharp = img.resize((1920, 1080), resample=Image.Resampling.NEAREST)
+
+    glow = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
+    gdr = ImageDraw.Draw(glow)
+    for gx, gy, gr, col in [
+        (960, 432, 340, (220, 65, 35, 48)),
+        (636, 730, 180, (255, 150, 40, 55)),
+        (1284, 730, 180, (255, 150, 40, 55)),
+        (960, 1020, 420, (220, 50, 20, 45)),
+    ]:
+        gdr.ellipse([gx - gr, gy - gr, gx + gr, gy + gr], fill=col)
+    glow = glow.filter(ImageFilter.GaussianBlur(radius=65))
+
+    final = Image.alpha_composite(sharp, glow).convert("RGB")
+    final.save(os.path.join(WALL_DIR, "dungeon-of-god.png"), "PNG")
+
+# ==============================================================================
+# ТЕМА 3: ЛЕСНОЙ РУЧЕЙ (Реальная 1080p фотография горного лесного ручья)
+# ==============================================================================
+def build_forest_wallpaper():
+    out_p = os.path.join(WALL_DIR, "forest-stream.png")
+    raw_p = "/tmp/forest_raw_dl.jpg"
+    urls = [
+        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=90",
+        "https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=1920&q=90",
+        "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1920&q=90",
+    ]
+    if download_photo(urls, raw_p):
+        im = Image.open(raw_p).convert("RGB").resize((1920, 1080), Image.Resampling.LANCZOS)
+        # Лёгкая кинематографичная тонировка, чтобы верхний парящий Waybar читался идеально
+        im = ImageEnhance.Color(im).enhance(1.15)
+        im = ImageEnhance.Contrast(im).enhance(1.08)
+        im.save(out_p, "PNG")
+        os.remove(raw_p)
+        return
+
+    # Если нет сети — строим многослойный фото-градиент каньона с туманом
+    im = Image.new("RGB", (1920, 1080), (12, 28, 21))
+    im.save(out_p, "PNG")
+
+# ==============================================================================
+# ТЕМА 4: ИМПАСТО ПЕЙЗАЖ (Реальный пейзаж + 3D-шейдер бугорков масляной краски!)
+# ==============================================================================
+def build_impasto_wallpaper():
+    out_p = os.path.join(WALL_DIR, "impasto-landscape.png")
+    raw_p = "/tmp/impasto_raw_dl.jpg"
+    urls = [
+        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=90",
+        "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=90",
+        "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1920&q=90",
+    ]
+    if download_photo(urls, raw_p):
+        base = Image.open(raw_p).convert("RGB").resize((1920, 1080), Image.Resampling.LANCZOS)
+        os.remove(raw_p)
+    else:
+        base = Image.new("RGB", (1920, 1080), (38, 28, 24))
+
+    # 1. Насыщаем палитру и группируем пиксели в густые масляные мазки (ModeFilter)
+    oil = ImageEnhance.Color(base).enhance(1.42)
+    oil = ImageEnhance.Contrast(oil).enhance(1.18)
+    # Быстрая кластеризация под мазки кисти
+    small = oil.resize((640, 360), Image.Resampling.BILINEAR)
+    small = small.filter(ImageFilter.ModeFilter(size=7)).filter(ImageFilter.ModeFilter(size=5))
+    oil = small.resize((1920, 1080), Image.Resampling.BICUBIC)
+
+    # 2. Генерируем карту рельефа мазков мастихина (heightmap бугорков краски)
+    tex = Image.new("L", (960, 540), 128)
+    tdr = ImageDraw.Draw(tex)
+    random.seed(99)
+    for _ in range(4200):
+        x = random.randint(0, 960)
+        y = random.randint(0, 540)
+        w = random.randint(14, 38)
+        h = random.randint(4, 11)
+        # Световая ступенька мазка (верх светлее, низ темнее -> создаёт физический 3D-бугорок!)
+        tdr.arc([x - w//2, y - h//2, x + w//2, y + h//2], start=190, end=350, fill=215, width=2)
+        tdr.arc([x - w//2, y - h//2 + 2, x + w//2, y + h//2 + 2], start=10, end=170, fill=55, width=2)
+    tex_full = tex.resize((1920, 1080), Image.Resampling.BILINEAR)
+
+    # 3. Вычисляем 3D-рельеф от краёв самих цветовых пятен картины (Emboss Kernel)
+    edges = oil.convert("L").filter(
+        ImageFilter.Kernel((3, 3), [-2, -1, 0, -1, 1, 1, 0, 1, 2], scale=1, offset=128)
+    )
+
+    # Складываем рельеф границ краски и текстуру мазков мастихина
+    bump = ImageChops.blend(edges, tex_full, 0.52)
+    bump_rgb = Image.merge("RGB", (bump, bump, bump))
+
+    # Наложение SoftLight / Overlay даёт физические блики и тени на каждом бугорке краски!
+    impasto_final = ImageChops.overlay(oil, bump_rgb)
+    impasto_final = ImageEnhance.Sharpness(impasto_final).enhance(1.45)
+    impasto_final.save(out_p, "PNG")
+
+# ==============================================================================
+# ТЕМА 5: GAMEDEV ENGINE STUDIO (Ультра-детализированный чертёж движка и сцены)
+# ==============================================================================
+def build_gamedev_wallpaper():
+    W, H = 1920, 1080
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
+    cr = cairo.Context(surf)
+
+    # 1. Глубокая матовая подложка инженерного вьюпорта
+    lg = cairo.LinearGradient(0, 0, W, H)
+    lg.add_color_stop_rgb(0.0, 0.043, 0.055, 0.075)
+    lg.add_color_stop_rgb(0.5, 0.055, 0.071, 0.098)
+    lg.add_color_stop_rgb(1.0, 0.039, 0.051, 0.071)
+    cr.set_source(lg); cr.paint()
+
+    # Мягкая подсветка активной зоны камеры
+    rg = cairo.RadialGradient(W * 0.5, H * 0.52, 20, W * 0.5, H * 0.52, 680)
+    rg.add_color_stop_rgba(0.0, 0.28, 0.55, 0.75, 0.14)
+    rg.add_color_stop_rgba(0.6, 0.39, 0.85, 0.58, 0.05)
+    rg.add_color_stop_rgba(1.0, 0, 0, 0, 0)
+    cr.set_source(rg); cr.paint()
+
+    # 2. Трёхуровневая инженерная сетка (16px микрометрия, 64px тайлы, 256px чанки)
+    cr.set_line_width(0.8); cr.set_source_rgba(0.28, 0.55, 0.75, 0.038)
+    for x in range(16, W, 16): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(16, H, 16): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
+
+    cr.set_line_width(1.0); cr.set_source_rgba(0.28, 0.55, 0.75, 0.085)
+    for x in range(64, W, 64): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(64, H, 64): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
+
+    cr.set_line_width(1.4); cr.set_source_rgba(0.28, 0.55, 0.75, 0.19)
+    for x in range(256, W, 256): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(256, H, 256): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
+
+    # Маркеры чанков и координатные кресты на пересечениях 256px
+    cr.select_font_face("monospace", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+    cr.set_font_size(9.5)
+    for x in range(256, W, 256):
+        for y in range(256, H, 256):
+            cr.set_source_rgba(0.39, 0.85, 0.58, 0.45)
+            cr.move_to(x - 5, y); cr.line_to(x + 5, y)
+            cr.move_to(x, y - 5); cr.line_to(x, y + 5); cr.stroke()
+            cr.set_source_rgba(0.28, 0.55, 0.75, 0.42)
+            cr.move_to(x + 6, y - 5)
+            cr.show_text(f"CHUNK [{(x-960)//256:+d},{(y-512)//256:+d}]")
+
+    # 3. Миллиметровые координатные линейки (Rulers) вдоль верхнего и левого края экрана
+    cr.set_source_rgba(0.06, 0.08, 0.11, 0.85)
+    cr.rectangle(0, 62, 28, H - 124); cr.rectangle(28, 62, W - 56, 22); cr.fill()
+    cr.set_line_width(1.0); cr.set_source_rgba(0.28, 0.55, 0.75, 0.45)
+    for x in range(64, W - 64, 16):
+        th = 10 if x % 64 == 0 else 5
+        cr.move_to(x, 84 - th); cr.line_to(x, 84)
+        if x % 128 == 0:
+            cr.move_to(x + 3, 74); cr.show_text(f"{x - 960:+d}")
+    for y in range(96, H - 80, 16):
+        tw = 10 if y % 64 == 0 else 5
+        cr.move_to(28 - tw, y); cr.line_to(28, y)
+    cr.stroke()
+
+    # 4. Главные мировые оси X (Red) и Y (Green)
+    cx, cy = W * 0.5, H * 0.54
+    cr.set_line_width(1.8)
+    cr.set_source_rgba(0.94, 0.33, 0.38, 0.55); cr.move_to(28, cy); cr.line_to(W - 28, cy); cr.stroke()
+    cr.set_source_rgba(0.39, 0.85, 0.58, 0.55); cr.move_to(cx, 84); cr.line_to(cx, H - 60); cr.stroke()
+
+    # 5. ДЕКОРАЦИЯ ВЕРХНЕГО ЛЕВОГО УГЛА: Визуальный граф шейдеров и стейт-машины (Shader / FSM Node Graph)
+    nodes = [
+        (64,  112, 145, 68, "Input_Controller", ["axis_x", "jump_pressed"], "#478cbf"),
+        (255, 102, 155, 78, "Player_FSM_State", ["STATE: AIR_DASH", "vel_xy"], "#63d994"),
+        (255, 202, 155, 68, "Physics2D_Solver", ["gravity: 980", "ray_hit"], "#f5b82e"),
+        (456, 142, 150, 74, "Vulkan_SpritePass", ["bloom: 1.4", "out_rgba"], "#d63384"),
+    ]
+    # Соединительные кривые Безье между портами нод
+    wires = [
+        (64+145, 112+36, 255, 102+34),
+        (64+145, 112+52, 255, 202+34),
+        (255+155, 102+44, 456, 142+32),
+        (255+155, 202+36, 456, 142+52),
+    ]
+    cr.set_line_width(2.2)
+    for x1, y1, x2, y2 in wires:
+        cr.set_source_rgba(0.39, 0.85, 0.58, 0.65)
+        cr.move_to(x1, y1)
+        cr.curve_to(x1 + 45, y1, x2 - 45, y2, x2, y2)
+        cr.stroke()
+
+    for nx, ny, nw, nh, ntitle, nports, ncol in nodes:
+        cr.set_source_rgba(0.07, 0.09, 0.13, 0.90)
+        cr.rectangle(nx, ny, nw, nh); cr.fill_preserve()
+        cr.set_line_width(1.4); cr.set_source_rgba(0.28, 0.55, 0.75, 0.65); cr.stroke()
+        # Шапка ноды
+        h_rgb = tuple(int(ncol.lstrip("#")[i:i+2], 16)/255.0 for i in (0, 2, 4))
+        cr.set_source_rgba(*h_rgb, 0.85)
+        cr.rectangle(nx, ny, nw, 18); cr.fill()
+        cr.set_font_size(9.5); cr.set_source_rgb(0.95, 0.98, 1.0)
+        cr.move_to(nx + 6, ny + 13); cr.show_text(f"◆ {ntitle}")
+        for idx, pt_txt in enumerate(nports):
+            py_p = ny + 35 + idx * 18
+            cr.set_source_rgb(0.75, 0.84, 0.95)
+            cr.move_to(nx + 10, py_p); cr.show_text(pt_txt)
+            cr.arc(nx, py_p - 3, 3.5, 0, 2*math.pi); cr.set_source_rgb(*h_rgb); cr.fill()
+            cr.arc(nx + nw, py_p - 3, 3.5, 0, 2*math.pi); cr.set_source_rgb(0.39, 0.85, 0.58); cr.fill()
+
+    # 6. ДЕКОРАЦИЯ ВЕРХНЕГО ПРАВОГО УГЛА: Профайлер кадра, Vulkan Pipeline и граф времени кадра (FrameTime 16.6ms)
+    px0, py0, pw0, ph0 = W - 470, 104, 420, 145
+    cr.set_source_rgba(0.07, 0.09, 0.13, 0.88)
+    cr.rectangle(px0, py0, pw0, ph0); cr.fill_preserve()
+    cr.set_line_width(1.4); cr.set_source_rgba(0.28, 0.55, 0.75, 0.65); cr.stroke()
+    cr.set_font_size(10.5); cr.set_source_rgba(0.39, 0.85, 0.58, 0.95)
+    cr.move_to(px0 + 12, py0 + 18); cr.show_text("📊 VULKAN PROFILER // FRAME_TIME: 4.12 ms (240 FPS CAP)")
+    cr.set_font_size(9.5); cr.set_source_rgba(0.68, 0.78, 0.90, 0.85)
+    cr.move_to(px0 + 12, py0 + 36); cr.show_text("DrawCalls: 128   •   Vertices: 18,420   •   Physics2D: 0.38 ms")
+    # Осциллограмма времени кадра
+    cr.set_line_width(1.8); cr.set_source_rgba(0.39, 0.85, 0.58, 0.85)
+    random.seed(7)
+    for gx in range(px0 + 14, px0 + pw0 - 14, 6):
+        gh = random.randint(12, 52)
+        cr.move_to(gx, py0 + ph0 - 14); cr.line_to(gx, py0 + ph0 - 14 - gh)
+    cr.stroke()
+    # Линия порога 16.6 ms (60 FPS)
+    cr.set_line_width(1.2); cr.set_source_rgba(0.95, 0.68, 0.20, 0.75)
+    cr.move_to(px0 + 12, py0 + ph0 - 58); cr.line_to(px0 + pw0 - 12, py0 + ph0 - 58); cr.stroke()
+
+    # 7. ЦЕНТРАЛЬНАЯ СЦЕНА 2D ИГРОВОГО ВЬЮПОРТА (Camera2D + Тайловый уровень + Хитбоксы + Лучи + Освещение)
+    cam_w, cam_h = 1040, 520
+    cam_x, cam_y = cx - cam_w * 0.5, cy - cam_h * 0.5 + 20
+    # Внешняя рамка Camera2D и направляющие третей
+    cr.set_line_width(2.0); cr.set_source_rgba(0.45, 0.80, 1.0, 0.65)
+    cr.rectangle(cam_x, cam_y, cam_w, cam_h); cr.stroke()
+    cr.set_font_size(10.5); cr.set_source_rgba(0.55, 0.88, 1.0, 0.90)
+    cr.move_to(cam_x + 10, cam_y - 8)
+    cr.show_text("🎥 Camera2D [Current]  •  Zoom: 1.00x  •  Viewport: 1920x1080  •  DragMargins: ON")
+
+    # Конусы освещения PointLight2D с кольцами затухания
+    for lx_p, ly_p, lrad, lcol in [(cx - 240, cy - 90, 210, (0.39, 0.85, 0.58)), (cx + 220, cy - 60, 240, (0.28, 0.65, 0.95))]:
+        lrg = cairo.RadialGradient(lx_p, ly_p, 4, lx_p, ly_p, lrad)
+        lrg.add_color_stop_rgba(0.0, *lcol, 0.22)
+        lrg.add_color_stop_rgba(1.0, *lcol, 0.0)
+        cr.set_source(lrg); cr.arc(lx_p, ly_p, lrad, 0, 2*math.pi); cr.fill()
+        cr.set_line_width(1.2); cr.set_source_rgba(*lcol, 0.45)
+        cr.arc(lx_p, ly_p, lrad, 0, 2*math.pi); cr.stroke()
+        cr.move_to(lx_p + 8, ly_p - 8); cr.show_text("💡 PointLight2D")
+
+    # Платформы TileMap с сеткой тайлов 32x32 и зелёными контурами CollisionShape2D
+    level_rects = [
+        (cx - 420, cy + 130, 840, 64, "TileMap_Floor [StaticBody2D // Layer: 1]"),
+        (cx - 380, cy - 10,  260, 32, "Platform_A [OneWayCollision: true]"),
+        (cx - 40,  cy - 74,  220, 32, "Platform_B [MovingPlatform2D]"),
+        (cx + 220, cy + 10,  240, 32, "Platform_C [StaticBody2D]"),
+    ]
+    for rx, ry, rw, rh, rlabel in level_rects:
+        cr.set_source_rgba(0.14, 0.26, 0.38, 0.52)
+        cr.rectangle(rx, ry, rw, rh); cr.fill()
+        # Сетка 32px тайлов внутри платформы
+        cr.set_line_width(1.0); cr.set_source_rgba(0.28, 0.55, 0.75, 0.35)
+        for tx in range(int(rx), int(rx + rw), 32):
+            cr.move_to(tx, ry); cr.line_to(tx, ry + rh)
+        cr.stroke()
+        # Зелёный контур физического коллайдера CollisionShape2D
+        cr.set_line_width(2.0); cr.set_source_rgba(0.39, 0.85, 0.58, 0.88)
+        cr.rectangle(rx, ry, rw, rh); cr.stroke()
+        cr.set_font_size(9.5); cr.move_to(rx + 6, ry - 5); cr.show_text(rlabel)
+
+    # Полигоны навигации ИИ (NavigationRegion2D / NavMesh) между платформами
+    cr.set_line_width(1.6); cr.set_source_rgba(0.98, 0.80, 0.22, 0.75)
+    for x1, y1, x2, y2 in [(cx - 250, cy - 10, cx + 60, cy - 74), (cx + 60, cy - 74, cx + 320, cy + 10), (cx - 250, cy - 10, cx - 180, cy + 130)]:
+        cr.move_to(x1, y1); cr.line_to(x2, y2); cr.stroke()
+        cr.arc(x1, y1, 4, 0, 2*math.pi); cr.fill()
+        cr.arc(x2, y2, 4, 0, 2*math.pi); cr.fill()
+
+    # Узел Игрока (Player CharacterBody2D) + Hurtbox + RayCast2D + Transform Gizmo
+    pl_x, pl_y = cx - 260, cy - 46
+    cr.set_source_rgba(0.20, 0.65, 0.95, 0.35)
+    cr.rectangle(pl_x - 20, pl_y - 36, 40, 72); cr.fill_preserve()
+    cr.set_line_width(2.0); cr.set_source_rgba(0.45, 0.88, 1.0, 0.95); cr.stroke()
+    # Стрелки Gizmo и вектор скорости
+    cr.set_line_width(2.8)
+    cr.set_source_rgb(0.96, 0.32, 0.36); cr.move_to(pl_x, pl_y); cr.line_to(pl_x + 56, pl_y); cr.stroke()
+    cr.set_source_rgb(0.39, 0.85, 0.58); cr.move_to(pl_x, pl_y); cr.line_to(pl_x, pl_y - 56); cr.stroke()
+    cr.set_line_width(1.8); cr.set_source_rgb(0.98, 0.82, 0.25)
+    cr.move_to(pl_x, pl_y - 10); cr.line_to(pl_x + 95, pl_y - 68); cr.stroke()
+    cr.set_font_size(9.5); cr.move_to(pl_x - 30, pl_y - 64); cr.show_text("🎮 Player [CharacterBody2D] • vel=(340,-420)")
+
+    # Узел Врага / Босса (Enemy_Boss Area2D) с красным хитбоксом атаки и радиусом агро
+    en_x, en_y = cx + 290, cy - 32
+    cr.set_line_width(1.4); cr.set_source_rgba(0.96, 0.32, 0.36, 0.42)
+    cr.arc(en_x, en_y, 135, 0, 2*math.pi); cr.stroke()
+    cr.set_source_rgba(0.96, 0.28, 0.32, 0.32)
+    cr.rectangle(en_x - 28, en_y - 42, 56, 84); cr.fill_preserve()
+    cr.set_line_width(2.0); cr.set_source_rgba(0.98, 0.38, 0.42, 0.95); cr.stroke()
+    cr.move_to(en_x - 45, en_y - 50); cr.show_text("👾 Boss_Actor [Hitbox2D // Aggro: 135px]")
+
+    # 8. ДЕКОРАЦИЯ НИЖНЕГО ЛЕВОГО УГЛА: Полоса раскадровки спрайтов и таймлайн анимации (AnimationPlayer Timeline)
+    ax0, ay0, aw0, ah0 = 64, H - 185, 760, 96
+    cr.set_source_rgba(0.07, 0.09, 0.13, 0.90)
+    cr.rectangle(ax0, ay0, aw0, ah0); cr.fill_preserve()
+    cr.set_line_width(1.4); cr.set_source_rgba(0.28, 0.55, 0.75, 0.65); cr.stroke()
+    cr.set_font_size(10.0); cr.set_source_rgba(0.55, 0.88, 1.0, 0.95)
+    cr.move_to(ax0 + 12, ay0 + 18)
+    cr.show_text("🎞 AnimationPlayer // Track: player_attack_combo.anim   •   FPS: 60   •   Loop: true")
+    for f_i in range(8):
+        fx = ax0 + 14 + f_i * 92
+        fy = ay0 + 28
+        is_active_f = (f_i == 3)
+        cr.set_source_rgba(*( (0.18, 0.38, 0.52, 0.85) if is_active_f else (0.10, 0.14, 0.20, 0.85) ))
+        cr.rectangle(fx, fy, 84, 54); cr.fill_preserve()
+        cr.set_line_width(1.8 if is_active_f else 1.0)
+        cr.set_source_rgba(*( (0.39, 0.85, 0.58, 0.95) if is_active_f else (0.28, 0.55, 0.75, 0.45) )); cr.stroke()
+        cr.set_font_size(9.0); cr.set_source_rgb(0.85, 0.92, 1.0)
+        cr.move_to(fx + 6, fy + 15); cr.show_text(f"FRM_0{f_i+1}")
+        cr.set_source_rgba(0.39, 0.85, 0.58, 0.85)
+        cr.move_to(fx + 6, fy + 44); cr.show_text(f"◆ {f_i * 33}ms")
+
+    surf.write_to_png(os.path.join(WALL_DIR, "gamedev-studio.png"))
+
+# ==============================================================================
+# ТЕМА 1: CYBERDECK CLASSIC
+# ==============================================================================
+def build_cyberdeck_wallpaper():
+    W, H = 1920, 1080
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
+    cr = cairo.Context(surf)
+    PRIM, ACC, BG = (0.298, 0.431, 0.961), (0.133, 0.722, 0.812), (0.027, 0.035, 0.059)
+    cr.set_source_rgb(*BG); cr.paint()
+    for cx, cy, rad, col, al in [(W*0.15, H*0.14, 620, PRIM, 0.13), (W*0.85, H*0.86, 620, ACC, 0.11)]:
+        rg = cairo.RadialGradient(cx, cy, 10, cx, cy, rad)
+        rg.add_color_stop_rgba(0, *col, al); rg.add_color_stop_rgba(1, *col, 0)
+        cr.set_source(rg); cr.paint()
+    cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.068)
+    for x in range(96, W, 96): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(96, H, 96): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
+    m, ln = 14, 52
+    cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.78)
+    for x1, y1, x2, y2, x3, y3 in [(m,m+ln,m,m,m+ln,m),(W-m-ln,m,W-m,m,W-m,m+ln),(m,H-m-ln,m,H-m,m+ln,H-m),(W-m-ln,H-m,W-m,H-m,W-m,H-m-ln)]:
+        cr.move_to(x1, y1); cr.line_to(x2, y2); cr.line_to(x3, y3)
+    cr.stroke()
+    surf.write_to_png(os.path.join(WALL_DIR, "cyberdeck.png"))
+
+if __name__ == "__main__":
+    target = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if target in ("all", "cyberdeck"):         build_cyberdeck_wallpaper()
+    if target in ("all", "dungeon-of-god"):    build_dungeon_pixel_art()
+    if target in ("all", "forest-stream"):     build_forest_wallpaper()
+    if target in ("all", "impasto-landscape"): build_impasto_wallpaper()
+    if target in ("all", "gamedev-studio"):    build_gamedev_wallpaper()
