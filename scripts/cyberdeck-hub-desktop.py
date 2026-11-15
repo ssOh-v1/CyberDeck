@@ -18,9 +18,7 @@ NOTES_FILE   = os.path.join(CFG_DIR, "studio_notes.txt")
 NOTES_PAGES  = os.path.join(CFG_DIR, "studio_notes_pages.json")
 PIN_FILE     = os.path.join(CFG_DIR, "pinned_work_apps.json")
 STATE_FILE   = os.path.join(CFG_DIR, "widgets_state.json")
-CHAT_FILE    = os.path.join(CFG_DIR, "ai_chat_history.json")
 CHATS_DB     = os.path.join(CFG_DIR, "ai_chats.json")
-MODELS_FILE  = os.path.join(CFG_DIR, "ai_models.json")
 GEM_KEY_FILE = os.path.join(CFG_DIR, "gemini_api_key.txt")
 HIDDEN_NOTIF = os.path.join(CFG_DIR, "hidden_notifications.json")
 ROFI_T       = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
@@ -65,13 +63,12 @@ if SINGLE_PIN_WID is None:
 
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
-# Системный профиль Gemini с памятью о проекте и окружении пользователя
 GEMINI_PERSONA_PROMPT = (
-    "Ты — Gemini, персональный ИИ-напарник Дениса (ssOh), встроенный прямо в виджет рабочего стола его студии "
+    "Ты — Gemini, единственный встроенный ИИ-напарник Дениса (ssOh) в виджете его рабочего стола "
     "на базе Arch Linux / Wayland / Hyprland (тема Studio Matte-Grey). "
-    "Ты отлично знаешь его проекты: разработку 2D rogue-платформера на Python 3 и Pygame (pygame-ce), "
-    "кастомизацию Linux/Hyprland/Waybar и учёбу в колледже на 2 курсе (Python, C#, C++, JS, Java, HTML, 1С). "
-    "Отвечай по-русски, живо, конкретно, без воды и лишних вступлений. Если нужен код — пиши чистый рабочий код."
+    "Ты отлично знаешь его задачи: разработку 2D rogue-платформера на Python 3 и Pygame (pygame-ce), "
+    "настройку Linux/Hyprland/Waybar и учёбу в колледже на 2 курсе (Python, C#, C++, JS, Java, HTML, 1С). "
+    "Отвечай по-русски, прямо, по делу и без лишней воды. Если нужен код — пиши чистый рабочий код."
 )
 
 def get_logical_monitor_size():
@@ -94,11 +91,11 @@ def get_logical_monitor_size():
 W_MON, H_MON = get_logical_monitor_size()
 
 DEFAULT_WIDGETS = {
-    "ai":       {"title": "✦ GEMINI // AI STUDIO", "x": 18,          "y": 46,  "w": 350, "h": 325, "base_w": 350, "base_h": 325, "min_w": 255, "min_h": 200, "collapsed": False},
-    "notes":    {"title": "▣ ЗАМЕТКИ",             "x": 18,          "y": 382, "w": 350, "h": 225, "base_w": 350, "base_h": 225, "min_w": 220, "min_h": 145, "collapsed": False},
-    "calendar": {"title": "▣ КАЛЕНДАРЬ",           "x": W_MON - 298, "y": 46,  "w": 280, "h": 210, "base_w": 280, "base_h": 205, "min_w": 220, "min_h": 160, "collapsed": False},
-    "media":    {"title": "▣ МЕДИАПЛЕЕР",          "x": W_MON - 298, "y": 268, "w": 280, "h": 130, "base_w": 280, "base_h": 128, "min_w": 230, "min_h": 110, "collapsed": False},
-    "notif":    {"title": "󰂚 ЦЕНТР УВЕДОМЛЕНИЙ",  "x": W_MON - 478, "y": 44,  "w": 460, "h": 540, "base_w": 460, "base_h": 540, "min_w": 340, "min_h": 300, "collapsed": False},
+    "ai":       {"title": "✦ GEMINI",             "x": 18,          "y": 46,  "w": 350, "h": 310, "base_w": 350, "base_h": 310, "min_w": 250, "min_h": 185, "collapsed": False},
+    "notes":    {"title": "▣ ЗАМЕТКИ",            "x": 18,          "y": 368, "w": 350, "h": 225, "base_w": 350, "base_h": 225, "min_w": 220, "min_h": 145, "collapsed": False},
+    "calendar": {"title": "▣ КАЛЕНДАРЬ",          "x": W_MON - 298, "y": 46,  "w": 280, "h": 210, "base_w": 280, "base_h": 205, "min_w": 220, "min_h": 160, "collapsed": False},
+    "media":    {"title": "▣ МЕДИАПЛЕЕР",         "x": W_MON - 298, "y": 268, "w": 280, "h": 130, "base_w": 280, "base_h": 128, "min_w": 230, "min_h": 110, "collapsed": False},
+    "notif":    {"title": "󰂚 ЦЕНТР УВЕДОМЛЕНИЙ", "x": W_MON - 478, "y": 44,  "w": 460, "h": 540, "base_w": 460, "base_h": 540, "min_w": 340, "min_h": 300, "collapsed": False},
 }
 
 FALLBACK_ART = os.path.join(ART_CACHE, "fallback_vinyl.svg")
@@ -146,6 +143,7 @@ def load_widgets_state():
                     for field in ("x", "y", "w", "h", "collapsed"):
                         if field in saved[k]:
                             st[k][field] = saved[k][field]
+                    st[k]["title"] = DEFAULT_WIDGETS[k]["title"]
                     w = max(int(st[k]["min_w"]), min(W_MON - 20, int(st[k]["w"])))
                     h = max(int(st[k]["min_h"]), min(H_MON - 60, int(st[k]["h"])))
                     st[k]["w"] = w
@@ -255,16 +253,6 @@ def read_music_and_art():
         pass
     return "󰓛 Нет активного медиа", "Запустите музыку или видео", FALLBACK_ART
 
-def load_ai_models():
-    try:
-        if os.path.isfile(MODELS_FILE):
-            m = json.load(open(MODELS_FILE, encoding="utf-8"))
-            if isinstance(m, list) and m:
-                return m
-    except Exception:
-        pass
-    return [{"id": "gemini-main", "name": "✦ Gemini 2.5 (Основной ассистент)", "provider": "gemini-bridge", "model": "gemini"}]
-
 def is_rate_limited_or_bad(text):
     if not text or len(text.strip()) < 2:
         return True
@@ -285,7 +273,6 @@ def is_rate_limited_or_bad(text):
     return any(b in low for b in bad_markers)
 
 def query_native_google_gemini_api(api_key, sys_prompt, messages):
-    # Прямое обращение к официальному API Google Gemini (если пользователь указал ключ)
     try:
         contents = []
         for m in messages[-10:]:
@@ -384,71 +371,27 @@ def query_blackbox_ai(sys_prompt, messages):
         pass
     return None
 
-def query_ai_llm(model_meta, messages, session_topic=""):
-    prov = model_meta.get("provider", "gemini-bridge")
-    mod_name = model_meta.get("model", "gemini")
-    m_title = model_meta.get("name", "Gemini").split("(")[0].replace("✦", "").strip()
-
-    if prov == "ollama":
-        try:
-            if mod_name == "auto":
-                tags = json.loads(urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2.0).read().decode())
-                mlist = [x["name"] for x in tags.get("models", [])]
-                if not mlist:
-                    return "В Ollama нет скачанных моделей. Выполните: ollama run qwen2.5-coder:7b (или выберите ✦ Gemini сверху)."
-                mod_name = mlist[0]
-            req = urllib.request.Request(
-                "http://127.0.0.1:11434/api/chat",
-                data=json.dumps({"model": mod_name, "messages": messages, "stream": False}).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-            )
-            resp = json.loads(urllib.request.urlopen(req, timeout=60).read().decode("utf-8"))
-            return resp.get("message", {}).get("content", "").strip()
-        except Exception:
-            return "Локальный сервер Ollama не запущен. Запустите `ollama serve` или выберите ✦ Gemini сверху."
-
-    if prov == "custom" and model_meta.get("url"):
-        try:
-            payload = {"model": mod_name, "messages": messages[-8:]}
-            res = subprocess.run(
-                ["curl", "-s", "-L", "--max-time", "40", "-X", "POST", model_meta["url"],
-                 "-H", "Content-Type: application/json",
-                 "-H", f"Authorization: Bearer {model_meta.get('key', '')}",
-                 "-d", json.dumps(payload)],
-                capture_output=True, text=True
-            )
-            data = json.loads(res.stdout)
-            return data["choices"][0]["message"]["content"].strip()
-        except Exception as e:
-            return f"Ошибка пользовательского API: {e}"
-
+def query_gemini(messages, session_topic=""):
     topic_ctx = f" Тема текущего чата: «{session_topic}»." if session_topic else ""
-    if "gemini" in prov or "gemini" in mod_name.lower():
-        sys_prompt = GEMINI_PERSONA_PROMPT + topic_ctx
-    else:
-        sys_prompt = f"Ты — {m_title}.{topic_ctx} Отвечай чётко, лаконично и по делу на русском языке. При написании кода выдавай чистый рабочий код."
+    sys_prompt = GEMINI_PERSONA_PROMPT + topic_ctx
 
-    # 1. Если установлен прямой ключ Google Gemini API — используем нативный канал Gemini 2.5
-    if ("gemini" in prov or "gemini" in mod_name.lower()) and os.path.isfile(GEM_KEY_FILE):
+    if os.path.isfile(GEM_KEY_FILE):
         gkey = open(GEM_KEY_FILE, "r", encoding="utf-8").read().strip()
         if gkey:
             ans_native = query_native_google_gemini_api(gkey, sys_prompt, messages)
             if ans_native:
                 return ans_native
 
-    # 2. Быстрый канал DuckDuckGo VQD Chat с персоной Gemini
     ans_ddg = query_duckduckgo_ai(sys_prompt, messages)
     if ans_ddg:
         return ans_ddg
 
-    # 3. Канал Blackbox AI с персоной Gemini
     ans_bb = query_blackbox_ai(sys_prompt, messages)
     if ans_bb:
         return ans_bb
 
-    # 4. Канал Pollinations с ротацией seed
     seed = random.randint(10000, 9999999)
-    for try_model in (mod_name, "openai", "qwen-coder", "mistral"):
+    for try_model in ("gemini", "openai", "qwen-coder", "mistral"):
         try:
             payload = {
                 "model": try_model,
@@ -480,7 +423,7 @@ def query_ai_llm(model_meta, messages, session_topic=""):
         except Exception:
             pass
 
-    return "Все облачные каналы временно заняты, повторите отправку через пару секунд."
+    return "Канал связи временно перегружен, повтори отправку через пару секунд."
 
 class OverlayWidgetCard:
     def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False, extra_hdr_btns=None):
@@ -603,7 +546,6 @@ class OverlayWidgetCard:
         .wscale-{self.wid} .notes-view,
         .wscale-{self.wid} entry.compact-entry {{ font-size: {f_text}px; }}
         .wscale-{self.wid} button.mini-btn,
-        .wscale-{self.wid} button.gemini-pill,
         .wscale-{self.wid} button.del-btn {{ font-size: {f_btn}px; padding: {pad_v}px {pad_h}px; min-height: {int(20 * scale)}px; }}
         .wscale-{self.wid} .cal-dow {{ font-size: {f_cal_w}px; min-width: {cell_w}px; }}
         .wscale-{self.wid} .cal-day,
@@ -707,10 +649,7 @@ class StudioDesktopApp(Gtk.Application):
         self.pinned = self.load_pinned()
         self.hidden_notifs = self.load_hidden_notifs()
         self.last_pin_mtime = 0
-        self.last_models_mtime = 0
 
-        self.ai_models = load_ai_models()
-        self.active_model_idx = 0
         self.chats_data = self.load_chats_db()
         self.ai_busy_sessions = set()
 
@@ -784,7 +723,7 @@ class StudioDesktopApp(Gtk.Application):
                 {
                     "id": "gamedev",
                     "title": "🎮 Разработка игры",
-                    "messages": [{"role": "assistant", "content": "Привет, Денис! Я на связи прямо в виджете. Готов помогать с твоим 2D rogue-платформером на Pygame, логикой врагов, карточками предметов или шейдерами."}],
+                    "messages": [{"role": "assistant", "content": "Привет, Денис! Я на связи прямо в виджете. Готов помогать с твоим 2D rogue-платформером на Pygame, логикой врагов и карточками предметов."}],
                 },
                 {
                     "id": "linux-env",
@@ -821,12 +760,12 @@ class StudioDesktopApp(Gtk.Application):
         return idx, sessions[idx]
 
     # ==========================================================================
-    # 1. ОБНОВЛЁННЫЙ ВИДЖЕТ GEMINI // AI STUDIO С УДАЛЕНИЕМ СТАРЫХ ЧАТОВ
+    # 1. ВИДЖЕТ ✦ GEMINI (БЕЗ ВЫБОРА СТОРОННИХ МОДЕЛЕЙ, ТОЛЬКО GEMINI И ЧАТЫ)
     # ==========================================================================
     def build_ai_widget(self, _card):
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
-        # Строка 1: Навигация по чатам + создание (+) + удаление старых чатов (✕)
+        # Единственная верхняя панель: переключение чатов + создание (+) + удаление (✕)
         chat_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
 
         b_prev_c = Gtk.Button(label="◀"); b_prev_c.add_css_class("mini-btn"); b_prev_c.set_has_tooltip(False)
@@ -849,7 +788,6 @@ class StudioDesktopApp(Gtk.Application):
         b_new_c.connect("clicked", self.on_create_new_chat_dialog)
         chat_row.append(b_new_c)
 
-        # Кнопка удаления чатов (ЛКМ — удалить текущий чат, ПКМ — меню выбора старых чатов на удаление)
         b_del_c = Gtk.Button(label="✕"); b_del_c.add_css_class("del-btn"); b_del_c.set_has_tooltip(False)
         b_del_c.connect("clicked", self.on_delete_current_chat_btn)
         rc_del_c = Gtk.GestureClick.new(); rc_del_c.set_button(3)
@@ -859,23 +797,7 @@ class StudioDesktopApp(Gtk.Application):
 
         box.append(chat_row)
 
-        # Строка 2: Плашка активного Gemini / выбор ИИ + кнопка «+ ИИ»
-        top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        cur_m_name = self.ai_models[self.active_model_idx]["name"] if self.ai_models else "✦ Gemini 2.5"
-        self.model_sel_btn = Gtk.Button(label=f"{cur_m_name[:26]} ▾")
-        self.model_sel_btn.add_css_class("gemini-pill"); self.model_sel_btn.set_hexpand(True); self.model_sel_btn.set_has_tooltip(False)
-        self.model_sel_btn.connect("clicked", self.on_open_model_list_rofi)
-        rc_m = Gtk.GestureClick.new(); rc_m.set_button(3)
-        rc_m.connect("pressed", lambda *_a: self.cycle_next_model())
-        self.model_sel_btn.add_controller(rc_m)
-        top_row.append(self.model_sel_btn)
-
-        b_manage = Gtk.Button(label="+ ИИ"); b_manage.add_css_class("mini-btn"); b_manage.set_has_tooltip(False)
-        b_manage.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/studio-ai-manager"))
-        top_row.append(b_manage)
-        box.append(top_row)
-
-        # Окно диалога
+        # Окно диалога с Gemini
         sc = Gtk.ScrolledWindow(); sc.set_vexpand(True); sc.set_hexpand(True)
         self.chat_tv = Gtk.TextView()
         self.chat_tv.set_editable(False); self.chat_tv.set_cursor_visible(False)
@@ -885,7 +807,7 @@ class StudioDesktopApp(Gtk.Application):
         sc.set_child(self.chat_tv)
         box.append(sc)
 
-        # Строка ввода сообщения
+        # Поле ввода сообщения
         in_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         self.ai_entry = Gtk.Entry()
         self.ai_entry.add_css_class("compact-entry"); self.ai_entry.set_hexpand(True); self.ai_entry.set_has_tooltip(False)
@@ -906,7 +828,6 @@ class StudioDesktopApp(Gtk.Application):
         in_row.append(b_clr)
 
         box.append(in_row)
-        self.last_models_mtime = os.path.getmtime(MODELS_FILE) if os.path.isfile(MODELS_FILE) else 0
         self.render_chat_log()
         return box
 
@@ -1014,7 +935,6 @@ class StudioDesktopApp(Gtk.Application):
             self.chats_data["sessions"].pop(idx)
             self.chats_data["active_idx"] = max(0, min(idx, len(self.chats_data["sessions"]) - 1))
         else:
-            # Если чат был единственным — сбрасываем его в чистый вид
             self.chats_data["sessions"] = [{
                 "id": f"chat-{int(time.time())}",
                 "title": "💬 Основной чат",
@@ -1025,52 +945,18 @@ class StudioDesktopApp(Gtk.Application):
         self.render_chat_log()
         return False
 
-    def cycle_next_model(self):
-        self.ai_models = load_ai_models()
-        if not self.ai_models: return
-        self.active_model_idx = (self.active_model_idx + 1) % len(self.ai_models)
-        self.model_sel_btn.set_label(f"{self.ai_models[self.active_model_idx]['name'][:26]} ▾")
-        self.render_chat_log()
-
-    def on_open_model_list_rofi(self, _b):
-        self.ai_models = load_ai_models()
-        def _pick():
-            lines = [f"{idx+1}. {m['name']}" + (" [● АКТИВНА]" if idx == self.active_model_idx else "") for idx, m in enumerate(self.ai_models)]
-            lines.append("➕ Настроить ключ Gemini / Добавить нейросеть...")
-            ch = rofi_prompt("✦ ВЫБОР МОДЕЛИ ИИ", lines)
-            if ch:
-                if "Настроить ключ" in ch:
-                    subprocess.Popen(["/usr/bin/python3", os.path.join(HOME, ".local/bin/studio-ai-manager")])
-                elif "." in ch:
-                    try:
-                        sel_i = int(ch.split(".", 1)[0]) - 1
-                        if 0 <= sel_i < len(self.ai_models): GLib.idle_add(self.set_active_model_idx, sel_i)
-                    except Exception: pass
-        threading.Thread(target=_pick, daemon=True).start()
-
-    def set_active_model_idx(self, idx):
-        self.active_model_idx = idx
-        self.model_sel_btn.set_label(f"{self.ai_models[self.active_model_idx]['name'][:26]} ▾")
-        self.render_chat_log()
-        return False
-
     def render_chat_log(self):
         idx, sess = self.get_active_chat_session()
         total_c = len(self.chats_data.get("sessions", []))
         if hasattr(self, "chat_sel_btn"):
-            self.chat_sel_btn.set_label(f"💬 {sess['title'][:16]} ({idx+1}/{total_c}) ▾")
-
-        m_meta = self.ai_models[self.active_model_idx] if self.ai_models else {"name": "✦ Gemini"}
-        short_m = m_meta["name"].split("(")[0].strip()
-        if not short_m.startswith("✦"):
-            short_m = f"▣ {short_m}"
+            self.chat_sel_btn.set_label(f"💬 {sess['title'][:18]} ({idx+1}/{total_c}) ▾")
 
         lines = []
         for msg in sess.get("messages", [])[-12:]:
-            prefix = "▸ ВЫ:" if msg["role"] == "user" else f"{short_m}:"
+            prefix = "▸ ВЫ:" if msg["role"] == "user" else "✦ Gemini:"
             lines.append(f"{prefix}\n{msg['content']}")
         if sess["id"] in self.ai_busy_sessions:
-            lines.append(f"{short_m}:\n▪ печатаю ответ...")
+            lines.append("✦ Gemini:\n▪ печатаю ответ...")
         self.chat_buf.set_text("\n\n".join(lines))
         GLib.idle_add(self.scroll_chat_bottom)
 
@@ -1092,12 +978,11 @@ class StudioDesktopApp(Gtk.Application):
         self.ai_busy_sessions.add(sid)
         self.render_chat_log()
 
-        m_meta = self.ai_models[self.active_model_idx] if self.ai_models else {"provider": "gemini-bridge", "model": "gemini"}
         msgs_snapshot = list(sess["messages"])
         topic_title = sess.get("title", "")
 
         def worker():
-            ans = query_ai_llm(m_meta, msgs_snapshot, session_topic=topic_title)
+            ans = query_gemini(msgs_snapshot, session_topic=topic_title)
             GLib.idle_add(self.on_ai_response_ready, sid, ans)
 
         threading.Thread(target=worker, daemon=True).start()
@@ -1127,7 +1012,7 @@ class StudioDesktopApp(Gtk.Application):
         self.render_chat_log()
 
     # ==========================================================================
-    # 2. ВИДЖЕТ ЗАМЕТОК С ПРЯМЫМ УДАЛЕНИЕМ СТАРЫХ ВКЛАДОК (✕)
+    # 2. ВИДЖЕТ ЗАМЕТОК С УДАЛЕНИЕМ СТАРЫХ ВКЛАДОК (✕)
     # ==========================================================================
     def load_notes_db(self):
         try:
@@ -1149,7 +1034,7 @@ class StudioDesktopApp(Gtk.Application):
             "active_idx": 0,
             "pages": [
                 {"id": "game-notes", "title": "🎮 Разработка игры", "content": first_text},
-                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Подключить Gemini и удаление старых чатов\n"},
+                {"id": "env-notes", "title": "🖥 Окружение Linux", "content": "[x] Waybar с ползунками и 3 режимами питания\n[x] Виджет с Gemini и удалением старых чатов\n"},
                 {"id": "study-notes", "title": "📚 Учёба и зачёты", "content": "[ ] Зачёты в декабре (Python, C#, C++)\n"},
             ]
         }
@@ -1197,7 +1082,6 @@ class StudioDesktopApp(Gtk.Application):
         b_new_n.connect("clicked", self.on_create_new_note_dialog)
         nav_row.append(b_new_n)
 
-        # Кнопка удаления вкладок заметок (ЛКМ — удалить текущую вкладку, ПКМ — меню выбора старых заметок на удаление)
         b_del_n = Gtk.Button(label="✕"); b_del_n.add_css_class("del-btn"); b_del_n.set_has_tooltip(False)
         b_del_n.connect("clicked", self.on_delete_current_note_btn)
         rc_del_n = Gtk.GestureClick.new(); rc_del_n.set_button(3)
@@ -1670,16 +1554,6 @@ class StudioDesktopApp(Gtk.Application):
             if mt != self.last_pin_mtime:
                 self.pinned = self.load_pinned()
                 self.populate_dock()
-        except Exception: pass
-
-        try:
-            mt_m = os.path.getmtime(MODELS_FILE) if os.path.isfile(MODELS_FILE) else 0
-            if mt_m != self.last_models_mtime:
-                self.last_models_mtime = mt_m
-                self.ai_models = load_ai_models()
-                self.active_model_idx = max(0, min(self.active_model_idx, len(self.ai_models) - 1))
-                if hasattr(self, "model_sel_btn") and self.ai_models:
-                    self.model_sel_btn.set_label(f"{self.ai_models[self.active_model_idx]['name'][:26]} ▾")
         except Exception: pass
 
         if hasattr(self, "track_lbl"):
