@@ -18,7 +18,7 @@ THEMES = {
         "session": "work",
         "layout":  "tactical",
         "cursor_shape": "wing",
-        "title": "◈ 1. CyberDeck Tactical OS // Командная дека + Радар портов + 5 колонок",
+        "title": "◈ 1. CyberDeck Tactical OS // Командная дека + Радар проектов и портов",
         "short": "Tactical",
         "badge": "TACTICAL OS",
         "game_badge": "APEX DECK",
@@ -38,8 +38,8 @@ THEMES = {
     "ronin-os": {
         "session": "work",
         "layout":  "ronin",
-        "cursor_shape": "katana",
-        "title": "❖ 2. Arasaka Ronin Deck // Боковая стойка + Таймер Pomodoro + Заметки",
+        "cursor_shape": "mecha",
+        "title": "❖ 2. Arasaka Ronin OS // 3-колоночный кокпит (Без верхней панели) + Категории + Pomodoro",
         "short": "Ronin",
         "badge": "RONIN // OS",
         "game_badge": "RONIN // WAR",
@@ -48,11 +48,11 @@ THEMES = {
         "primary": "#e03131",
         "accent":  "#fcc419",
         "soft":    "#ff8787",
-        "bg":      "#0b0608",
-        "bg_alt":  "#1a0c10",
-        "fg":      "#f5e6e8",
+        "bg":      "#0a0507",
+        "bg_alt":  "#190b10",
+        "fg":      "#f7e8ea",
         "card_bg": "rgba(22, 10, 14, 0.96)",
-        "deck_bg": "rgba(16, 7, 10, 0.97)",
+        "deck_bg": "rgba(15, 7, 10, 0.97)",
         "radius":  3,
         "hypr_round": 3,
     },
@@ -60,7 +60,7 @@ THEMES = {
         "session": "work",
         "layout":  "netrunner",
         "cursor_shape": "reticle",
-        "title": "⌬ 3. Netrunner Construct // Живой монитор процессов + Инспектор сети + CLI-док",
+        "title": "⌬ 3. Netrunner Construct // 3-панельный TUI-мейнфрейм + Живая консоль на столе",
         "short": "Netrunner",
         "badge": "NET // CONSTRUCT",
         "game_badge": "NET // MATRIX",
@@ -69,19 +69,19 @@ THEMES = {
         "primary": "#0ca678",
         "accent":  "#38d9a9",
         "soft":    "#63e6be",
-        "bg":      "#050a08",
-        "bg_alt":  "#0b1812",
+        "bg":      "#040907",
+        "bg_alt":  "#0a1711",
         "fg":      "#d3f9d8",
-        "card_bg": "rgba(8, 20, 15, 0.95)",
-        "deck_bg": "rgba(6, 15, 11, 0.97)",
-        "radius":  8,
-        "hypr_round": 7,
+        "card_bg": "rgba(7, 19, 14, 0.96)",
+        "deck_bg": "rgba(5, 14, 10, 0.97)",
+        "radius":  6,
+        "hypr_round": 6,
     },
     "cryo-studio": {
         "session": "work",
         "layout":  "cryo",
         "cursor_shape": "crystal",
-        "title": "✦ 4. Orbital Cryo Studio // Парящий остров + Орбитальный дашборд + Док избранного",
+        "title": "✦ 4. Orbital Cryo Studio // Парящий остров + Круговые кольца CPU/RAM + Док",
         "short": "CryoStudio",
         "badge": "CRYO // STUDIO",
         "game_badge": "CRYO // CORE",
@@ -104,7 +104,7 @@ THEMES = {
         "session": "game",
         "layout":  "esports",
         "cursor_shape": "wing",
-        "title": "◈ 1. Apex Direct Scanout // Киберспорт-арена + Тюнер CS2 4:3 + Очистка ОЗУ",
+        "title": "◈ 1. Apex Direct Scanout // Киберспорт-арена + Калькулятор eDPI + CS2 4:3",
         "short": "ApexScanout",
         "badge": "APEX // WORK",
         "game_badge": "APEX // SCANOUT",
@@ -124,8 +124,8 @@ THEMES = {
     "game-redline": {
         "session": "game",
         "layout":  "redline",
-        "cursor_shape": "katana",
-        "title": "❖ 2. Redline Overdrive // Боковая башня разгона + Турбо-сброс кэша + Меха-карточки",
+        "cursor_shape": "mecha",
+        "title": "❖ 2. Redline Overdrive // Боковая башня разгона (Без верхней панели) + Меха-плиты",
         "short": "Redline",
         "badge": "REDLINE // OS",
         "game_badge": "REDLINE // BOOST",
@@ -134,11 +134,11 @@ THEMES = {
         "primary": "#f02e3e",
         "accent":  "#ffb800",
         "soft":    "#ff8787",
-        "bg":      "#0c0507",
+        "bg":      "#0b0507",
         "bg_alt":  "#1b0b0f",
         "fg":      "#fff0f3",
         "card_bg": "rgba(24, 10, 14, 0.96)",
-        "deck_bg": "rgba(18, 7, 10, 0.97)",
+        "deck_bg": "rgba(17, 7, 10, 0.97)",
         "radius":  3,
         "hypr_round": 3,
     },
@@ -146,7 +146,7 @@ THEMES = {
         "session": "game",
         "layout":  "arcade",
         "cursor_shape": "delta",
-        "title": "▲ 3. Synth Arcade 2084 // Консольная витрина + Крупные баннеры запуска + Outrun",
+        "title": "▲ 3. Synth Arcade 2084 // Консольная витрина + Крупные баннеры + Аркадный док",
         "short": "Arcade2084",
         "badge": "SYNTH // 2084",
         "game_badge": "ARCADE // 2084",
@@ -196,15 +196,15 @@ def build_full_theme_css(t):
     p, a, s, bg, bg_alt, fg = t["primary"], t["accent"], t["soft"], t["bg"], t["bg_alt"], t["fg"]
     cbg, dbg = t["card_bg"], t["deck_bg"]
     r = int(t["radius"])
-    r_sm = max(3, r - 3)
+    r_sm = max(2, r - 3)
     arch = t["arch"]
 
     if arch == "ronin":
-        deck_border = f"border: 1px solid {p}; border-bottom: 2px solid {a};"
+        deck_border = f"border: 1px solid {p}; border-left: 3px solid {a};"
         card_border = f"border: 1px solid {p}; border-left: 4px solid {a};"
     elif arch == "matrix":
         deck_border = f"border: 1px solid {a};"
-        card_border = f"border: 1px solid {p}; border-top: 2px solid {a};"
+        card_border = f"border: 1px solid {p}; border-left: 3px solid {a};"
     elif arch == "synth":
         deck_border = f"border: 1px solid {p}; border-top: 2px solid {a};"
         card_border = f"border: 1px solid {p}; border-bottom: 2px solid {a};"
@@ -221,64 +221,68 @@ scrolledwindow, viewport, flowbox, flowboxchild {{
     background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; padding: 0px;
 }}
 button, entry, textview {{ background-image: none; box-shadow: none; text-shadow: none; outline: none; }}
-.hub-overlay {{ background-color: transparent; padding: 20px 30px; }}
+.hub-overlay {{ background-color: transparent; padding: 18px 26px; }}
 
-.top-deck, .side-rail, .widget-panel, .hero-banner, .bottom-dock {{
+.top-deck, .side-rail, .widget-panel, .hero-banner, .bottom-dock, .floating-island, .tui-strip {{
     background-color: {dbg};
     {deck_border}
     border-radius: {r}px;
     padding: 8px 13px;
 }}
-.side-rail {{ padding: 14px 12px; }}
-.widget-panel {{ padding: 14px 16px; }}
-.hero-banner {{ padding: 16px 22px; }}
-.bottom-dock {{ padding: 8px 18px; }}
+.side-rail       {{ padding: 16px 14px; }}
+.widget-panel    {{ padding: 14px 16px; }}
+.hero-banner     {{ padding: 16px 22px; }}
+.bottom-dock     {{ padding: 8px 20px; border: 1px solid {a}; }}
+.floating-island {{ padding: 6px 18px; border: 1px solid {a}; border-radius: 99px; }}
+.tui-strip       {{ padding: 6px 14px; border: 1px solid {a}; border-radius: 4px; }}
 
 .panel-header {{ font-size: 12px; font-weight: bold; color: {a}; }}
-.panel-sub    {{ font-size: 11px; font-weight: bold; color: {fg}; }}
-.big-clock    {{ font-size: 42px; font-weight: bold; color: {fg}; }}
-.big-sub      {{ font-size: 12px; font-weight: bold; color: {a}; }}
-.timer-digits {{ font-size: 28px; font-weight: bold; color: {a}; }}
+.panel-sub    {{ font-size: 11px; font-weight: bold; color: {fg}; font-family: monospace; }}
+.big-clock    {{ font-size: 40px; font-weight: bold; color: {fg}; }}
+.big-sub      {{ font-size: 11px; font-weight: bold; color: {a}; }}
+.timer-digits {{ font-size: 28px; font-weight: bold; color: {a}; font-family: monospace; }}
 
 .notes-view {{
     background-color: {bg_alt};
     color: {fg};
     border: 1px solid {p};
     border-radius: {r_sm}px;
-    padding: 8px;
+    padding: 10px;
     font-size: 12px;
+    font-family: monospace;
 }}
 
 .brand-pill {{
-    background-color: {bg_alt};
-    border: 1px solid {p};
-    border-radius: {r_sm}px;
-    padding: 0px 11px;
-    min-height: 36px;
+    background-color: {bg_alt}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 34px;
 }}
 .brand-dot   {{ color: {a}; font-size: 13px; font-weight: bold; }}
 .brand-title {{ font-size: 13px; font-weight: bold; color: {fg}; }}
 
-button.ws-btn {{
+button.ws-btn, button.cat-tab {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-radius: {r_sm}px;
-    padding: 0px 10px; min-height: 36px; font-size: 12px; font-weight: bold;
+    padding: 0px 10px; min-height: 34px; font-size: 12px; font-weight: bold;
 }}
-button.ws-btn:hover {{ background-color: {p}; color: #ffffff; border-color: {a}; }}
+button.ws-btn:hover, button.cat-tab:hover {{ background-color: {p}; color: #ffffff; border-color: {a}; }}
+
+button.cat-tab-active {{
+    background-color: {p}; color: #ffffff; border: 1px solid {a}; border-left: 3px solid {a};
+    border-radius: {r_sm}px; padding: 0px 12px; min-height: 34px; font-size: 12px; font-weight: bold;
+}}
 
 button.ws-new-btn {{
     background-color: {bg_alt}; color: {a}; border: 1px solid {a}; border-radius: {r_sm}px;
-    padding: 0px 11px; min-height: 36px; font-size: 12px; font-weight: bold;
+    padding: 0px 11px; min-height: 34px; font-size: 12px; font-weight: bold;
 }}
 button.ws-new-btn:hover {{ background-color: {a}; color: {bg}; }}
 
 .telemetry-pod {{
-    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 36px;
+    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 34px;
 }}
-.pod-sep {{ background-color: {p}; min-width: 1px; margin: 7px 3px; opacity: 0.45; }}
+.pod-sep    {{ background-color: {p}; min-width: 1px; margin: 7px 3px; opacity: 0.45; }}
 .metric-lbl {{ font-size: 11px; font-weight: bold; color: {fg}; }}
 .net-badge  {{ font-size: 11px; font-weight: bold; color: {a}; }}
 
-progressbar trough {{ background-color: {bg_alt}; border-radius: 3px; min-height: 5px; min-width: 34px; }}
+progressbar trough   {{ background-color: {bg_alt}; border-radius: 3px; min-height: 5px; min-width: 34px; }}
 progressbar progress {{ background-color: {p}; border-radius: 3px; min-height: 5px; }}
 progressbar.gauge-cyan progress {{ background-color: {a}; }}
 progressbar.bat-good progress   {{ background-color: {a}; }}
@@ -287,86 +291,135 @@ progressbar.bat-crit progress   {{ background-color: #ff6b6b; }}
 
 button.wifi-btn, button.kb-btn {{
     background-color: {bg_alt}; color: {a}; border: 1px solid {p}; border-radius: {r_sm}px;
-    padding: 0px 9px; min-height: 36px; font-size: 12px; font-weight: bold;
+    padding: 0px 9px; min-height: 34px; font-size: 12px; font-weight: bold;
 }}
 button.wifi-btn:hover, button.kb-btn:hover {{ border-color: {a}; background-color: {p}; color: #ffffff; }}
 
 button.ctrl-pill, button.ctrl-pill-perf {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {a}; border-radius: {r_sm}px;
-    padding: 0px 11px; min-height: 36px; font-size: 12px; font-weight: bold;
+    padding: 0px 11px; min-height: 34px; font-size: 12px; font-weight: bold;
 }}
 button.ctrl-pill:hover, button.ctrl-pill-perf:hover {{ background-color: {p}; border-color: {a}; }}
 
 .audio-capsule, .power-capsule {{
-    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 6px; min-height: 36px;
+    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 6px; min-height: 34px;
 }}
 button.audio-icon-btn, button.icon-act-btn {{
     background-color: transparent; color: {fg}; border: none; border-radius: {max(2, r_sm - 2)}px;
-    padding: 0px 7px; min-height: 30px; font-size: 11px; font-weight: bold;
+    padding: 0px 7px; min-height: 28px; font-size: 11px; font-weight: bold;
 }}
 button.audio-icon-btn:hover, button.icon-act-btn:hover {{ background-color: {p}; color: #ffffff; }}
 
 button.danger-act-btn {{
     background-color: transparent; color: #ff8787; border: none; border-radius: {max(2, r_sm - 2)}px;
-    padding: 0px 7px; min-height: 30px; font-size: 11px; font-weight: bold;
+    padding: 0px 7px; min-height: 28px; font-size: 11px; font-weight: bold;
 }}
 button.danger-act-btn:hover {{ background-color: #3b141e; }}
 .vol-pct {{ font-size: 11px; font-weight: bold; color: {s}; min-width: 30px; }}
 
 scale {{ padding: 0px 3px; }}
-scale trough {{ background-color: {bg_alt}; border-radius: 3px; min-height: 6px; }}
+scale trough    {{ background-color: {bg_alt}; border-radius: 3px; min-height: 6px; }}
 scale highlight {{ background-color: {a}; border-radius: 3px; }}
 scale slider {{
     background-color: {fg}; border: 2px solid {p}; border-radius: {r_sm}px;
     min-width: 12px; min-height: 12px; margin: -4px 0px;
 }}
 .clock-pill {{
-    background-color: {bg_alt}; border: 1px solid {a}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 36px;
+    background-color: {bg_alt}; border: 1px solid {a}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 34px;
 }}
 .clock-time {{ font-size: 15px; font-weight: bold; color: {fg}; }}
 .clock-hz   {{ font-size: 10px; font-weight: bold; color: {a}; }}
 
 entry.search-entry {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-left: 3px solid {a};
-    border-radius: {r}px; padding: 8px 14px; font-size: 14px;
+    border-radius: {r}px; padding: 7px 14px; font-size: 13.5px;
 }}
 entry.search-entry:focus {{ border-color: {a}; }}
 
 button.primary-btn {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-left: 4px solid {a};
-    border-radius: {r}px; padding: 8px 16px; font-weight: bold;
+    border-radius: {r}px; padding: 7px 14px; font-weight: bold;
 }}
 button.primary-btn:hover {{ background-color: {p}; border-color: {a}; }}
 
 button.secondary-btn {{
     background-color: {bg_alt}; color: {s}; border: 1px solid {a}; border-radius: {r}px;
-    padding: 8px 14px; font-weight: bold;
+    padding: 7px 13px; font-weight: bold;
 }}
 button.secondary-btn:hover {{ background-color: {a}; color: {bg}; }}
 
 button.hero-tile {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-top: 3px solid {a};
-    border-radius: {r}px; padding: 14px 18px; min-height: 74px;
+    border-radius: {r}px; padding: 12px 16px; min-height: 70px;
 }}
 button.hero-tile:hover {{ background-color: {p}; border-color: {a}; }}
 
+/* 1. Классические карточки Tactical OS */
 button.app-card {{
     background-color: {cbg}; {card_border} border-radius: {r}px;
-    padding: 12px 15px; min-width: 245px; min-height: 90px;
+    padding: 11px 14px; min-width: 240px; min-height: 86px;
 }}
 button.app-card:hover {{ background-color: {bg_alt}; border-color: {a}; }}
 
+/* 2. Горизонтальные меха-пластины Arasaka Ronin / Redline */
+button.ronin-blade {{
+    background-color: {cbg};
+    border: 1px solid {p};
+    border-left: 5px solid {a};
+    border-radius: 2px;
+    padding: 8px 14px;
+    min-width: 280px;
+    min-height: 54px;
+}}
+button.ronin-blade:hover {{
+    background-color: {bg_alt};
+    border-color: {a};
+}}
+.blade-idx {{ font-family: monospace; font-size: 11px; font-weight: bold; color: {a}; }}
+
+/* 3. Терминальные строки Netrunner Construct */
+button.tui-row {{
+    background-color: rgba(6, 16, 12, 0.92);
+    border: 1px solid {p};
+    border-left: 3px solid {a};
+    border-radius: 4px;
+    padding: 7px 12px;
+    min-width: 260px;
+    min-height: 44px;
+}}
+button.tui-row:hover {{
+    background-color: {bg_alt};
+    border-color: {a};
+}}
+.tui-text {{ font-family: monospace; font-size: 12px; font-weight: bold; color: {fg}; }}
+.tui-tag  {{ font-family: monospace; font-size: 10px; font-weight: bold; color: {a}; }}
+
+/* 4. Крупноиконочные пространственные плитки Cryo Studio */
+button.cryo-tile {{
+    background-color: {cbg};
+    border: 1px solid {p};
+    border-top: 2px solid {a};
+    border-radius: 16px;
+    padding: 14px 12px;
+    min-width: 155px;
+    min-height: 112px;
+}}
+button.cryo-tile:hover {{
+    background-color: {bg_alt};
+    border-color: {a};
+}}
+
 .stripe-pinned {{ background-color: {a}; border-radius: 3px; min-width: 4px; }}
 .stripe-normal {{ background-color: {p}; border-radius: 3px; min-width: 4px; }}
-.icon-frame    {{ background-color: {bg_alt}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 8px; }}
-.card-title    {{ font-size: 14px; font-weight: bold; color: {fg}; }}
+.icon-frame    {{ background-color: {bg_alt}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 7px; }}
+.card-title    {{ font-size: 13.5px; font-weight: bold; color: {fg}; }}
 .card-sub      {{ font-size: 10px; font-weight: bold; color: {s}; opacity: 0.78; }}
 .cat-chip      {{ background-color: {bg}; color: {a}; border: 1px solid {p}; border-radius: {max(2, r_sm - 3)}px; padding: 1px 6px; font-size: 9px; font-weight: bold; }}
 .launch-glyph  {{ font-size: 14px; font-weight: bold; color: {a}; }}
 
-.footer-bar {{ background-color: {dbg}; {deck_border} border-radius: {r}px; padding: 8px 18px; }}
-.key-badge  {{ background-color: {bg_alt}; color: {a}; border: 1px solid {p}; border-radius: {max(2, r_sm - 2)}px; padding: 3px 8px; font-size: 11px; font-weight: bold; }}
-.key-desc   {{ color: #8b9ab8; font-size: 12px; margin-right: 12px; }}
+.footer-bar {{ background-color: {dbg}; {deck_border} border-radius: {r}px; padding: 7px 16px; }}
+.key-badge  {{ background-color: {bg_alt}; color: {a}; border: 1px solid {p}; border-radius: {max(2, r_sm - 2)}px; padding: 2px 7px; font-size: 10.5px; font-weight: bold; }}
+.key-desc   {{ color: #8b9ab8; font-size: 11.5px; margin-right: 10px; }}
 """
 
 def render_environment_wallpaper(t):
@@ -378,60 +431,74 @@ def render_environment_wallpaper(t):
 
     cr.set_source_rgb(*BG); cr.paint()
 
-    for cx, cy, rad, col, al in [(W*0.15, H*0.14, 620, PRIM, 0.13), (W*0.85, H*0.86, 620, ACC, 0.11)]:
-        rg = cairo.RadialGradient(cx, cy, 10, cx, cy, rad)
-        rg.add_color_stop_rgba(0, *col, al); rg.add_color_stop_rgba(1, *col, 0)
-        cr.set_source(rg); cr.paint()
-
-    cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.025)
-    for x in range(24, W, 24): cr.move_to(x, 0); cr.line_to(x, H)
-    for y in range(24, H, 24): cr.move_to(0, y); cr.line_to(W, y)
-    cr.stroke()
-
-    cr.set_source_rgba(*PRIM, 0.068)
-    for x in range(96, W, 96): cr.move_to(x, 0); cr.line_to(x, H)
-    for y in range(96, H, 96): cr.move_to(0, y); cr.line_to(W, y)
-    cr.stroke()
-
     if arch == "tactical":
-        for rx, ry, rr in [(W*0.82, H*0.56, 200), (W*0.16, H*0.64, 150)]:
-            cr.set_line_width(1.4); cr.set_source_rgba(*PRIM, 0.16); cr.arc(rx, ry, rr, 0, 2*math.pi); cr.stroke()
-            cr.set_line_width(2.6); cr.set_source_rgba(*ACC, 0.28); cr.arc(rx, ry, rr*1.1, -0.5, 0.6); cr.stroke()
-    elif arch == "ronin":
-        cr.set_line_width(1.6); cr.set_source_rgba(*PRIM, 0.11)
-        for k in range(-H, W + H, 130):
-            cr.move_to(k, 0); cr.line_to(k - H * 0.42, H)
+        for cx, cy, rad, col, al in [(W*0.15, H*0.14, 620, PRIM, 0.13), (W*0.85, H*0.86, 620, ACC, 0.11)]:
+            rg = cairo.RadialGradient(cx, cy, 10, cx, cy, rad)
+            rg.add_color_stop_rgba(0, *col, al); rg.add_color_stop_rgba(1, *col, 0)
+            cr.set_source(rg); cr.paint()
+        cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.065)
+        for x in range(96, W, 96): cr.move_to(x, 0); cr.line_to(x, H)
+        for y in range(96, H, 96): cr.move_to(0, y); cr.line_to(W, y)
         cr.stroke()
-        cx, cy = W * 0.5, H * 0.52
-        cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.25)
-        cr.move_to(cx, cy - 250); cr.line_to(cx + 250, cy); cr.line_to(cx, cy + 250); cr.line_to(cx - 250, cy); cr.close_path(); cr.stroke()
+        for rx, ry, rr in [(W*0.82, H*0.56, 200), (W*0.16, H*0.64, 150)]:
+            cr.set_line_width(1.4); cr.set_source_rgba(*PRIM, 0.18); cr.arc(rx, ry, rr, 0, 2*math.pi); cr.stroke()
+            cr.set_line_width(2.6); cr.set_source_rgba(*ACC, 0.30); cr.arc(rx, ry, rr*1.1, -0.5, 0.6); cr.stroke()
+
+    elif arch == "ronin":
+        # Arasaka Ronin: диагональные карбоновые плиты, шевроны безопасности и центральная геометрия меха
+        rg = cairo.RadialGradient(W*0.52, H*0.5, 20, W*0.52, H*0.5, 760)
+        rg.add_color_stop_rgba(0, *PRIM, 0.16); rg.add_color_stop_rgba(1, 0, 0, 0, 0)
+        cr.set_source(rg); cr.paint()
+        cr.set_line_width(1.5); cr.set_source_rgba(*PRIM, 0.12)
+        for k in range(-H, W + H, 110):
+            cr.move_to(k, 0); cr.line_to(k - H * 0.45, H)
+        cr.stroke()
+        cx, cy = W * 0.52, H * 0.50
+        cr.set_line_width(2.2); cr.set_source_rgba(*ACC, 0.26)
+        cr.move_to(cx, cy - 260); cr.line_to(cx + 260, cy); cr.line_to(cx, cy + 260); cr.line_to(cx - 260, cy); cr.close_path(); cr.stroke()
+
     elif arch == "matrix":
+        # Netrunner Construct: цифровой дождь + гексагональная матрица
         random.seed(42)
         cr.set_line_width(1.6)
-        for x in range(64, W, 64):
-            y0 = random.randint(60, H - 360)
-            hlen = random.randint(140, 300)
+        for x in range(48, W, 48):
+            y0 = random.randint(40, H - 360)
+            hlen = random.randint(120, 320)
             lg = cairo.LinearGradient(x, y0, x, y0 + hlen)
-            lg.add_color_stop_rgba(0, *PRIM, 0.0); lg.add_color_stop_rgba(1, *ACC, 0.28)
+            lg.add_color_stop_rgba(0, *PRIM, 0.0); lg.add_color_stop_rgba(1, *ACC, 0.32)
             cr.set_source(lg); cr.move_to(x, y0); cr.line_to(x, y0 + hlen); cr.stroke()
+        cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.07)
+        for x in range(64, W, 64): cr.move_to(x, 0); cr.line_to(x, H)
+        for y in range(64, H, 64): cr.move_to(0, y); cr.line_to(W, y)
+        cr.stroke()
+
     elif arch == "synth":
-        hz_y = H * 0.58
-        cr.set_line_width(1.5); cr.set_source_rgba(*PRIM, 0.22)
+        # Synth Arcade 2084: перспективная сетка горизонта + сегментированное солнце
+        hz_y = H * 0.56
+        rg = cairo.RadialGradient(W*0.5, hz_y, 20, W*0.5, hz_y, 520)
+        rg.add_color_stop_rgba(0, *PRIM, 0.26); rg.add_color_stop_rgba(1, 0, 0, 0, 0)
+        cr.set_source(rg); cr.paint()
+        cr.set_line_width(1.5); cr.set_source_rgba(*PRIM, 0.24)
         for i in range(-16, 17):
             cr.move_to(W*0.5 + i * 24, hz_y); cr.line_to(W*0.5 + i * 160, H)
         for j in range(1, 12):
             py = hz_y + math.pow(j / 11.0, 2.0) * (H - hz_y)
             cr.move_to(0, py); cr.line_to(W, py)
         cr.stroke()
-        cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.48)
+        cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.52)
         cr.move_to(0, hz_y); cr.line_to(W, hz_y); cr.stroke()
+
     elif arch == "cryo":
-        cx, cy = W * 0.5, H * 0.5
-        for rad, al in [(190, 0.22), (310, 0.28), (430, 0.16)]:
-            cr.set_line_width(1.6); cr.set_source_rgba(*ACC, al); cr.arc(cx, cy, rad, 0, 2*math.pi); cr.stroke()
+        # Orbital Cryo Studio: концентрическая астролябия и ледяное свечение
+        cx, cy = W * 0.5, H * 0.52
+        rg = cairo.RadialGradient(cx, cy, 10, cx, cy, 680)
+        rg.add_color_stop_rgba(0, *PRIM, 0.18); rg.add_color_stop_rgba(1, 0, 0, 0, 0)
+        cr.set_source(rg); cr.paint()
+        for rad, al in [(180, 0.22), (300, 0.28), (420, 0.16)]:
+            cr.set_line_width(1.5); cr.set_source_rgba(*ACC, al); cr.arc(cx, cy, rad, 0, 2*math.pi); cr.stroke()
 
     m, ln = 14, 52
-    cr.set_line_width(2.4); cr.set_source_rgba(*PRIM, 0.78)
+    cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.78)
     for x1, y1, x2, y2, x3, y3 in [
         (m, m + ln, m, m, m + ln, m), (W - m - ln, m, W - m, m, W - m, m + ln),
         (m, H - m - ln, m, H - m, m + ln, H - m), (W - m - ln, H - m, W - m, H - m, W - m, H - m - ln),
@@ -444,7 +511,6 @@ def render_environment_wallpaper(t):
     surf.write_to_png(os.path.join(HOME, ".config/hypr/assets/terminal_hud_bg.png"))
 
 def rebuild_distinct_cursor(theme_id, t):
-    # 5 РАДИКАЛЬНО ОТЛИЧАЮЩИХСЯ ФОРМ И ЦВЕТОВ КУРСОРА (wing, katana, reticle, crystal, delta)
     cur_name = f"CyberDeck-Cursor-{theme_id}"
     icons_root = os.path.join(HOME, ".local/share/icons")
     for old_d in glob.glob(os.path.join(icons_root, "CyberDeck-Cursor*")):
@@ -467,90 +533,95 @@ def rebuild_distinct_cursor(theme_id, t):
         return s, cr
 
     def draw_arrow(cr):
-        if shape == "katana":
-            # 1. KATANA BLADE (Ronin / Redline): Острый самурайский клинок с золотой гардой и ярким алым лезвием
-            blade = [(2, 2), (5, 27), (10.5, 21), (22, 13.5)]
-            cr.move_to(*blade[0])
-            for p in blade[1:]: cr.line_to(*p)
+        if shape == "mecha":
+            # НОВЫЙ КУРСОР 2-Й ТЕМЫ (ARASAKA MECHA RAZOR):
+            # Строгий гранёный стелс-указатель с раздвоенным хвостом («ласточкин хвост»),
+            # матовым карбоновым корпусом, бритвенно-алой кромкой и золотым энергетическим сердечником внутри
+            outer = [(2.5, 2.0), (2.5, 25.5), (8.2, 19.8), (13.2, 27.2), (16.5, 25.2), (11.8, 17.8), (20.2, 16.2)]
+            cr.save(); cr.translate(1.2, 1.5); cr.move_to(*outer[0])
+            for p in outer[1:]: cr.line_to(*p)
+            cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.55); cr.fill(); cr.restore()
+
+            cr.move_to(*outer[0])
+            for p in outer[1:]: cr.line_to(*outer[outer.index(p)])
             cr.close_path()
-            cr.set_source_rgba(*PRIM, 0.96); cr.fill_preserve()
-            cr.set_line_width(2.0); cr.set_source_rgb(*ACC); cr.stroke()
-            # Гарда и рукоять
-            cr.set_line_width(2.8); cr.set_source_rgb(*ACC)
-            cr.move_to(7, 23); cr.line_to(16, 17); cr.stroke()
-            cr.set_line_width(3.4); cr.set_source_rgb(*DARK)
-            cr.move_to(11.5, 20.5); cr.line_to(17.5, 28.5); cr.stroke()
-            cr.set_line_width(1.8); cr.set_source_rgb(*ACC)
-            cr.move_to(11.5, 20.5); cr.line_to(17.5, 28.5); cr.stroke()
+            lg = cairo.LinearGradient(2, 2, 18, 26)
+            lg.add_color_stop_rgb(0.0, 0.14, 0.05, 0.07)
+            lg.add_color_stop_rgb(1.0, 0.06, 0.02, 0.03)
+            cr.set_source(lg); cr.fill_preserve()
+            cr.set_line_width(2.0); cr.set_source_rgb(*PRIM); cr.stroke()
+
+            # Внутренний золотой энергетический шеврон и прицельная риска на острие
+            cr.set_line_width(1.6); cr.set_source_rgb(*ACC)
+            cr.move_to(5.2, 6.8); cr.line_to(5.2, 18.5)
+            cr.move_to(5.2, 6.8); cr.line_to(14.5, 14.5)
+            cr.stroke()
+            cr.arc(5.2, 6.8, 1.7, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
 
         elif shape == "reticle":
-            # 2. NETRUNNER RETICLE (Netrunner): Изумрудный прицел-захват с лазерным указателем
-            cr.arc(13, 13, 8.5, 0.2, math.pi * 1.65)
-            cr.set_source_rgba(*DARK, 0.75); cr.fill_preserve()
-            cr.set_line_width(2.2); cr.set_source_rgb(*ACC); cr.stroke()
-            # Стрела захвата в точку (3, 3)
-            pts = [(3, 3), (3, 15), (7.5, 10.5), (15, 18), (18, 15), (10.5, 7.5), (15, 3)]
+            # NETRUNNER RETICLE: Изумрудный тактический указатель с полукольцом сканера
+            cr.arc(11.5, 11.5, 8.0, 0.35, math.pi * 1.55)
+            cr.set_line_width(1.6); cr.set_source_rgba(*ACC, 0.85); cr.stroke()
+            pts = [(3, 2.5), (3, 23.5), (8.6, 18.8), (12.5, 26.8), (15.8, 25.0), (12.0, 17.2), (19.2, 17.2)]
             cr.move_to(*pts[0])
             for p in pts[1:]: cr.line_to(*p)
             cr.close_path()
-            cr.set_source_rgba(*PRIM, 0.95); cr.fill_preserve()
-            cr.set_line_width(1.8); cr.set_source_rgb(*ACC); cr.stroke()
-            cr.arc(3.5, 3.5, 2.0, 0, 2*math.pi); cr.set_source_rgb(1, 1, 1); cr.fill()
+            cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
+            cr.set_line_width(1.9); cr.set_source_rgb(*ACC); cr.stroke()
+            cr.arc(5.2, 6.0, 1.6, 0, 2*math.pi); cr.set_source_rgb(*PRIM); cr.fill()
 
         elif shape == "crystal":
-            # 3. CRYO CRYSTAL SPEAR (Cryo Studio): Светящееся ледяное копьё-ромб с двойным градиентом
-            spear = [(3, 2), (6, 25), (12, 20), (16, 28), (19, 26.5), (15, 18.5), (23, 14)]
+            # CRYO CRYSTAL: Ледяной гранёный кристалл с белым бликом
+            spear = [(3, 2), (4.5, 24.5), (10.2, 19.2), (14.5, 27.2), (17.8, 25.4), (13.5, 17.5), (20.8, 15.5)]
             cr.move_to(*spear[0])
             for p in spear[1:]: cr.line_to(*p)
             cr.close_path()
-            lg = cairo.LinearGradient(3, 2, 22, 26)
-            lg.add_color_stop_rgb(0.0, 0.90, 0.98, 1.0)
-            lg.add_color_stop_rgb(0.5, *ACC)
+            lg = cairo.LinearGradient(3, 2, 20, 26)
+            lg.add_color_stop_rgb(0.0, 0.88, 0.97, 1.0)
+            lg.add_color_stop_rgb(0.55, *ACC)
             lg.add_color_stop_rgb(1.0, *PRIM)
             cr.set_source(lg); cr.fill_preserve()
-            cr.set_line_width(1.8); cr.set_source_rgb(1.0, 1.0, 1.0); cr.stroke()
+            cr.set_line_width(1.7); cr.set_source_rgb(1.0, 1.0, 1.0); cr.stroke()
 
         elif shape == "delta":
-            # 4. SYNTH DELTA WING (Arcade 2084): Неоновое дельта-крыло (пурпур + циан)
-            wing = [(2, 2), (6, 26), (12.5, 18.5), (24, 15)]
+            # SYNTH DELTA WING: Неоновое крыло Outrun
+            wing = [(3, 2), (4.8, 25), (11.2, 18.5), (22, 15.2)]
             cr.move_to(*wing[0])
             for p in wing[1:]: cr.line_to(*p)
             cr.close_path()
-            lg = cairo.LinearGradient(2, 2, 24, 26)
+            lg = cairo.LinearGradient(3, 2, 22, 25)
             lg.add_color_stop_rgb(0.0, *ACC)
             lg.add_color_stop_rgb(1.0, *PRIM)
             cr.set_source(lg); cr.fill_preserve()
-            cr.set_line_width(2.0); cr.set_source_rgb(*ACC); cr.stroke()
-            cr.arc(7, 9, 2.2, 0, 2*math.pi); cr.set_source_rgb(1, 1, 1); cr.fill()
+            cr.set_line_width(1.9); cr.set_source_rgb(*ACC); cr.stroke()
 
         else:
-            # 5. TACTICAL CYBER WING (CyberDeck / Apex Scanout): Индиго-бирюзовый тактический курсор
+            # TACTICAL WING: Базовый тактический курсор CyberDeck
             pts = [(3,2),(3,24),(8.8,19.2),(12.6,27.5),(16.0,25.8),(12.2,17.6),(19.8,17.6)]
             cr.move_to(*pts[0])
             for p in pts[1:]: cr.line_to(*p)
             cr.close_path()
+            cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
             lg = cairo.LinearGradient(3, 2, 19, 27)
-            lg.add_color_stop_rgb(0.0, *DARK)
-            lg.add_color_stop_rgb(1.0, *PRIM)
-            cr.set_source(lg); cr.fill_preserve()
-            cr.set_line_width(2.0); cr.set_source_rgb(*ACC); cr.stroke()
-            cr.arc(5.5, 6.5, 1.8, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
+            lg.add_color_stop_rgb(0.0, *ACC); lg.add_color_stop_rgb(0.65, *PRIM); lg.add_color_stop_rgb(1.0, *ACC)
+            cr.set_source(lg); cr.set_line_width(1.9); cr.stroke()
+            cr.arc(5.2, 5.8, 1.5, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
 
     def draw_pointer(cr):
         draw_arrow(cr)
-        cr.arc(18, 8, 3.8, 0, 2*math.pi)
+        cr.arc(17.5, 8.5, 3.4, 0, 2*math.pi)
         cr.set_source_rgb(*ACC); cr.fill_preserve()
-        cr.set_line_width(1.4); cr.set_source_rgb(1, 1, 1); cr.stroke()
+        cr.set_line_width(1.3); cr.set_source_rgb(1, 1, 1); cr.stroke()
 
     def draw_ibeam(cr):
-        cr.set_line_width(2.4); cr.set_source_rgb(*ACC)
+        cr.set_line_width(2.2); cr.set_source_rgb(*ACC)
         cr.move_to(16,5); cr.line_to(16,27); cr.move_to(11.5,5); cr.line_to(20.5,5); cr.move_to(11.5,27); cr.line_to(20.5,27); cr.stroke()
 
     def draw_cross(cr):
         cr.set_line_width(2.0); cr.set_source_rgb(*ACC)
         for x1,y1,x2,y2 in [(16,3,16,11),(16,21,16,29),(3,16,11,16),(21,16,29,16)]: cr.move_to(x1,y1); cr.line_to(x2,y2)
         cr.stroke()
-        cr.set_line_width(1.6); cr.set_source_rgb(*PRIM); cr.arc(16,16,6.5,0,2*math.pi); cr.stroke()
+        cr.set_line_width(1.5); cr.set_source_rgb(*PRIM); cr.arc(16,16,6.5,0,2*math.pi); cr.stroke()
 
     def draw_darrow(cr, ang):
         cr.save(); cr.translate(16,16); cr.rotate(math.radians(ang))
@@ -562,7 +633,7 @@ def rebuild_distinct_cursor(theme_id, t):
         cx, cy, r = (22.5, 21.5, 6.2) if mini else (16.0, 16.0, 10.5)
         cr.arc(cx,cy,r,0,2*math.pi); cr.set_source_rgba(*DARK,0.88); cr.fill()
         a0 = ph * 2 * math.pi
-        cr.set_line_width(2.6); cr.set_source_rgb(*ACC); cr.arc(cx,cy,r,a0,a0+math.pi*0.9); cr.stroke()
+        cr.set_line_width(2.5); cr.set_source_rgb(*ACC); cr.arc(cx,cy,r,a0,a0+math.pi*0.9); cr.stroke()
         cr.set_source_rgb(*PRIM); cr.arc(cx,cy,r,a0+math.pi,a0+math.pi*1.55); cr.stroke()
 
     tmp = tempfile.mkdtemp(prefix="cd_cur_")
@@ -642,6 +713,7 @@ def rebuild_distinct_cursor(theme_id, t):
         )
 
     open(os.path.join(HOME, ".config/environment.d/99-cyberdeck.conf"), "w", encoding="utf-8").write(f"XCURSOR_THEME={cur_name}\nXCURSOR_SIZE=28\n")
+    subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "cursor-theme", "Adwaita"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "cursor-theme", cur_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(["hyprctl", "--batch", f"keyword env XCURSOR_THEME,{cur_name} ; setcursor {cur_name} 28"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return cur_name
@@ -649,11 +721,6 @@ def rebuild_distinct_cursor(theme_id, t):
 def update_terminals(t):
     p_hex, a_hex, s_hex, bg_hex, bg_alt, fg_hex = t["primary"], t["accent"], t["soft"], t["bg"], t["bg_alt"], t["fg"]
     p_c, a_c, s_c, bg_c, bg_ac, fg_c = p_hex.lstrip("#"), a_hex.lstrip("#"), s_hex.lstrip("#"), bg_hex.lstrip("#"), bg_alt.lstrip("#"), fg_hex.lstrip("#")
-    pr, pg, pb = hex_rgb_int(p_hex)
-    ar, ag, ab = hex_rgb_int(a_hex)
-    sr, sg_i, sb = hex_rgb_int(s_hex)
-    sym = t["symbol"]
-    short = t["short"].upper()
 
     open(os.path.join(HOME, ".config/foot/foot.ini"), "w", encoding="utf-8").write(f"""[main]
 font=monospace:size=11.5
@@ -716,7 +783,6 @@ def apply_backend(theme_id, restart_hub=True):
     p_hex, a_hex, bg_hex = t["primary"], t["accent"], t["bg"]
     cur_name = f"CyberDeck-Cursor-{theme_id}"
 
-    # Сохраняем тему и как глобальную последнюю активную, и как профиль соответствующей сессии (work или game)
     state_payload = {"id": theme_id, "cursor_theme": cur_name, **t}
     json.dump(state_payload, open(STATE_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
     if t["session"] == "game":
@@ -726,7 +792,6 @@ def apply_backend(theme_id, restart_hub=True):
 
     open(os.path.join(CFG_DIR, "active_hub.css"), "w", encoding="utf-8").write(build_full_theme_css(t))
 
-    # Перекрашиваем UI-иконки, пакет иконок и тему Firefox под эту сессию
     all_prim = ("#4c6ef5","#3b5bdb","#e03131","#f02e3e","#0ca678","#d63384","#f03e98","#1c7ed6","#339af0","#364fc7")
     all_acc  = ("#22b8cf","#00f5d4","#fcc419","#ffb800","#38d9a9","#40f99b","#20c997","#74c0fc","#99e9f2","#66d9e8")
 
@@ -741,14 +806,13 @@ def apply_backend(theme_id, restart_hub=True):
             txt = re.sub(r"#[0-9a-fA-F]{6}", lambda m: (p_hex if m.group(0).lower() in all_prim else (a_hex if m.group(0).lower() in all_acc else m.group(0))), txt)
             open(script_p, "w", encoding="utf-8").write(txt)
 
-    subprocess.run([os.path.join(HOME, ".local/bin/cyber-icons-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run([os.path.join(HOME, ".local/bin/cyber-firefox-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["/usr/bin/python3", os.path.join(HOME, ".local/bin/cyber-icons-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["/usr/bin/python3", os.path.join(HOME, ".local/bin/cyber-firefox-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     render_environment_wallpaper(t)
     update_terminals(t)
     rebuild_distinct_cursor(theme_id, t)
 
-    # Обновляем Rofi и Mako
     for rasi_p in (os.path.join(HOME, ".config/hypr/gaming_launcher.rasi"), os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")):
         if os.path.isfile(rasi_p):
             rtxt = open(rasi_p, "r", encoding="utf-8").read()
@@ -772,7 +836,6 @@ def apply_backend(theme_id, restart_hub=True):
         f"keyword general:col.active_border rgba({p_c}ff) rgba({a_c}ff) 45deg ; keyword decoration:rounding {h_round} ; keyword env XCURSOR_THEME,{cur_name} ; setcursor {cur_name} 28"
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # Синхронизируем SDDM и GRUB с темой текущей сессии!
     subprocess.run(["sudo", "-n", "/usr/local/bin/cyber-theme-sys-sync", HOME, p_hex, a_hex, cur_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(["makoctl", "reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -833,8 +896,10 @@ if __name__ == "__main__":
     if act == "--apply-backend" and len(sys.argv) > 2:
         apply_backend(sys.argv[2], restart_hub=True)
     elif act == "--sync-session" and len(sys.argv) > 2:
-        # Автосинхронизация Firefox, Курсора, SDDM и GRUB под активную/последнюю сессию (work или game)
         tid = get_session_theme_id(sys.argv[2])
         apply_backend(tid, restart_hub=False)
+    elif act == "get":
+        tid = get_session_theme_id()
+        print(THEMES[tid]["short"])
     else:
         show_menu()
