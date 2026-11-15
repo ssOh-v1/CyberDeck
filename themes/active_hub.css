@@ -179,3 +179,34 @@ tooltip, tooltip * {
     padding: 0px;
     margin: 0px;
 }
+
+button.gemini-pill {
+    background-color: #21252d;
+    color: #e6e9ef;
+    border: 1px solid #454a54;
+    border-left: 2px solid #9ea4b0;
+    border-radius: 4px;
+    padding: 2px 8px;
+    min-height: 22px;
+    font-weight: 700;
+}
+button.gemini-pill:hover {
+    background-color: #2b303a;
+    border-color: #8c939e;
+    color: #ffffff;
+}
+
+button.del-btn {
+    background-color: #1c1a1d;
+    color: #b89ea2;
+    border: 1px solid #362c30;
+    border-radius: 4px;
+    padding: 2px 7px;
+    min-height: 22px;
+    font-weight: 700;
+}
+button.del-btn:hover {
+    background-color: #38262a;
+    border-color: #7a5258;
+    color: #ffffff;
+}
