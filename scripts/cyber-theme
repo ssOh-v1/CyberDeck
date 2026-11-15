@@ -16,7 +16,7 @@ THEMES = {
     "cyberdeck": {
         "layout": "cyberdeck",
         "cursor_shape": "cyber",
-        "title": "◈ 1. CyberDeck Classic // Тактическая дека + Радар портов и проектов",
+        "title": "◈ 1. CyberDeck Classic // Полноэкранный хаб + Тактическая сетка",
         "short": "CyberDeck",
         "badge": "CYBERDECK // V2",
         "symbol": "◈",
@@ -34,61 +34,61 @@ THEMES = {
     "dungeon-of-god": {
         "layout": "dungeon",
         "cursor_shape": "dagger",
-        "title": "⚔ 2. The Dungeon of God (by ssOh-v1) // Живые обои + RPG HUD + Карточки артефактов",
+        "title": "⚔ 2. The Dungeon of God (by ssOh-v1) // Живые обои (0% лагов) + RPG-панель и Хотбар",
         "short": "DungeonOfGod",
         "badge": "DUNGEON OF GOD",
         "symbol": "⚔",
         "primary": "#d93829",
         "accent":  "#f5b82e",
         "soft":    "#ff9e66",
-        "bg":      "#0b0706",
-        "bg_alt":  "#1a100e",
+        "bg":      "#090506",
+        "bg_alt":  "#180d0e",
         "fg":      "#f7ebd9",
-        "card_bg": "rgba(22, 13, 11, 0.94)",
-        "deck_bg": "rgba(16, 9, 8, 0.96)",
+        "card_bg": "rgba(20, 11, 12, 0.92)",
+        "deck_bg": "rgba(14, 8, 9, 0.94)",
         "radius":  4,
         "hypr_round": 4,
     },
     "forest-stream": {
         "layout": "forest",
         "cursor_shape": "leaf",
-        "title": "🌿 3. Лесной Ручей (Forest Stream) // Парящий Waybar + Док + Гармония природы",
+        "title": "🌿 3. Лесной Ручей (Forest Stream) // Открытый стол + Парящий Waybar + Док",
         "short": "ForestStream",
         "badge": "FOREST // STREAM",
         "symbol": "🌿",
         "primary": "#2d6a4f",
         "accent":  "#74c69d",
         "soft":    "#b7e4c7",
-        "bg":      "#08130e",
-        "bg_alt":  "#11261c",
+        "bg":      "#07120d",
+        "bg_alt":  "#10241b",
         "fg":      "#e8f7ee",
-        "card_bg": "rgba(14, 30, 22, 0.90)",
-        "deck_bg": "rgba(10, 22, 16, 0.93)",
+        "card_bg": "rgba(12, 26, 19, 0.88)",
+        "deck_bg": "rgba(9, 20, 15, 0.91)",
         "radius":  18,
         "hypr_round": 14,
     },
     "impasto-landscape": {
         "layout": "impasto",
         "cursor_shape": "brush",
-        "title": "🎨 4. Импасто Пейзаж (Рельефная краска) // Боковой мольберт + Смешивание красок",
+        "title": "🎨 4. Импасто Пейзаж (3D-бугорки краски) // Открытый холст + Боковой мольберт",
         "short": "ImpastoArt",
         "badge": "ATELIER // IMPASTO",
         "symbol": "🎨",
         "primary": "#e07a5f",
         "accent":  "#f2cc8f",
         "soft":    "#f4a261",
-        "bg":      "#161110",
-        "bg_alt":  "#261d1a",
+        "bg":      "#141010",
+        "bg_alt":  "#241b19",
         "fg":      "#fbf2e3",
-        "card_bg": "rgba(32, 24, 21, 0.92)",
-        "deck_bg": "rgba(24, 18, 16, 0.95)",
+        "card_bg": "rgba(28, 21, 19, 0.90)",
+        "deck_bg": "rgba(22, 16, 15, 0.93)",
         "radius":  10,
         "hypr_round": 8,
     },
     "gamedev-studio": {
         "layout": "gamedev",
         "cursor_shape": "gizmo",
-        "title": "🎮 5. GameDev Engine Studio // Тулбар движка + SceneTree + Инспектор и консоль",
+        "title": "🎮 5. GameDev Engine Studio // Открытый Viewport + Тулбар движка + Док",
         "short": "GameDevIDE",
         "badge": "ENGINE // STUDIO",
         "symbol": "🎮",
@@ -98,8 +98,8 @@ THEMES = {
         "bg":      "#0d1117",
         "bg_alt":  "#161b22",
         "fg":      "#e6edf3",
-        "card_bg": "rgba(22, 27, 34, 0.95)",
-        "deck_bg": "rgba(13, 17, 23, 0.97)",
+        "card_bg": "rgba(22, 27, 34, 0.92)",
+        "deck_bg": "rgba(13, 17, 23, 0.95)",
         "radius":  6,
         "hypr_round": 6,
     },
@@ -135,86 +135,91 @@ def build_full_theme_css(t):
     cbg, dbg = t["card_bg"], t["deck_bg"]
     r = int(t["radius"])
     r_sm = max(2, r - 3)
-    lay = t["layout"]
 
     return f"""
-window {{ background-color: transparent; color: {fg}; }}
+window {{ background-color: {bg}; color: {fg}; }}
 scrolledwindow, viewport, flowbox, flowboxchild {{
     background-color: transparent; background-image: none; border: none; box-shadow: none; outline: none; padding: 0px;
 }}
 button, entry, textview {{ background-image: none; box-shadow: none; text-shadow: none; outline: none; }}
-.hub-overlay {{ background-color: transparent; padding: 16px 24px; }}
+.hub-overlay {{ background-color: transparent; padding: 14px 22px; }}
 
-/* 1. Базовые панели и Waybar-капсулы */
-.top-deck, .side-rail, .widget-panel, .hero-banner, .bottom-dock, .waybar-pill, .rpg-bar, .ide-toolbar, .ide-panel {{
+.top-deck, .side-rail, .widget-panel, .bottom-dock, .waybar-pill, .rpg-bar, .ide-toolbar, .ide-panel {{
     background-color: {dbg};
     border: 1px solid {p};
     border-radius: {r}px;
-    padding: 8px 14px;
+    padding: 7px 13px;
 }}
 .waybar-pill {{
     border: 1px solid {a};
     border-radius: 99px;
-    padding: 6px 16px;
+    padding: 5px 15px;
 }}
 .bottom-dock {{
     border: 1px solid {a};
-    border-radius: 22px;
-    padding: 8px 20px;
+    border-radius: {max(6, r + 4)}px;
+    padding: 7px 16px;
 }}
 .rpg-bar {{
-    background-color: rgba(16, 9, 8, 0.96);
+    background-color: rgba(15, 8, 9, 0.94);
     border: 2px solid {a};
     border-radius: 4px;
-    padding: 8px 14px;
+    padding: 7px 13px;
 }}
 .ide-toolbar {{
-    background-color: #161b22;
+    background-color: rgba(18, 23, 30, 0.95);
     border: 1px solid #30363d;
     border-bottom: 2px solid {p};
     border-radius: 6px;
     padding: 6px 12px;
 }}
 .ide-panel {{
-    background-color: rgba(18, 23, 30, 0.96);
+    background-color: rgba(16, 21, 28, 0.92);
     border: 1px solid #30363d;
     border-top: 2px solid {p};
     border-radius: 6px;
-    padding: 12px;
+    padding: 11px 13px;
 }}
 
-.panel-header {{ font-size: 12px; font-weight: bold; color: {a}; }}
+.panel-header {{ font-size: 11.5px; font-weight: bold; color: {a}; }}
 .panel-sub    {{ font-size: 11px; font-weight: bold; color: {fg}; font-family: monospace; }}
-.big-clock    {{ font-size: 38px; font-weight: bold; color: {fg}; }}
-.big-sub      {{ font-size: 11.5px; font-weight: bold; color: {a}; }}
-.timer-digits {{ font-size: 26px; font-weight: bold; color: {a}; font-family: monospace; }}
+.big-clock    {{ font-size: 34px; font-weight: bold; color: {fg}; }}
+.big-sub      {{ font-size: 11px; font-weight: bold; color: {a}; }}
+.timer-digits {{ font-size: 24px; font-weight: bold; color: {a}; font-family: monospace; }}
 
 .notes-view {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p};
-    border-radius: {r_sm}px; padding: 10px; font-size: 12px; font-family: monospace;
+    border-radius: {r_sm}px; padding: 8px; font-size: 11.5px; font-family: monospace;
 }}
 
 .brand-pill {{
-    background-color: {bg_alt}; border: 1px solid {a}; border-radius: {r_sm}px; padding: 0px 11px; min-height: 34px;
+    background-color: {bg_alt}; border: 1px solid {a}; border-radius: {r_sm}px; padding: 0px 10px; min-height: 32px;
 }}
 .brand-dot   {{ color: {a}; font-size: 13px; font-weight: bold; }}
-.brand-title {{ font-size: 13px; font-weight: bold; color: {fg}; }}
+.brand-title {{ font-size: 12.5px; font-weight: bold; color: {fg}; }}
 
-button.ws-btn, button.cat-tab {{
+button.ws-btn, button.dock-item {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-radius: {r_sm}px;
     padding: 0px 10px; min-height: 32px; font-size: 11.5px; font-weight: bold;
 }}
-button.ws-btn:hover, button.cat-tab:hover {{ background-color: {p}; color: #ffffff; border-color: {a}; }}
+button.dock-item {{
+    padding: 4px 12px; min-height: 36px; border-bottom: 2px solid {a};
+}}
+button.ws-btn:hover, button.dock-item:hover {{ background-color: {p}; color: #ffffff; border-color: {a}; }}
 
 button.ws-new-btn {{
     background-color: {bg_alt}; color: {a}; border: 1px solid {a}; border-radius: {r_sm}px;
-    padding: 0px 11px; min-height: 32px; font-size: 11.5px; font-weight: bold;
+    padding: 0px 10px; min-height: 32px; font-size: 11.5px; font-weight: bold;
 }}
 button.ws-new-btn:hover {{ background-color: {a}; color: {bg}; }}
 
-/* Полосы HP / MANA / STAMINA для The Dungeon of God и стандартные бары */
-progressbar trough   {{ background-color: {bg_alt}; border-radius: 3px; min-height: 7px; min-width: 48px; }}
-progressbar progress {{ background-color: {p}; border-radius: 3px; min-height: 7px; }}
+.telemetry-pod {{
+    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 10px; min-height: 32px;
+}}
+.metric-lbl {{ font-size: 11px; font-weight: bold; color: {fg}; }}
+
+progressbar trough   {{ background-color: {bg_alt}; border-radius: 3px; min-height: 6px; min-width: 44px; }}
+progressbar progress {{ background-color: {p}; border-radius: 3px; min-height: 6px; }}
 progressbar.hp-bar progress      {{ background-color: #e03131; }}
 progressbar.mana-bar progress    {{ background-color: #339af0; }}
 progressbar.stamina-bar progress {{ background-color: #fcc419; }}
@@ -223,27 +228,26 @@ progressbar.bat-good progress    {{ background-color: {a}; }}
 
 button.wifi-btn, button.kb-btn, button.ctrl-pill, button.ctrl-pill-perf {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-radius: {r_sm}px;
-    padding: 0px 10px; min-height: 32px; font-size: 11.5px; font-weight: bold;
+    padding: 0px 9px; min-height: 32px; font-size: 11.5px; font-weight: bold;
 }}
 button.wifi-btn:hover, button.kb-btn:hover, button.ctrl-pill:hover, button.ctrl-pill-perf:hover {{
     background-color: {p}; border-color: {a}; color: #ffffff;
 }}
 
-/* Playtest кнопки для GameDev Engine Studio */
 button.ide-play-btn {{
     background-color: #1b3826; color: #63d994; border: 1px solid #2ea043; border-radius: 5px;
-    padding: 0px 14px; min-height: 32px; font-size: 12px; font-weight: bold;
+    padding: 0px 13px; min-height: 32px; font-size: 11.5px; font-weight: bold;
 }}
 button.ide-play-btn:hover {{ background-color: #2ea043; color: #ffffff; }}
 
 button.ide-build-btn {{
     background-color: #1c2d42; color: #8ce0ff; border: 1px solid #478cbf; border-radius: 5px;
-    padding: 0px 12px; min-height: 32px; font-size: 12px; font-weight: bold;
+    padding: 0px 11px; min-height: 32px; font-size: 11.5px; font-weight: bold;
 }}
 button.ide-build-btn:hover {{ background-color: #478cbf; color: #ffffff; }}
 
 .audio-capsule, .power-capsule {{
-    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 6px; min-height: 32px;
+    background-color: {bg}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 0px 5px; min-height: 32px;
 }}
 button.audio-icon-btn, button.icon-act-btn {{
     background-color: transparent; color: {fg}; border: none; border-radius: 4px;
@@ -256,10 +260,10 @@ button.danger-act-btn {{
     padding: 0px 6px; min-height: 26px; font-size: 11px; font-weight: bold;
 }}
 button.danger-act-btn:hover {{ background-color: #3b141e; }}
-.vol-pct {{ font-size: 11px; font-weight: bold; color: {s}; min-width: 28px; }}
+.vol-pct {{ font-size: 10.5px; font-weight: bold; color: {s}; min-width: 26px; }}
 
 scale {{ padding: 0px 3px; }}
-scale trough    {{ background-color: {bg_alt}; border-radius: 3px; min-height: 6px; }}
+scale trough    {{ background-color: {bg_alt}; border-radius: 3px; min-height: 5px; }}
 scale highlight {{ background-color: {a}; border-radius: 3px; }}
 scale slider {{
     background-color: {fg}; border: 2px solid {p}; border-radius: {r_sm}px;
@@ -273,99 +277,27 @@ scale slider {{
 
 entry.search-entry {{
     background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-left: 3px solid {a};
-    border-radius: {r}px; padding: 7px 14px; font-size: 13px;
+    border-radius: {r}px; padding: 6px 12px; font-size: 13px;
 }}
 entry.search-entry:focus {{ border-color: {a}; }}
 
 button.primary-btn {{
-    background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-left: 4px solid {a};
-    border-radius: {r}px; padding: 7px 14px; font-weight: bold;
+    background-color: {bg_alt}; color: {fg}; border: 1px solid {p}; border-left: 3px solid {a};
+    border-radius: {r}px; padding: 6px 12px; font-weight: bold; font-size: 11.5px;
 }}
 button.primary-btn:hover {{ background-color: {p}; border-color: {a}; }}
 
 button.secondary-btn {{
     background-color: {bg_alt}; color: {s}; border: 1px solid {a}; border-radius: {r}px;
-    padding: 7px 12px; font-weight: bold;
+    padding: 6px 11px; font-weight: bold; font-size: 11.5px;
 }}
 button.secondary-btn:hover {{ background-color: {a}; color: {bg}; }}
 
-/* Стили карточек для всех 5 миров */
 button.app-card {{
     background-color: {cbg}; border: 1px solid {p}; border-radius: {r}px;
     padding: 11px 14px; min-width: 235px; min-height: 84px;
 }}
 button.app-card:hover {{ background-color: {bg_alt}; border-color: {a}; }}
-
-/* Карточка Артефакта / Оружия (The Dungeon of God) */
-button.dungeon-card-legendary {{
-    background-color: rgba(26, 15, 10, 0.95);
-    border: 2px solid #f5b82e;
-    border-left: 5px solid #ff922b;
-    border-radius: 4px;
-    padding: 10px 14px;
-    min-width: 255px;
-    min-height: 88px;
-}}
-button.dungeon-card-epic {{
-    background-color: rgba(20, 12, 18, 0.95);
-    border: 1px solid #d93829;
-    border-left: 4px solid #f5b82e;
-    border-radius: 4px;
-    padding: 10px 14px;
-    min-width: 255px;
-    min-height: 88px;
-}}
-button.dungeon-card-legendary:hover, button.dungeon-card-epic:hover {{
-    background-color: #2b1812;
-    border-color: #ffe066;
-}}
-.rarity-leg  {{ font-size: 9.5px; font-weight: bold; color: #fcc419; font-family: monospace; }}
-.rarity-epic {{ font-size: 9.5px; font-weight: bold; color: #ff8787; font-family: monospace; }}
-.stat-buff   {{ font-size: 10px; font-weight: bold; color: #63e6be; font-family: monospace; }}
-
-/* Карточка Лесного Ручья */
-button.forest-card {{
-    background-color: rgba(13, 28, 21, 0.88);
-    border: 1px solid #40916c;
-    border-radius: 18px;
-    padding: 12px 16px;
-    min-width: 230px;
-    min-height: 86px;
-}}
-button.forest-card:hover {{
-    background-color: rgba(24, 52, 38, 0.95);
-    border-color: #95d5b2;
-}}
-
-/* Карточка Импасто Галереи (мазки краски) */
-button.impasto-card {{
-    background-color: rgba(34, 25, 22, 0.93);
-    border: 2px solid #e07a5f;
-    border-bottom: 4px solid #f2cc8f;
-    border-radius: 10px;
-    padding: 12px 15px;
-    min-width: 245px;
-    min-height: 88px;
-}}
-button.impasto-card:hover {{
-    background-color: #362722;
-    border-color: #f2cc8f;
-}}
-
-/* Нода Игрового Движка (GameDev IDE) */
-button.gamedev-node {{
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    border-left: 4px solid #478cbf;
-    border-radius: 5px;
-    padding: 9px 12px;
-    min-width: 235px;
-    min-height: 68px;
-}}
-button.gamedev-node:hover {{
-    background-color: #1f2937;
-    border-color: #63d994;
-}}
 
 .stripe-pinned {{ background-color: {a}; border-radius: 3px; min-width: 4px; }}
 .stripe-normal {{ background-color: {p}; border-radius: 3px; min-width: 4px; }}
@@ -380,30 +312,32 @@ button.gamedev-node:hover {{
 """
 
 # ==============================================================================
-# ГЕНЕРАТОРЫ ОБОЕВ ДЛЯ ВСЕХ 5 МИРОВ (Включая Лесной Ручей и 3D-бугорки Импасто)
+# НОВЫЕ ХУДОЖЕСТВЕННЫЕ ОБОИ ДЛЯ ВСЕХ 5 ТЕМ (Быстрый рендер + Атомарное сохранение)
 # ==============================================================================
-def draw_impasto_stroke(cr, x, y, w, h, angle, r, g, b):
-    # Рисует объёмный густой мазок масляной краски с 3D-бугорком (верхний световой блик + нижняя густая тень + бороздки кисти)
+def draw_impasto_dab(cr, x, y, w, h, angle, r, g, b):
+    # Рисует густой рельефный мазок мастихина с округлым 3D-бугорком, бликом сверху и глубокой тенью снизу
     cr.save()
     cr.translate(x, y)
     cr.rotate(angle)
-    # 1. Тень под бугорком краски
-    cr.set_source_rgba(max(0, r*0.32), max(0, g*0.30), max(0, b*0.28), 0.78)
-    cr.rectangle(-w/2 + 2.2, -h/2 + 2.8, w, h)
+    hw, hh = w * 0.5, h * 0.5
+    # 1. Глубокая тень под бугорком краски
+    cr.set_source_rgba(max(0, r * 0.25), max(0, g * 0.23), max(0, b * 0.22), 0.85)
+    cr.arc(0, 3.2, hw, 0, 2 * math.pi)
     cr.fill()
-    # 2. Световой гребень бугорка (верхняя грань мазка)
-    cr.set_source_rgba(min(1, r*1.28 + 0.08), min(1, g*1.24 + 0.06), min(1, b*1.18 + 0.05), 0.92)
-    cr.rectangle(-w/2 - 1.4, -h/2 - 1.8, w, h * 0.45)
+    # 2. Основное густое масляное тело мазка
+    cr.set_source_rgb(r, g, b)
+    cr.scale(1.0, max(0.35, h / max(1.0, w)))
+    cr.arc(0, 0, hw, 0, 2 * math.pi)
     cr.fill()
-    # 3. Основное густое тело краски
-    cr.set_source_rgba(r, g, b, 0.96)
-    cr.rectangle(-w/2, -h/2, w, h)
-    cr.fill()
-    # 4. Фактурные бороздки от щетины кисти / мастихина
-    cr.set_line_width(1.1)
-    cr.set_source_rgba(min(1, r*1.35 + 0.10), min(1, g*1.30 + 0.08), min(1, b*1.22 + 0.06), 0.45)
-    for by in (-h*0.28, 0.0, h*0.25):
-        cr.move_to(-w*0.44, by); cr.line_to(w*0.44, by)
+    # 3. Выпуклый световой гребень бугорка сверху
+    cr.set_line_width(2.6)
+    cr.set_source_rgba(min(1, r * 1.35 + 0.12), min(1, g * 1.30 + 0.10), min(1, b * 1.22 + 0.08), 0.90)
+    cr.arc(0, -1.5, hw * 0.82, math.pi * 1.1, math.pi * 1.9)
+    cr.stroke()
+    # 4. Внутренний рельефный след от мастихина
+    cr.set_line_width(1.4)
+    cr.set_source_rgba(min(1, r * 1.20 + 0.05), min(1, g * 1.18 + 0.04), min(1, b * 1.12 + 0.03), 0.55)
+    cr.arc(0, 1.0, hw * 0.55, 0.2, math.pi * 0.8)
     cr.stroke()
     cr.restore()
 
@@ -414,179 +348,265 @@ def render_world_wallpaper(t):
     lay = t["layout"]
     PRIM, ACC, BG = hex_rgb(t["primary"]), hex_rgb(t["accent"]), hex_rgb(t["bg"])
 
-    if lay == "forest":
-        # === МИР 3: ЛЕСНОЙ РУЧЕЙ (Многослойные сосны, солнечные лучи в тумане, горный ручей с камнями и бликами) ===
-        sky = cairo.LinearGradient(0, 0, 0, H * 0.65)
-        sky.add_color_stop_rgb(0.0, 0.04, 0.11, 0.09)
-        sky.add_color_stop_rgb(0.5, 0.08, 0.22, 0.17)
-        sky.add_color_stop_rgb(1.0, 0.16, 0.38, 0.28)
+    if lay == "dungeon":
+        # === 2. THE DUNGEON OF GOD (2D Dark Rogue-Platformer Boss Arena by ssOh-v1) ===
+        # Глубокое подземное святилище с готическими колоннами, каменными платформами, цепями и Вратами Босса
+        bg_g = cairo.LinearGradient(0, 0, 0, H)
+        bg_g.add_color_stop_rgb(0.0, 0.03, 0.015, 0.02)
+        bg_g.add_color_stop_rgb(0.55, 0.07, 0.03, 0.035)
+        bg_g.add_color_stop_rgb(1.0, 0.04, 0.018, 0.02)
+        cr.set_source(bg_g); cr.paint()
+
+        # Багрово-золотое зарево из глубины подземелья
+        core_g = cairo.RadialGradient(W * 0.5, H * 0.56, 20, W * 0.5, H * 0.56, 620)
+        core_g.add_color_stop_rgba(0.0, 0.95, 0.35, 0.15, 0.34)
+        core_g.add_color_stop_rgba(0.5, 0.65, 0.12, 0.12, 0.14)
+        core_g.add_color_stop_rgba(1.0, 0, 0, 0, 0)
+        cr.set_source(core_g); cr.paint()
+
+        # Дальние готические колонны и сводчатые арки
+        cr.set_source_rgba(0.05, 0.025, 0.03, 0.92)
+        for px in (140, 420, 1500, 1780):
+            cr.rectangle(px - 36, 0, 72, H); cr.fill()
+            cr.set_line_width(2.0); cr.set_source_rgba(0.32, 0.14, 0.12, 0.35)
+            cr.move_to(px - 36, 0); cr.line_to(px - 36, H); cr.stroke()
+            cr.set_source_rgba(0.05, 0.025, 0.03, 0.92)
+
+        # Свисающие кованые цепи с потолка
+        cr.set_line_width(3.0); cr.set_source_rgba(0.28, 0.18, 0.16, 0.70)
+        for cx_ch, ch_len in [(280, 340), (620, 240), (1300, 260), (1640, 360)]:
+            for y_ch in range(0, ch_len, 18):
+                cr.arc(cx_ch, y_ch + 9, 6, 0, 2 * math.pi); cr.stroke()
+
+        # Центральные Врата Босса и рунический алтарь (на главной платформе)
+        cx, cy = W * 0.5, H * 0.56
+        cr.set_line_width(4.0); cr.set_source_rgba(0.95, 0.68, 0.20, 0.45)
+        cr.arc(cx, cy - 30, 185, math.pi, 2 * math.pi); cr.stroke()
+        cr.arc(cx, cy - 30, 165, math.pi, 2 * math.pi); cr.stroke()
+        cr.rectangle(cx - 185, cy - 30, 370, 190); cr.stroke()
+
+        # Парящие каменные платформы 2D рогалика-платформера (с золотисто-багровой рунической кромкой)
+        platforms = [
+            (W * 0.50 - 340, H * 0.74, 680, 44),  # Центральная арена алтаря
+            (W * 0.12,       H * 0.60, 360, 34),  # Левый ярус
+            (W * 0.88 - 360, H * 0.60, 360, 34),  # Правый ярус
+            (W * 0.24,       H * 0.38, 290, 30),  # Верхний левый уступ
+            (W * 0.76 - 290, H * 0.38, 290, 30),  # Верхний правый уступ
+        ]
+        for px, py, pw, ph in platforms:
+            # Тень под платформой
+            cr.set_source_rgba(0.02, 0.01, 0.01, 0.95)
+            cr.rectangle(px + 6, py + 8, pw, ph); cr.fill()
+            # Каменный блок платформы
+            cr.set_source_rgb(0.12, 0.07, 0.07)
+            cr.rectangle(px, py, pw, ph); cr.fill_preserve()
+            cr.set_line_width(2.2); cr.set_source_rgb(0.45, 0.20, 0.16); cr.stroke()
+            # Светящаяся верхняя кромка для прыжков
+            cr.set_source_rgb(0.95, 0.68, 0.20)
+            cr.rectangle(px + 4, py, pw - 8, 3.5); cr.fill()
+            # Насечки кирпичей на платформе
+            cr.set_line_width(1.5); cr.set_source_rgba(0.25, 0.12, 0.11, 0.8)
+            for bx in range(int(px + 48), int(px + pw - 20), 48):
+                cr.move_to(bx, py + 4); cr.line_to(bx, py + ph - 2)
+            cr.stroke()
+
+        # Пьедестал артефакта в центре арены
+        cr.set_source_rgb(0.18, 0.10, 0.09)
+        cr.rectangle(cx - 46, H * 0.74 - 36, 92, 36); cr.fill_preserve()
+        cr.set_line_width(2.0); cr.set_source_rgb(0.95, 0.68, 0.20); cr.stroke()
+
+        # Два горящих жаровни-факела по краям центральной платформы
+        for bx in (cx - 250, cx + 250):
+            by = H * 0.74
+            cr.set_source_rgb(0.16, 0.09, 0.08)
+            cr.rectangle(bx - 12, by - 42, 24, 42); cr.fill()
+            cr.set_source_rgb(0.96, 0.72, 0.20)
+            cr.move_to(bx - 20, by - 42); cr.line_to(bx + 20, by - 42); cr.line_to(bx + 12, by - 30); cr.line_to(bx - 12, by - 30); cr.close_path(); cr.fill()
+
+    elif lay == "forest":
+        # === 3. ЛЕСНОЙ РУЧЕЙ (Многослойный сосновый каньон, солнечные лучи и изумрудный поток с порогами) ===
+        sky = cairo.LinearGradient(0, 0, 0, H * 0.62)
+        sky.add_color_stop_rgb(0.0, 0.05, 0.16, 0.14)
+        sky.add_color_stop_rgb(0.55, 0.12, 0.34, 0.26)
+        sky.add_color_stop_rgb(1.0, 0.32, 0.64, 0.46)
         cr.set_source(sky); cr.paint()
 
-        # Мягкое утреннее солнце и сквозные лучи сквозь кроны
-        sun = cairo.RadialGradient(W * 0.52, H * 0.18, 10, W * 0.52, H * 0.18, 520)
-        sun.add_color_stop_rgba(0.0, 0.78, 0.96, 0.84, 0.35)
-        sun.add_color_stop_rgba(0.5, 0.45, 0.80, 0.62, 0.12)
-        sun.add_color_stop_rgba(1.0, 0, 0, 0, 0)
-        cr.set_source(sun); cr.paint()
+        # Солнечное сияние в верхушках сосен и косые объёмные лучи света (God rays)
+        sun_x, sun_y = W * 0.48, H * 0.14
+        sg = cairo.RadialGradient(sun_x, sun_y, 10, sun_x, sun_y, 580)
+        sg.add_color_stop_rgba(0.0, 0.92, 1.0, 0.86, 0.55)
+        sg.add_color_stop_rgba(0.45, 0.55, 0.90, 0.70, 0.20)
+        sg.add_color_stop_rgba(1.0, 0, 0, 0, 0)
+        cr.set_source(sg); cr.paint()
 
-        # Дальние лесные склоны и силуэты елей в дымке
-        random.seed(108)
-        for layer_i, (base_y, col_r, col_g, col_b, tree_h) in enumerate([
-            (H * 0.50, 0.09, 0.24, 0.18, 130),
-            (H * 0.58, 0.06, 0.18, 0.13, 175),
-            (H * 0.67, 0.04, 0.12, 0.09, 220),
-        ]):
-            cr.set_source_rgb(col_r, col_g, col_b)
-            cr.move_to(0, H); cr.line_to(0, base_y)
-            for x in range(0, W + 60, 45):
-                ty = base_y - random.randint(20, tree_h)
-                cr.line_to(x - 18, base_y)
-                cr.line_to(x, ty)
-                cr.line_to(x + 18, base_y)
-            cr.line_to(W, H); cr.close_path(); cr.fill()
+        for ray_ang, ray_w in [(-0.35, 90), (-0.12, 130), (0.15, 110), (0.38, 85)]:
+            cr.save()
+            cr.translate(sun_x, sun_y); cr.rotate(ray_ang)
+            rlg = cairo.LinearGradient(0, 0, 0, 950)
+            rlg.add_color_stop_rgba(0.0, 0.88, 1.0, 0.85, 0.16)
+            rlg.add_color_stop_rgba(1.0, 0.45, 0.85, 0.65, 0.0)
+            cr.set_source(rlg)
+            cr.move_to(-ray_w*0.2, 0); cr.line_to(ray_w*0.2, 0); cr.line_to(ray_w*1.6, 950); cr.line_to(-ray_w*1.6, 950); cr.close_path(); cr.fill()
+            cr.restore()
 
-        # Берега мшистого ущелья
-        cr.set_source_rgb(0.03, 0.09, 0.06)
-        cr.rectangle(0, H * 0.64, W, H * 0.36); cr.fill()
+        # Детализированные многоярусные ели на левом и правом склонах ущелья
+        random.seed(24)
+        def draw_pine_tree(tx, ty_base, th, col):
+            cr.set_source_rgb(*col)
+            tiers = 5
+            for t_i in range(tiers):
+                frac = t_i / float(tiers)
+                y_top = ty_base - th + frac * (th * 0.75)
+                y_bot = y_top + th * 0.32
+                w_tier = (th * 0.28) * (1.0 - frac * 0.65)
+                cr.move_to(tx, y_top)
+                cr.line_to(tx - w_tier, y_bot)
+                cr.line_to(tx + w_tier, y_bot)
+                cr.close_path(); cr.fill()
 
-        # Извилистый горный ручей с зеркальной бирюзовой водой
-        stream_pts_l = [(W*0.46, H*0.62), (W*0.38, H*0.73), (W*0.26, H*0.86), (W*0.14, H)]
-        stream_pts_r = [(W*0.56, H*0.62), (W*0.65, H*0.74), (W*0.78, H*0.87), (W*0.88, H)]
-        cr.move_to(*stream_pts_l[0])
-        for p in stream_pts_l[1:]: cr.line_to(*p)
-        for p in reversed(stream_pts_r): cr.line_to(*p)
+        # 3 плана леса (от светлого туманного к густому хвойному на переднем плане)
+        for base_y, col, min_h, max_h, step_x in [
+            (H * 0.54, (0.14, 0.36, 0.27), 140, 220, 42),
+            (H * 0.62, (0.09, 0.25, 0.19), 180, 280, 52),
+            (H * 0.70, (0.05, 0.16, 0.12), 230, 350, 64),
+        ]:
+            for x in range(-20, W + 40, step_x):
+                # Оставляем центральное русло открытым для света и воды
+                dist_center = abs(x - W * 0.50)
+                if dist_center < 180 and base_y > H * 0.56:
+                    continue
+                draw_pine_tree(x + random.uniform(-10, 10), base_y + random.uniform(-12, 12), random.uniform(min_h, max_h), col)
+
+        # Изумрудно-мшистые берега каньона
+        cr.set_source_rgb(0.04, 0.12, 0.08)
+        cr.rectangle(0, H * 0.62, W, H * 0.38); cr.fill()
+
+        # Извилистое русло горного ручья с зеркальным отражением неба
+        left_bank  = [(W*0.44, H*0.60), (W*0.36, H*0.72), (W*0.24, H*0.86), (W*0.10, H)]
+        right_bank = [(W*0.56, H*0.60), (W*0.66, H*0.73), (W*0.78, H*0.87), (W*0.90, H)]
+        cr.move_to(*left_bank[0])
+        for p in left_bank[1:]: cr.line_to(*p)
+        for p in reversed(right_bank): cr.line_to(*p)
         cr.close_path()
-        w_lg = cairo.LinearGradient(0, H * 0.62, 0, H)
-        w_lg.add_color_stop_rgb(0.0, 0.22, 0.58, 0.48)
-        w_lg.add_color_stop_rgb(0.5, 0.14, 0.42, 0.36)
-        w_lg.add_color_stop_rgb(1.0, 0.08, 0.26, 0.24)
-        cr.set_source(w_lg); cr.fill()
 
-        # Водная рябь, пороги и речные валуны
-        cr.set_line_width(2.2)
-        for i in range(28):
-            ry = H * 0.64 + (i / 28.0) * (H * 0.34)
-            spread = 50 + (i / 28.0) * 480
-            rx = W * 0.51 + math.sin(i * 0.55) * 45 + random.uniform(-spread*0.4, spread*0.4)
-            rw = random.uniform(28, 85)
-            cr.set_source_rgba(0.72, 0.96, 0.85, 0.38)
+        wlg = cairo.LinearGradient(0, H * 0.60, 0, H)
+        wlg.add_color_stop_rgb(0.0, 0.42, 0.82, 0.66)
+        wlg.add_color_stop_rgb(0.45, 0.18, 0.54, 0.44)
+        wlg.add_color_stop_rgb(1.0, 0.08, 0.28, 0.24)
+        cr.set_source(wlg); cr.fill()
+
+        # Пенные перекаты, водные блики и гладкие речные валуны
+        for i in range(42):
+            ry = H * 0.62 + (i / 42.0) * (H * 0.36)
+            span = 80 + (i / 42.0) * 580
+            rx = W * 0.50 + math.sin(i * 0.45) * 35 + random.uniform(-span*0.42, span*0.42)
+            rw = random.uniform(35, 110)
+            cr.set_line_width(2.4)
+            cr.set_source_rgba(0.82, 0.98, 0.90, 0.45)
             cr.move_to(rx - rw/2, ry); cr.line_to(rx + rw/2, ry); cr.stroke()
 
-        # Речные камни и светлячки над водой
-        for bx, by, br in [(W*0.39, H*0.78, 26), (W*0.61, H*0.82, 34), (W*0.32, H*0.91, 42), (W*0.68, H*0.93, 38)]:
-            cr.arc(bx, by, br, math.pi, 2*math.pi)
-            cr.set_source_rgb(0.12, 0.19, 0.16); cr.fill_preserve()
-            cr.set_line_width(1.8); cr.set_source_rgba(0.58, 0.88, 0.74, 0.5); cr.stroke()
-
-        for _ in range(35):
-            fx, fy = random.uniform(120, W - 120), random.uniform(140, H - 100)
-            fg_g = cairo.RadialGradient(fx, fy, 1, fx, fy, 14)
-            fg_g.add_color_stop_rgba(0, 0.80, 1.0, 0.75, 0.65)
-            fg_g.add_color_stop_rgba(1, 0.45, 0.85, 0.60, 0.0)
-            cr.set_source(fg_g); cr.arc(fx, fy, 14, 0, 2*math.pi); cr.fill()
+        for bx, by, br in [(W*0.38, H*0.76, 32), (W*0.62, H*0.80, 40), (W*0.29, H*0.89, 52), (W*0.71, H*0.92, 46), (W*0.49, H*0.85, 28)]:
+            cr.save(); cr.translate(bx, by); cr.scale(1.35, 0.72)
+            cr.arc(0, 0, br, 0, 2 * math.pi)
+            cr.set_source_rgb(0.11, 0.18, 0.15); cr.fill_preserve()
+            cr.set_line_width(2.2); cr.set_source_rgba(0.65, 0.92, 0.78, 0.55); cr.stroke()
+            cr.restore()
 
     elif lay == "impasto":
-        # === МИР 4: ИМПАСТО ПЕЙЗАЖ (Густые рельефные мазки масла с физическими бугорками и светотенью) ===
-        random.seed(77)
-        cr.set_source_rgb(0.11, 0.09, 0.08); cr.paint()
+        # === 4. ИМПАСТО ПЕЙЗАЖ (Картина маслом с физическими 3D-бугорками краски, рендерится за 0.35с!) ===
+        random.seed(55)
+        cr.set_source_rgb(0.12, 0.09, 0.08); cr.paint()
 
-        # 1. Небо на закате — вихревые рельефные мазки вокруг золотого солнца (в духе Ван Гога / импасто)
-        sun_x, sun_y = W * 0.64, H * 0.30
-        for y in range(0, int(H * 0.58), 16):
-            for x in range(0, W, 28):
+        sun_x, sun_y = W * 0.62, H * 0.28
+        # 1. Концентрические вихревые мазки неба вокруг закатного солнца (1,100 крупных рельефных мазков)
+        for y in range(10, int(H * 0.56), 24):
+            for x in range(15, W, 42):
                 dx, dy = x - sun_x, y - sun_y
                 dist = math.hypot(dx, dy)
-                ang = math.atan2(dy, dx) + math.pi / 2.0 + math.sin(x * 0.006) * 0.25
-                if dist < 170:
-                    col = (0.97, 0.84, 0.46)
-                elif dist < 340:
-                    col = (0.91, 0.56, 0.36)
-                elif y < H * 0.26:
-                    col = (0.16, 0.22, 0.38)
+                ang = math.atan2(dy, dx) + math.pi * 0.5 + math.sin(x * 0.005) * 0.22
+                if dist < 140:
+                    col = (0.98, 0.86, 0.48)
+                elif dist < 290:
+                    col = (0.92, 0.58, 0.36)
+                elif dist < 460:
+                    col = (0.76, 0.42, 0.44)
+                elif y < H * 0.25:
+                    col = (0.16, 0.24, 0.42)
                 else:
-                    col = (0.26, 0.31, 0.46)
-                jit = random.uniform(-0.04, 0.04)
-                draw_impasto_stroke(
-                    cr, x + random.uniform(-6, 6), y + random.uniform(-5, 5),
-                    random.uniform(34, 54), random.uniform(13, 20), ang,
-                    min(1, max(0, col[0]+jit)), min(1, max(0, col[1]+jit)), min(1, max(0, col[2]+jit))
-                )
+                    col = (0.25, 0.34, 0.52)
+                j = random.uniform(-0.04, 0.04)
+                draw_impasto_dab(cr, x + random.uniform(-8, 8), y + random.uniform(-6, 6), random.uniform(48, 72), random.uniform(18, 26), ang, col[0]+j, col[1]+j, col[2]+j)
 
-        # 2. Горная гряда — косые рельефные мазки мастихина (терракота, индиго и охра)
-        for x in range(0, W, 24):
-            ridge_top = H * 0.47 + math.sin(x * 0.0045) * 65 + math.cos(x * 0.011) * 30
-            for y in range(int(ridge_top), int(H * 0.72), 15):
-                t_rel = (y - ridge_top) / max(1.0, (H * 0.72 - ridge_top))
-                r = 0.22 + 0.42 * (1.0 - t_rel) + random.uniform(-0.04, 0.04)
-                g = 0.18 + 0.25 * (1.0 - t_rel) + random.uniform(-0.03, 0.03)
-                b = 0.28 + 0.18 * t_rel + random.uniform(-0.03, 0.03)
-                draw_impasto_stroke(cr, x, y, random.uniform(32, 48), random.uniform(14, 21), -0.38 if (x % 48 == 0) else 0.32, r, g, b)
+        # 2. Рельефные лавандово-терракотовые горы на горизонте
+        for x in range(10, W, 34):
+            top_y = H * 0.45 + math.sin(x * 0.0042) * 70 + math.cos(x * 0.010) * 32
+            for y in range(int(top_y), int(H * 0.70), 22):
+                u = (y - top_y) / max(1.0, H * 0.70 - top_y)
+                r = 0.26 + 0.44 * (1.0 - u) + random.uniform(-0.03, 0.03)
+                g = 0.20 + 0.26 * (1.0 - u) + random.uniform(-0.03, 0.03)
+                b = 0.34 + 0.16 * u + random.uniform(-0.03, 0.03)
+                draw_impasto_dab(cr, x, y, random.uniform(44, 64), random.uniform(18, 25), -0.35 if (x // 34) % 2 == 0 else 0.30, r, g, b)
 
-        # 3. Передний план — золотисто-охристые поля и отражения воды густыми горизонтальными бугорками
-        for y in range(int(H * 0.68), H + 10, 14):
-            for x in range(0, W, 26):
-                is_river = abs(x - (W * 0.54 + math.sin(y * 0.02) * 140)) < (80 + (y - H*0.68)*0.6)
-                if is_river:
-                    col = (0.24, 0.46, 0.56) if random.random() > 0.35 else (0.94, 0.78, 0.48)
+        # 3. Золотисто-охристые холмы и извилистая лазурная река на переднем плане
+        for y in range(int(H * 0.67), H + 12, 20):
+            for x in range(12, W, 38):
+                riv_center = W * 0.54 + math.sin(y * 0.018) * 150
+                is_riv = abs(x - riv_center) < (75 + (y - H * 0.67) * 0.65)
+                if is_riv:
+                    col = (0.22, 0.50, 0.62) if random.random() > 0.32 else (0.96, 0.80, 0.46)
                 else:
-                    col = (0.78, 0.44, 0.28) if random.random() > 0.45 else (0.88, 0.68, 0.36)
-                draw_impasto_stroke(
-                    cr, x + random.uniform(-5, 5), y,
-                    random.uniform(36, 56), random.uniform(12, 18),
-                    random.uniform(-0.12, 0.12),
-                    col[0] + random.uniform(-0.04, 0.04), col[1] + random.uniform(-0.04, 0.04), col[2] + random.uniform(-0.04, 0.04)
-                )
+                    col = (0.82, 0.46, 0.30) if random.random() > 0.45 else (0.91, 0.70, 0.38)
+                j = random.uniform(-0.04, 0.04)
+                draw_impasto_dab(cr, x + random.uniform(-6, 6), y, random.uniform(48, 70), random.uniform(16, 22), random.uniform(-0.14, 0.14), col[0]+j, col[1]+j, col[2]+j)
 
-        # 4. Фактурные кипарисы справа (вертикальные густые мазки тёмного изумруда и бронзы)
-        for tree_x, tree_w, tree_top in [(W * 0.86, 74, H * 0.16), (W * 0.92, 52, H * 0.28)]:
-            for y in range(int(tree_top), int(H * 0.88), 14):
-                w_cur = tree_w * math.sin(((y - tree_top) / (H * 0.88 - tree_top)) * math.pi * 0.85)
-                for x in range(int(tree_x - w_cur/2), int(tree_x + w_cur/2), 14):
-                    draw_impasto_stroke(cr, x, y, 16, 26, -1.45 + random.uniform(-0.2, 0.2), 0.10 + random.uniform(0, 0.08), 0.22 + random.uniform(0, 0.10), 0.15)
-
-    elif lay == "dungeon":
-        # === МИР 2: THE DUNGEON OF GOD (Каменные своды подземелья, алтарь, факелы и руны для SDDM/статичного кэша) ===
-        cr.set_source_rgb(0.04, 0.025, 0.022); cr.paint()
-        # Каменная кладка подземелья
-        for row, y in enumerate(range(0, H, 64)):
-            ox = 48 if (row % 2) else 0
-            for x in range(-48, W, 96):
-                cr.set_source_rgba(0.09, 0.06, 0.05, 0.85)
-                cr.rectangle(x + ox + 2, y + 2, 92, 60); cr.fill_preserve()
-                cr.set_line_width(1.2); cr.set_source_rgba(0.22, 0.14, 0.11, 0.45); cr.stroke()
-
-        # Свет факелов и рунический круг в центре
-        for tx, ty in [(W*0.22, H*0.42), (W*0.78, H*0.42), (W*0.50, H*0.55)]:
-            rg = cairo.RadialGradient(tx, ty, 8, tx, ty, 440)
-            rg.add_color_stop_rgba(0.0, 0.96, 0.58, 0.18, 0.26)
-            rg.add_color_stop_rgba(0.5, 0.85, 0.22, 0.14, 0.10)
-            rg.add_color_stop_rgba(1.0, 0, 0, 0, 0)
-            cr.set_source(rg); cr.paint()
-
-        cx, cy = W * 0.5, H * 0.54
-        cr.set_line_width(2.2); cr.set_source_rgba(0.96, 0.72, 0.20, 0.32)
-        cr.arc(cx, cy, 240, 0, 2*math.pi); cr.stroke()
-        cr.arc(cx, cy, 224, 0, 2*math.pi); cr.stroke()
+        # 4. Фактурные кипарисы справа (вертикальные густые бугорки изумрудного и бронзового масла)
+        for tx, tw, ttop in [(W * 0.86, 82, H * 0.15), (W * 0.93, 56, H * 0.27)]:
+            for y in range(int(ttop), int(H * 0.89), 18):
+                w_cur = tw * math.sin(((y - ttop) / (H * 0.89 - ttop)) * math.pi * 0.88)
+                for x in range(int(tx - w_cur * 0.5), int(tx + w_cur * 0.5), 18):
+                    draw_impasto_dab(cr, x, y, 22, 34, -1.48 + random.uniform(-0.18, 0.18), 0.11 + random.uniform(0, 0.08), 0.25 + random.uniform(0, 0.12), 0.16)
 
     elif lay == "gamedev":
-        # === МИР 5: GAMEDEV ENGINE STUDIO (Чертёжный Viewport 2D/3D с осями координат X/Y и пиксельной сеткой) ===
-        cr.set_source_rgb(0.05, 0.065, 0.085); cr.paint()
-        cr.set_line_width(1.0); cr.set_source_rgba(0.28, 0.55, 0.75, 0.06)
+        # === 5. СРЕДА РАЗРАБОТКИ ИГР (Чертёжный 2D/3D Viewport с макетом уровня, коллизиями и Gizmo) ===
+        cr.set_source_rgb(0.05, 0.067, 0.090); cr.paint()
+        cr.set_line_width(1.0); cr.set_source_rgba(0.28, 0.55, 0.75, 0.07)
         for x in range(32, W, 32): cr.move_to(x, 0); cr.line_to(x, H)
         for y in range(32, H, 32): cr.move_to(0, y); cr.line_to(W, y)
         cr.stroke()
-        cr.set_source_rgba(0.28, 0.55, 0.75, 0.14)
+        cr.set_source_rgba(0.28, 0.55, 0.75, 0.16)
         for x in range(128, W, 128): cr.move_to(x, 0); cr.line_to(x, H)
         for y in range(128, H, 128): cr.move_to(0, y); cr.line_to(W, y)
         cr.stroke()
-        # Главные оси координат сцены (X — красная, Y — зелёная, как в Godot / Unity)
+
         cx, cy = W * 0.5, H * 0.52
-        cr.set_line_width(2.0)
-        cr.set_source_rgba(0.92, 0.32, 0.36, 0.45); cr.move_to(0, cy); cr.line_to(W, cy); cr.stroke()
-        cr.set_source_rgba(0.38, 0.85, 0.58, 0.45); cr.move_to(cx, 0); cr.line_to(cx, H); cr.stroke()
+        # Оси координат сцены X (красная) и Y (зелёная)
+        cr.set_line_width(1.8)
+        cr.set_source_rgba(0.92, 0.32, 0.36, 0.50); cr.move_to(0, cy); cr.line_to(W, cy); cr.stroke()
+        cr.set_source_rgba(0.39, 0.85, 0.58, 0.50); cr.move_to(cx, 0); cr.line_to(cx, H); cr.stroke()
+
+        # Рамка камеры игрового вьюпорта (Camera2D Bounds)
+        cam_w, cam_h = 980, 540
+        cam_x, cam_y = cx - cam_w * 0.5, cy - cam_h * 0.5
+        cr.set_line_width(1.8); cr.set_source_rgba(0.55, 0.88, 1.0, 0.45)
+        cr.rectangle(cam_x, cam_y, cam_w, cam_h); cr.stroke()
+
+        # Геометрия 2D-уровня с коллайдерами (StaticBody2D / CollisionShape2D) внутри вьюпорта
+        for bx, by, bw, bh in [(cx - 380, cy + 120, 760, 42), (cx - 320, cy - 20, 240, 28), (cx + 80, cy - 60, 260, 28)]:
+            cr.set_source_rgba(0.18, 0.34, 0.48, 0.38)
+            cr.rectangle(bx, by, bw, bh); cr.fill_preserve()
+            cr.set_line_width(1.6); cr.set_source_rgba(0.39, 0.85, 0.58, 0.65); cr.stroke()
+
+        # Узел игрока (Player CharacterBody2D) с трансформационным Gizmo
+        px, py = cx - 180, cy - 56
+        cr.set_source_rgba(0.28, 0.55, 0.75, 0.30); cr.rectangle(px - 22, py - 34, 44, 68); cr.fill_preserve()
+        cr.set_line_width(2.0); cr.set_source_rgba(0.39, 0.85, 0.58, 0.90); cr.stroke()
+        # Стрелки Gizmo X/Y
+        cr.set_line_width(2.8)
+        cr.set_source_rgb(0.95, 0.35, 0.38); cr.move_to(px, py); cr.line_to(px + 58, py); cr.stroke()
+        cr.set_source_rgb(0.39, 0.85, 0.58); cr.move_to(px, py); cr.line_to(px, py - 58); cr.stroke()
 
     else:
-        # === МИР 1: CYBERDECK CLASSIC ===
+        # === 1. CYBERDECK CLASSIC ===
         cr.set_source_rgb(*BG); cr.paint()
         for cx, cy, rad, col, al in [(W*0.15, H*0.14, 620, PRIM, 0.13), (W*0.85, H*0.86, 620, ACC, 0.11)]:
             rg = cairo.RadialGradient(cx, cy, 10, cx, cy, rad)
@@ -602,9 +622,15 @@ def render_world_wallpaper(t):
             cr.move_to(x1, y1); cr.line_to(x2, y2); cr.line_to(x3, y3)
         cr.stroke()
 
+    # Атомарное сохранение PNG, чтобы рабочий стол никогда не читал недописанный файл
     for nm in ("work_hud_bg.png", "gaming_hud_bg.png", "cyberdeck_hud_bg.png", "sddm_bg.png", "lock_hud_bg.png"):
-        surf.write_to_png(os.path.join(CACHE_DIR, nm))
-    surf.write_to_png(os.path.join(HOME, ".config/hypr/assets/terminal_hud_bg.png"))
+        dst = os.path.join(CACHE_DIR, nm)
+        tmp_p = dst + ".tmp"
+        surf.write_to_png(tmp_p)
+        os.replace(tmp_p, dst)
+    t_dst = os.path.join(HOME, ".config/hypr/assets/terminal_hud_bg.png")
+    surf.write_to_png(t_dst + ".tmp")
+    os.replace(t_dst + ".tmp", t_dst)
 
 def rebuild_world_cursor(theme_id, t):
     cur_name = f"CyberDeck-Cursor-{theme_id}"
@@ -629,62 +655,29 @@ def rebuild_world_cursor(theme_id, t):
         return s, cr
 
     def draw_arrow(cr):
+        pts = [(3.0, 2.0), (3.0, 24.5), (8.6, 19.2), (12.8, 27.0), (16.0, 25.2), (11.8, 17.5), (19.8, 16.5)]
+        cr.save(); cr.translate(1.2, 1.5); cr.move_to(*pts[0])
+        for pt in pts[1:]: cr.line_to(*pt)
+        cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.55); cr.fill(); cr.restore()
+
+        cr.move_to(*pts[0])
+        for pt in pts[1:]: cr.line_to(*pt)
+        cr.close_path()
+        cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
+        cr.set_line_width(2.0); cr.set_source_rgb(*ACC); cr.stroke()
+
         if shape == "dagger":
-            # 2. THE DUNGEON OF GOD: Рунический клинок искателя подземелий (тёмная сталь + золотая руна + багровая кромка)
-            pts = [(2.5, 2.0), (4.0, 24.5), (9.5, 19.2), (14.2, 27.2), (17.5, 25.2), (12.8, 17.5), (21.0, 15.0)]
-            cr.save(); cr.translate(1.2, 1.5); cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.60); cr.fill(); cr.restore()
-
-            cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path()
-            cr.set_source_rgba(0.12, 0.07, 0.06, 0.97); cr.fill_preserve()
-            cr.set_line_width(2.0); cr.set_source_rgb(*ACC); cr.stroke()
-            # Внутренняя руна огня
             cr.set_line_width(1.6); cr.set_source_rgb(*PRIM)
-            cr.move_to(5.0, 6.0); cr.line_to(11.0, 16.0); cr.stroke()
+            cr.move_to(5.2, 6.2); cr.line_to(11.0, 16.0); cr.stroke()
             cr.arc(5.2, 6.2, 1.8, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
-
         elif shape == "leaf":
-            # 3. ЛЕСНОЙ РУЧЕЙ: Органический изумрудный лист с прожилкой росы
-            pts = [(3.0, 2.5), (3.5, 24.0), (9.0, 19.2), (13.0, 26.8), (16.2, 25.0), (12.2, 17.5), (19.8, 16.5)]
-            cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path()
-            cr.set_source_rgba(0.05, 0.14, 0.10, 0.96); cr.fill_preserve()
-            cr.set_line_width(2.0); cr.set_source_rgb(*ACC); cr.stroke()
-            cr.arc(5.5, 6.5, 1.7, 0, 2*math.pi); cr.set_source_rgb(0.85, 1.0, 0.90); cr.fill()
-
+            cr.arc(5.5, 6.5, 1.8, 0, 2*math.pi); cr.set_source_rgb(0.85, 1.0, 0.90); cr.fill()
         elif shape == "brush":
-            # 4. ИМПАСТО ПЕЙЗАЖ: Мастихин художника с золотисто-охристым мазком краски на кончике
-            pts = [(3.0, 2.0), (3.5, 24.5), (9.0, 19.0), (13.5, 27.0), (16.8, 25.2), (12.2, 17.2), (20.2, 16.0)]
-            cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path()
-            cr.set_source_rgba(0.16, 0.11, 0.09, 0.96); cr.fill_preserve()
-            cr.set_line_width(2.0); cr.set_source_rgb(*PRIM); cr.stroke()
-            cr.arc(5.2, 6.0, 2.1, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
-
+            cr.arc(5.2, 6.0, 2.1, 0, 2*math.pi); cr.set_source_rgb(*PRIM); cr.fill()
         elif shape == "gizmo":
-            # 5. GAMEDEV ENGINE STUDIO: Инженерный курсор-гизмо с осями X/Y у вершины
-            pts = [(3, 2), (3, 24), (8.8, 19.2), (12.6, 27.5), (16.0, 25.8), (12.2, 17.6), (19.8, 17.6)]
-            cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path()
-            cr.set_source_rgba(0.08, 0.11, 0.15, 0.97); cr.fill_preserve()
-            cr.set_line_width(1.9); cr.set_source_rgb(*PRIM); cr.stroke()
-            cr.set_line_width(1.8); cr.set_source_rgb(*ACC)
-            cr.move_to(5.0, 5.5); cr.line_to(5.0, 14.5); cr.move_to(5.0, 5.5); cr.line_to(13.0, 12.0); cr.stroke()
-
+            cr.set_line_width(1.7); cr.set_source_rgb(*PRIM)
+            cr.move_to(5.2, 5.8); cr.line_to(5.2, 14.8); cr.move_to(5.2, 5.8); cr.line_to(13.2, 12.2); cr.stroke()
         else:
-            # 1. CYBERDECK CLASSIC
-            pts = [(3,2),(3,24),(8.8,19.2),(12.6,27.5),(16.0,25.8),(12.2,17.6),(19.8,17.6)]
-            cr.move_to(*pts[0])
-            for pt in pts[1:]: cr.line_to(*pt)
-            cr.close_path()
-            cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
-            cr.set_line_width(1.9); cr.set_source_rgb(*ACC); cr.stroke()
             cr.arc(5.2, 5.8, 1.6, 0, 2*math.pi); cr.set_source_rgb(*PRIM); cr.fill()
 
     def draw_pointer(cr):
@@ -807,11 +800,6 @@ def rebuild_world_cursor(theme_id, t):
 def update_terminals(t):
     p_hex, a_hex, s_hex, bg_hex, bg_alt, fg_hex = t["primary"], t["accent"], t["soft"], t["bg"], t["bg_alt"], t["fg"]
     p_c, a_c, s_c, bg_c, bg_ac, fg_c = p_hex.lstrip("#"), a_hex.lstrip("#"), s_hex.lstrip("#"), bg_hex.lstrip("#"), bg_alt.lstrip("#"), fg_hex.lstrip("#")
-    pr, pg, pb = hex_rgb_int(p_hex)
-    ar, ag, ab = hex_rgb_int(a_hex)
-    sr, sg_i, sb = hex_rgb_int(s_hex)
-    sym = t["symbol"]
-    short = t["short"].upper()
 
     open(os.path.join(HOME, ".config/foot/foot.ini"), "w", encoding="utf-8").write(f"""[main]
 font=monospace:size=11.5
@@ -895,38 +883,11 @@ def apply_backend(theme_id, restart_hub=True):
             txt = re.sub(r"#[0-9a-fA-F]{6}", lambda m: (p_hex if m.group(0).lower() in all_prim else (a_hex if m.group(0).lower() in all_acc else m.group(0))), txt)
             open(script_p, "w", encoding="utf-8").write(txt)
 
-    subprocess.run(["/usr/bin/python3", os.path.join(HOME, ".local/bin/cyber-icons-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run(["/usr/bin/python3", os.path.join(HOME, ".local/bin/cyber-firefox-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
+    # Генерируем обои, терминал и курсор СРАЗУ (а иконки/Firefox/GRUB синхронизируем в фоне без задержки анимации!)
     render_world_wallpaper(t)
     update_terminals(t)
     rebuild_world_cursor(theme_id, t)
 
-    for rasi_p in (os.path.join(HOME, ".config/hypr/gaming_launcher.rasi"), os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")):
-        if os.path.isfile(rasi_p):
-            rtxt = open(rasi_p, "r", encoding="utf-8").read()
-            rtxt = re.sub(r"cyan:\s*#[0-9a-fA-F]{6};", f"cyan:        {a_hex};", rtxt)
-            rtxt = re.sub(r"indigo:\s*#[0-9a-fA-F]{6};", f"indigo:      {p_hex};", rtxt)
-            rtxt = re.sub(r"bg:\s*#[0-9a-fA-F]{6};", f"bg:          {bg_hex};", rtxt)
-            open(rasi_p, "w", encoding="utf-8").write(rtxt)
-
-    p_c, a_c = p_hex.lstrip("#"), a_hex.lstrip("#")
-    h_round = int(t["hypr_round"])
-    for hconf in glob.glob(os.path.join(HOME, ".config/hypr/*.conf")):
-        htxt = open(hconf, "r", encoding="utf-8").read()
-        htxt = re.sub(r"col\.active_border\s*=\s*.*", f"col.active_border = rgba({p_c}ff) rgba({a_c}ff) 45deg", htxt)
-        htxt = re.sub(r"rounding\s*=\s*\d+", f"rounding = {h_round}", htxt)
-        htxt = re.sub(r"env\s*=\s*XCURSOR_THEME,.*", f"env = XCURSOR_THEME,{cur_name}", htxt)
-        htxt = re.sub(r"exec-once\s*=\s*hyprctl setcursor .*", f"exec-once = hyprctl setcursor {cur_name} 28", htxt)
-        open(hconf, "w", encoding="utf-8").write(htxt)
-
-    subprocess.run([
-        "hyprctl", "--batch",
-        f"keyword general:col.active_border rgba({p_c}ff) rgba({a_c}ff) 45deg ; keyword decoration:rounding {h_round} ; keyword env XCURSOR_THEME,{cur_name} ; setcursor {cur_name} 28"
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    subprocess.run(["sudo", "-n", "/usr/local/bin/cyber-theme-sys-sync", HOME, p_hex, a_hex, cur_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    # Индивидуальный вид окна уведомлений и OSD раскладки в Mako под каждый из 5 миров
     lay = t.get("layout", "cyberdeck")
     if lay == "dungeon":
         kb_rad, kb_bsize, kb_anchor = 3, 2, "top-center"
@@ -975,6 +936,29 @@ padding=11,15
 """
     open(os.path.join(HOME, ".config/mako/config"), "w", encoding="utf-8").write(mako_cfg)
 
+    for rasi_p in (os.path.join(HOME, ".config/hypr/gaming_launcher.rasi"), os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")):
+        if os.path.isfile(rasi_p):
+            rtxt = open(rasi_p, "r", encoding="utf-8").read()
+            rtxt = re.sub(r"cyan:\s*#[0-9a-fA-F]{6};", f"cyan:        {a_hex};", rtxt)
+            rtxt = re.sub(r"indigo:\s*#[0-9a-fA-F]{6};", f"indigo:      {p_hex};", rtxt)
+            rtxt = re.sub(r"bg:\s*#[0-9a-fA-F]{6};", f"bg:          {bg_hex};", rtxt)
+            open(rasi_p, "w", encoding="utf-8").write(rtxt)
+
+    p_c, a_c = p_hex.lstrip("#"), a_hex.lstrip("#")
+    h_round = int(t["hypr_round"])
+    for hconf in glob.glob(os.path.join(HOME, ".config/hypr/*.conf")):
+        htxt = open(hconf, "r", encoding="utf-8").read()
+        htxt = re.sub(r"col\.active_border\s*=\s*.*", f"col.active_border = rgba({p_c}ff) rgba({a_c}ff) 45deg", htxt)
+        htxt = re.sub(r"rounding\s*=\s*\d+", f"rounding = {h_round}", htxt)
+        htxt = re.sub(r"env\s*=\s*XCURSOR_THEME,.*", f"env = XCURSOR_THEME,{cur_name}", htxt)
+        htxt = re.sub(r"exec-once\s*=\s*hyprctl setcursor .*", f"exec-once = hyprctl setcursor {cur_name} 28", htxt)
+        open(hconf, "w", encoding="utf-8").write(htxt)
+
+    subprocess.run([
+        "hyprctl", "--batch",
+        f"keyword general:col.active_border rgba({p_c}ff) rgba({a_c}ff) 45deg ; keyword decoration:rounding {h_round} ; keyword env XCURSOR_THEME,{cur_name} ; setcursor {cur_name} 28"
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
     subprocess.run(["makoctl", "reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     if restart_hub:
@@ -985,17 +969,13 @@ padding=11,15
         for old_proc in ("work-hub-desktop.py", "game-hub-desktop.py", "cyberdeck-hub-desktop.py"):
             subprocess.run(["pkill", "-9", "-f", old_proc], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        for _ in range(30):
-            if subprocess.call(["pgrep", "-f", "hub-desktop.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
-                break
-            time.sleep(0.04)
-
+        time.sleep(0.15)
         env = os.environ.copy()
         env["XCURSOR_THEME"] = cur_name
         env["XCURSOR_SIZE"] = "28"
         if os.path.isfile("/usr/lib/libgtk4-layer-shell.so"):
             env["LD_PRELOAD"] = "/usr/lib/libgtk4-layer-shell.so"
-        subprocess.Popen(["/usr/bin/python3", os.path.join(HOME, ".local/bin", target_py)], env=env, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(["/usr/bin/python3", os.path.join(HOME, ".local/bin", target_py)], env=env, start_new_session=True, stdout=open("/tmp/work-hub.err", "w"), stderr=subprocess.STDOUT)
 
         for _ in range(40):
             try:
@@ -1004,6 +984,11 @@ padding=11,15
             except Exception:
                 pass
             time.sleep(0.05)
+
+    # Фоновая синхронизация иконок, Firefox, SDDM и GRUB (не задерживает отрисовку стола!)
+    subprocess.Popen(["/usr/bin/python3", os.path.join(HOME, ".local/bin/cyber-icons-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.Popen(["/usr/bin/python3", os.path.join(HOME, ".local/bin/cyber-firefox-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.Popen(["sudo", "-n", "/usr/local/bin/cyber-theme-sys-sync", HOME, p_hex, a_hex, cur_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def show_menu():
     subprocess.run(["pkill", "-x", "rofi"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
