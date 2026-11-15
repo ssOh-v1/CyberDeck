@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+import json, subprocess
+
+try:
+    modes = subprocess.check_output(["makoctl", "mode"], text=True, stderr=subprocess.DEVNULL).splitlines()
+    is_dnd = "do-not-disturb" in modes
+    hist = subprocess.check_output(["makoctl", "history"], text=True, stderr=subprocess.DEVNULL)
+    cnt = hist.count("Notification ")
+    if is_dnd:
+        print(json.dumps({"text": f"󰂛 {cnt}", "class": "dnd", "tooltip": f"Не беспокоить ВКЛ (в истории: {cnt})\nЛКМ: Открыть панель уведомлений\nПКМ: Включить звук уведомлений"}))
+    else:
+        ic = "󰂚" if cnt > 0 else "󰂜"
+        print(json.dumps({"text": f"{ic} {cnt}", "class": "normal", "tooltip": f"Уведомлений в истории: {cnt}\nЛКМ: Открыть виджет уведомлений\nПКМ: Режим «Не беспокоить»"}))
+except Exception:
+    print(json.dumps({"text": "󰂜 0", "tooltip": "Центр уведомлений"}))

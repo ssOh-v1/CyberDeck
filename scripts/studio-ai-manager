@@ -1,0 +1,81 @@
+#!/usr/bin/python3
+import os, json, subprocess
+
+os.environ.pop("LD_PRELOAD", None)
+HOME = os.path.expanduser("~")
+MODELS_F = os.path.join(HOME, ".config/cyberdeck/ai_models.json")
+ROFI_T   = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
+
+CATALOG = [
+    {"id": "claude-hybrid", "name": "Claude 3.5 Haiku (Анализ и Код)",     "provider": "pollinations", "model": "claude-hybridspace"},
+    {"id": "gemini-flash",  "name": "Gemini 2.0 Flash (Быстрый поиск)",    "provider": "pollinations", "model": "gemini"},
+    {"id": "qwq-32b",       "name": "Qwen QwQ 32B (Математика и Физика)",  "provider": "pollinations", "model": "qwq"},
+    {"id": "phi-4",         "name": "Microsoft Phi-4 (Компактный ИИ)",     "provider": "pollinations", "model": "phi"},
+    {"id": "codellama",     "name": "Ollama: CodeLlama (Локальная)",       "provider": "ollama",       "model": "codellama"},
+    {"id": "deepseek-loc",  "name": "Ollama: DeepSeek-Coder (Локальная)",  "provider": "ollama",       "model": "deepseek-coder"},
+]
+
+def rofi_ask(prompt, lines):
+    cmd = ["rofi", "-dmenu", "-i", "-p", prompt]
+    if os.path.isfile(ROFI_T): cmd += ["-theme", ROFI_T]
+    p = subprocess.run(cmd, input="\n".join(lines), text=True, capture_output=True)
+    return p.stdout.strip() if p.returncode == 0 else ""
+
+try:
+    models = json.load(open(MODELS_F, encoding="utf-8"))
+except Exception:
+    models = []
+
+menu = [
+    "➕  Добавить нейросеть из каталога доступных моделей",
+    "🛠  Добавить свою собственную нейросеть (Custom API / Ollama / OpenRouter)",
+    "🗑  Удалить нейросеть из списка виджета",
+]
+ch = rofi_ask("🧠 УПРАВЛЕНИЕ НЕЙРОСЕТЯМИ", menu)
+
+if "из каталога" in ch:
+    existing_ids = {m["id"] for m in models}
+    avail = [c for c in CATALOG if c["id"] not in existing_ids]
+    if not avail:
+        subprocess.Popen(["notify-send", "-a", "cyber-kb", "▣ AI STUDIO", "Все модели из каталога уже добавлены"])
+    else:
+        c_lines = [f"➕ {c['name']}  [{c['model']}]" for c in avail]
+        sel = rofi_ask("Выберите модель", c_lines)
+        for c in avail:
+            if c["name"] in sel:
+                models.append(c)
+                json.dump(models, open(MODELS_F, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+                subprocess.Popen(["notify-send", "-a", "cyber-kb", "▣ AI STUDIO", f"Добавлена модель: {c['name']}"])
+                break
+
+elif "свою собственную" in ch:
+    name = rofi_ask("1/4 Название вашей нейросети", ["Моя Нейросеть (Custom)"])
+    if name:
+        prov = rofi_ask("2/4 Тип подключения", [
+            "pollinations (Бесплатное облако по ID модели)",
+            "ollama (Локальная модель из Ollama)",
+            "openai-custom (Свой URL OpenAI-совместимого API / OpenRouter)"
+        ])
+        prov_key = "ollama" if "ollama" in prov else ("custom" if "custom" in prov else "pollinations")
+        mod_id = rofi_ask("3/4 ID модели (например: openai, llama3, gpt-4o)", ["openai"])
+        api_url, api_key = "", ""
+        if prov_key == "custom":
+            api_url = rofi_ask("4/4 URL API (например: https://openrouter.ai/api/v1/chat/completions)", ["https://openrouter.ai/api/v1/chat/completions"])
+            api_key = rofi_ask("API Ключ (если требуется)", [""])
+        if mod_id:
+            models.append({
+                "id": f"custom-{len(models)+1}",
+                "name": name,
+                "provider": prov_key,
+                "model": mod_id,
+                "url": api_url,
+                "key": api_key,
+            })
+            json.dump(models, open(MODELS_F, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+            subprocess.Popen(["notify-send", "-a", "cyber-kb", "▣ AI STUDIO", f"Нейросеть «{name}» добавлена в виджет!"])
+
+elif "Удалить" in ch and len(models) > 1:
+    d_lines = [f"🗑 {m['name']}" for m in models]
+    sel = rofi_ask("Удалить модель", d_lines)
+    models = [m for m in models if m["name"] not in sel]
+    json.dump(models, open(MODELS_F, "w", encoding="utf-8"), ensure_ascii=False, indent=2)

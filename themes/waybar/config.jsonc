@@ -13,15 +13,15 @@
 
   "modules-left": [
     "custom/launcher",
-    "hyprland/workspaces"
+    "hyprland/workspaces",
+    "cpu",
+    "memory"
   ],
 
   "modules-center": [],
 
   "modules-right": [
     "custom/media",
-    "cpu",
-    "memory",
     "backlight",
     "backlight/slider",
     "pulseaudio",
@@ -30,6 +30,7 @@
     "custom/power-mode",
     "hyprland/language",
     "battery",
+    "custom/notifications",
     "clock",
     "custom/lock",
     "custom/poweroff"
@@ -37,7 +38,7 @@
 
   "custom/launcher": {
     "format": "▣",
-    "tooltip-format": "ЛКМ: Лаунчер приложений (Rofi)\nПКМ: Системный монитор Btop",
+    "tooltip-format": "ЛКМ: Лаунчер приложений (Rofi)\nПКМ: Большой системный монитор Btop",
     "on-click": "rofi -show drun -theme ~/.config/hypr/gaming_launcher.rasi",
     "on-click-right": "~/.local/bin/cyber-tool btop"
   },
@@ -51,6 +52,21 @@
     "sort-by-number": true
   },
 
+  "cpu": {
+    "interval": 2,
+    "format": "󰻠 CPU {usage}%",
+    "tooltip-format": "Процессор: {usage}%\nЛКМ — открыть большой Btop",
+    "on-click": "~/.local/bin/cyber-tool btop"
+  },
+
+  "memory": {
+    "interval": 3,
+    "format": "󰍛 RAM {used:0.1f}G",
+    "tooltip-format": "ОЗУ: {used:0.1f} GB / {total:0.1f} GB\nЛКМ: Btop • ПКМ: Очистить кэш ОЗУ",
+    "on-click": "~/.local/bin/cyber-tool btop",
+    "on-click-right": "sudo -n /usr/local/bin/cyber-power-hw purge-ram && notify-send -a cyber-kb '▣ STUDIO' 'Кэш ОЗУ очищен'"
+  },
+
   "custom/media": {
     "exec": "~/.local/bin/waybar-media",
     "return-type": "json",
@@ -58,21 +74,6 @@
     "on-click": "playerctl play-pause",
     "on-scroll-up": "playerctl previous",
     "on-scroll-down": "playerctl next"
-  },
-
-  "cpu": {
-    "interval": 2,
-    "format": "󰻠 {usage}%",
-    "tooltip-format": "Нагрузка CPU: {usage}%\nЛКМ — открыть Btop",
-    "on-click": "~/.local/bin/cyber-tool btop"
-  },
-
-  "memory": {
-    "interval": 3,
-    "format": "󰍛 {used:0.1f}G",
-    "tooltip-format": "ОЗУ: {used:0.1f} GB / {total:0.1f} GB\nПКМ — очистить кэш ОЗУ",
-    "on-click": "~/.local/bin/cyber-tool btop",
-    "on-click-right": "sudo -n /usr/local/bin/cyber-power-hw purge-ram && notify-send -a cyber-kb '▣ STUDIO' 'Кэш ОЗУ очищен'"
   },
 
   "backlight": {
@@ -92,7 +93,7 @@
   "pulseaudio": {
     "format": "󰕾 {volume}%",
     "format-muted": "󰝟 MUTE",
-    "tooltip-format": "Звук: {volume}% (ЛКМ — микшер, ПКМ — Mute)",
+    "tooltip-format": "Системный звук: {volume}% (ЛКМ — микшер, ПКМ — Mute)",
     "on-click": "~/.local/bin/cyber-audio-menu",
     "on-click-right": "pamixer -t",
     "on-scroll-up": "pamixer -i 5",
@@ -116,7 +117,8 @@
     "exec": "~/.local/bin/waybar-power-mode",
     "return-type": "json",
     "interval": 2,
-    "on-click": "~/.local/bin/cyber-power toggle"
+    "on-click": "~/.local/bin/cyber-power toggle",
+    "on-click-right": "~/.local/bin/cyber-power menu"
   },
 
   "hyprland/language": {
@@ -135,6 +137,14 @@
     "format": "󰁹 {capacity}%",
     "format-charging": "󰂄 {capacity}%",
     "format-plugged": "󰚥 {capacity}%"
+  },
+
+  "custom/notifications": {
+    "exec": "~/.local/bin/waybar-notif-status",
+    "return-type": "json",
+    "interval": 2,
+    "on-click": "touch /tmp/studio_toggle_notif_center",
+    "on-click-right": "makoctl mode -t do-not-disturb"
   },
 
   "clock": {

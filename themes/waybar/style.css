@@ -178,3 +178,35 @@ tooltip label {
     border-color: #5c626d;
     color: #ffffff;
 }
+
+#custom-notifications {
+    background-color: #181a1f;
+    color: #d4d8de;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 11px;
+    border: 1px solid #282c34;
+    border-radius: 4px;
+    padding: 0px 8px;
+    margin: 3px 1px;
+}
+
+#custom-notifications.dnd {
+    background-color: #282224;
+    color: #b09ea2;
+    border-color: #524246;
+}
+
+#custom-notifications:hover {
+    background-color: #282c34;
+    border-color: #6c727d;
+    color: #ffffff;
+}
+
+#custom-power-mode.eco {
+    color: #9ea4b0;
+}
+
+#custom-power-mode.bal {
+    color: #d4d8de;
+    border-color: #383d47;
+}

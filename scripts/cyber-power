@@ -1,31 +1,44 @@
 #!/bin/bash
 unset LD_PRELOAD
 ACT="${1:-get}"
-CUR="eco"
+CUR="balanced"
 [ -f /run/cyberdeck-power-mode ] && CUR=$(cat /run/cyberdeck-power-mode 2>/dev/null)
-[ "$CUR" != "performance" ] && CUR="eco"
 
 if [ "$ACT" = "get" ]; then
     echo "$CUR"
     exit 0
 fi
 
-if [ "$ACT" = "toggle" ]; then
-    if [ "$CUR" = "performance" ]; then TARGET="eco"; else TARGET="performance"; fi
+if [ "$ACT" = "menu" ]; then
+    CHOICE=$(printf "󰾆  Эконом (Максимальное энергосбережение, без Turbo Boost)\n󰗑  Баланс (Оптимальный режим для кода и повседневной работы)\n󰓅  Производительность (Максимальные частоты CPU/GPU для игр)" | rofi -dmenu -i -p "⚡ РЕЖИМ ПИТАНИЯ" -theme ~/.config/hypr/cyber_wifi.rasi)
+    case "$CHOICE" in
+        *Эконом*) TARGET="eco" ;;
+        *Баланс*) TARGET="balanced" ;;
+        *Производительность*) TARGET="performance" ;;
+        *) exit 0 ;;
+    esac
+    NOTIFY=1
+elif [ "$ACT" = "toggle" ]; then
+    case "$CUR" in
+        eco)         TARGET="balanced" ;;
+        balanced)    TARGET="performance" ;;
+        performance) TARGET="eco" ;;
+        *)           TARGET="balanced" ;;
+    esac
     NOTIFY=1
 else
-    [ "$ACT" = "performance" ] && TARGET="performance" || TARGET="eco"
+    TARGET="$ACT"
     NOTIFY=0
 fi
 
-# Сохраняем текущий уровень подсветки перед сменой профиля
 SAVED_BRI=$(brightnessctl -m 2>/dev/null | cut -d, -f4 | tr -d '%')
 sudo -n /usr/local/bin/cyber-power-hw "$TARGET"
 [ -n "$SAVED_BRI" ] && brightnessctl -q set "${SAVED_BRI}%" 2>/dev/null || true
 
-if [ "$TARGET" = "performance" ]; then
-    hyprctl --batch "keyword decoration:blur:enabled false ; keyword decoration:shadow:enabled false" >/dev/null 2>&1 || true
-    [ "$NOTIFY" = "1" ] && notify-send -i "$HOME/.config/hypr/assets/ui/turbo.svg" "◈ ПИТАНИЕ // ПЕРФОМАНС" "Активен игровой профиль CPU/GPU и фиксированный кадр"
-else
-    [ "$NOTIFY" = "1" ] && notify-send -i "$HOME/.config/hypr/assets/ui/eco.svg" "◈ ПИТАНИЕ // ЭКО" "Энергосберегающий режим активен (яркость сохранена)"
+if [ "$NOTIFY" = "1" ]; then
+    case "$TARGET" in
+        eco)         notify-send -a cyber-kb "󰾆 ПИТАНИЕ // ЭКОНОМ" "Максимальное энергосбережение (Turbo Boost отключён)" ;;
+        balanced)    notify-send -a cyber-kb "󰗑 ПИТАНИЕ // БАЛАНС" "Сбалансированный профиль для работы и мультимедиа" ;;
+        performance) notify-send -a cyber-kb "󰓅 ПИТАНИЕ // ПРОИЗВОДИТЕЛЬНОСТЬ" "Максимальные частоты CPU/GPU для игр и компиляции" ;;
+    esac
 fi

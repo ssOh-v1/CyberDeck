@@ -20,26 +20,22 @@ open(PID_FILE, "w").write(str(os.getpid()))
 def norm_layout(raw):
     low = raw.lower()
     if any(k in low for k in ("ru", "rus", "рус", "cyrillic")):
-        return "RU", "Русская раскладка", "Кириллица • UTF-8"
-    return "EN", "English layout", "Latin US • UTF-8"
+        return "RU", "Русская раскладка", "EN  ──▸  [ RU ]"
+    return "EN", "English layout", "[ EN ]  ◂──  RU"
 
-def build_keycap_svg(code):
+def build_switch_svg(code):
     svg_path = f"/tmp/cyber_kb_badge_{UID}.svg"
     is_ru = (code == "RU")
-    dot_en = "#525761" if is_ru else "#d4d8de"
-    dot_ru = "#d4d8de" if is_ru else "#525761"
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
-  <defs>
-    <linearGradient id="kc" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#282c34"/>
-      <stop offset="100%" stop-color="#191b20"/>
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="40" height="40" rx="9" fill="#121316" stroke="#454a52" stroke-width="1.5"/>
-  <rect x="5" y="4" width="34" height="33" rx="6" fill="url(#kc)" stroke="#6c727d" stroke-width="1.2"/>
-  <text x="22" y="25" text-anchor="middle" font-family="JetBrainsMono Nerd Font, Inter, monospace" font-weight="800" font-size="14.5" fill="#f0f3f8">{code}</text>
-  <circle cx="18" cy="39" r="1.6" fill="{dot_en}"/>
-  <circle cx="26" cy="39" r="1.6" fill="{dot_ru}"/>
+    bg_en = "#181a1f" if is_ru else "#343942"
+    fg_en = "#6c727d" if is_ru else "#ffffff"
+    bg_ru = "#343942" if is_ru else "#181a1f"
+    fg_ru = "#ffffff" if is_ru else "#6c727d"
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="56" height="40" viewBox="0 0 56 40">
+  <rect x="1" y="4" width="54" height="32" rx="7" fill="#121316" stroke="#454a52" stroke-width="1.5"/>
+  <rect x="4" y="7" width="23" height="26" rx="5" fill="{bg_en}"/>
+  <rect x="29" y="7" width="23" height="26" rx="5" fill="{bg_ru}"/>
+  <text x="15.5" y="24" text-anchor="middle" font-family="JetBrainsMono Nerd Font, Inter, monospace" font-weight="800" font-size="11" fill="{fg_en}">EN</text>
+  <text x="40.5" y="24" text-anchor="middle" font-family="JetBrainsMono Nerd Font, Inter, monospace" font-weight="800" font-size="11" fill="{fg_ru}">RU</text>
 </svg>"""
     open(svg_path, "w", encoding="utf-8").write(svg)
     return svg_path
@@ -47,13 +43,13 @@ def build_keycap_svg(code):
 def send_kb_notify(code, title_txt, sub_txt):
     open(STATE_FILE, "w").write(code)
     subprocess.Popen([os.path.join(HOME, ".local/bin/cyber-kb-sync-x11")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    icon_p = build_keycap_svg(code)
+    icon_p = build_switch_svg(code)
     subprocess.Popen([
         "notify-send", "-a", "cyber-kb",
         "-h", "string:x-canonical-private-synchronous:cyber-kb",
         "-i", icon_p,
-        f"▣ {title_txt}",
-        f"<span foreground='#9ea4b0' size='small'>{sub_txt}</span>"
+        f"{title_txt}",
+        f"<tt><span foreground='#9ea4b0'>{sub_txt}</span></tt>"
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 try:

@@ -1,8 +1,14 @@
 #!/bin/bash
-MODE="eco"
+MODE="balanced"
 [ -f /run/cyberdeck-power-mode ] && MODE=$(cat /run/cyberdeck-power-mode 2>/dev/null)
-if [ "$MODE" = "performance" ]; then
-    printf '{"text": "󰓅 PERF", "class": "perf", "tooltip": "Режим: Перфоманс (ЛКМ — переключить на Эко)"}\n'
-else
-    printf '{"text": "󰾆 ECO", "class": "eco", "tooltip": "Режим: Эко (ЛКМ — переключить на Перфоманс)"}\n'
-fi
+case "$MODE" in
+    eco)
+        printf '{"text": "󰾆 ЭКОНОМ", "class": "eco", "tooltip": "Режим: Эконом (максимальное сбережение батареи)\nЛКМ: следующий режим • ПКМ: меню выбора"}\n'
+        ;;
+    performance)
+        printf '{"text": "󰓅 ПРОИЗВ", "class": "perf", "tooltip": "Режим: Производительность (максимум CPU/GPU для игр)\nЛКМ: следующий режим • ПКМ: меню выбора"}\n'
+        ;;
+    *)
+        printf '{"text": "󰗑 БАЛАНС", "class": "bal", "tooltip": "Режим: Баланс (оптимально для работы)\nЛКМ: следующий режим • ПКМ: меню выбора"}\n'
+        ;;
+esac

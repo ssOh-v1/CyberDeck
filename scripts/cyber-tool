@@ -1,28 +1,20 @@
 #!/bin/bash
 unset LD_PRELOAD
-ACTION="${1:-btop}"
-TERM_BIN=$(command -v foot || command -v kitty || command -v alacritty || echo "xterm")
-case "$ACTION" in
+case "$1" in
     btop)
-        MON_CMD=$(command -v btop || command -v htop || echo "top")
-        if [[ "$TERM_BIN" == *"foot"* ]]; then exec foot --app-id=floating-btop -e "$MON_CMD"
-        elif [[ "$TERM_BIN" == *"kitty"* ]]; then exec kitty --class floating-btop -e "$MON_CMD"
-        else exec "$TERM_BIN" -e "$MON_CMD"; fi
+        # Открываем Btop в большом центрированном окне 1480x880
+        hyprctl dispatch exec "[float; size 1480 880; center] foot --app-id=floating-btop -o main.pad=14x10 -e btop" >/dev/null 2>&1
+        ;;
+    pick)
+        HEX=$(hyprpicker -a -n 2>/dev/null)
+        [ -n "$HEX" ] && notify-send -a cyber-kb "▣ ПИПЕТКА // $HEX" "Цвет скопирован в буфер обмена"
         ;;
     shot)
         mkdir -p "$HOME/Pictures/Screenshots"
-        FILE="$HOME/Pictures/Screenshots/shot_$(date +%Y%m%d_%H%M%S).png"
-        GEOM=$(slurp 2>/dev/null) || exit 0
-        [ -z "$GEOM" ] && exit 0
-        grim -g "$GEOM" "$FILE" && wl-copy < "$FILE"
-        notify-send "◈ СКРИНШОТ СОХРАНЁН" "Скопировано в буфер и $FILE"
-        ;;
-    pick)
-        if command -v hyprpicker >/dev/null 2>&1; then
-            HEX=$(hyprpicker -a 2>/dev/null | tr -d '\n')
-            [ -n "$HEX" ] && notify-send "◈ ЦВЕТ СКОПИРОВАН" "HEX: $HEX"
-        else
-            notify-send "◈ ПИПЕТКА" "Установите пакет hyprpicker"
+        OUT="$HOME/Pictures/Screenshots/shot_$(date +%Y%m%d_%H%M%S).png"
+        if grim -g "$(slurp 2>/dev/null)" "$OUT" 2>/dev/null; then
+            wl-copy < "$OUT" 2>/dev/null || true
+            notify-send -a cyber-kb "▣ СКРИНШОТ СОХРАНЁН" "Скопирован в буфер и папку Screenshots"
         fi
         ;;
 esac
