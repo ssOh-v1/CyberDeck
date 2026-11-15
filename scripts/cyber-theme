@@ -52,38 +52,38 @@ THEMES = {
     "forest-stream": {
         "layout": "forest",
         "cursor_shape": "leaf",
-        "title": "🌿 3. Лесной Ручей (Forest Stream) // Открытый стол + Парящий Waybar + Док",
+        "title": "🌿 3. Лесной Ручей (Forest Stream) // Прозрачный лесной Waybar + Чистый док",
         "short": "ForestStream",
         "badge": "FOREST // STREAM",
         "symbol": "🌿",
-        "primary": "#2d6a4f",
-        "accent":  "#74c69d",
-        "soft":    "#b7e4c7",
-        "bg":      "#07120d",
-        "bg_alt":  "#10241b",
-        "fg":      "#e8f7ee",
-        "card_bg": "rgba(12, 26, 19, 0.88)",
-        "deck_bg": "rgba(9, 20, 15, 0.91)",
-        "radius":  18,
-        "hypr_round": 14,
+        "primary": "#40916c",
+        "accent":  "#95d5b2",
+        "soft":    "#e9c46a",
+        "bg":      "#0b1913",
+        "bg_alt":  "#142e23",
+        "fg":      "#f1faee",
+        "card_bg": "rgba(11, 25, 19, 0.76)",
+        "deck_bg": "rgba(11, 25, 19, 0.74)",
+        "radius":  20,
+        "hypr_round": 16,
     },
     "impasto-landscape": {
         "layout": "impasto",
         "cursor_shape": "brush",
-        "title": "🎨 4. Импасто Пейзаж (3D-бугорки краски) // Открытый холст + Боковой мольберт",
+        "title": "🎨 4. Импасто Пейзаж (3D-мазки масла) // Галерейный Waybar + Чистый док",
         "short": "ImpastoArt",
         "badge": "ATELIER // IMPASTO",
         "symbol": "🎨",
         "primary": "#e07a5f",
         "accent":  "#f2cc8f",
-        "soft":    "#f4a261",
-        "bg":      "#141010",
-        "bg_alt":  "#241b19",
-        "fg":      "#fbf2e3",
-        "card_bg": "rgba(28, 21, 19, 0.90)",
-        "deck_bg": "rgba(22, 16, 15, 0.93)",
-        "radius":  10,
-        "hypr_round": 8,
+        "soft":    "#81b29a",
+        "bg":      "#191724",
+        "bg_alt":  "#262338",
+        "fg":      "#fbf4e8",
+        "card_bg": "rgba(25, 23, 36, 0.80)",
+        "deck_bg": "rgba(25, 23, 36, 0.78)",
+        "radius":  14,
+        "hypr_round": 12,
     },
     "gamedev-studio": {
         "layout": "gamedev",
@@ -709,8 +709,8 @@ def show_menu():
 
     nl = chr(10)
     proc = subprocess.run(cmd, input=nl.join(lines), text=True, capture_output=True)
-    if proc.returncode != 0 and os.path.isfile(ROFI_WIFI):
-        proc = subprocess.run(["rofi", "-dmenu", "-i", "-p", "◈ ВЫБОР МИРА"], input=nl.join(lines), text=True, capture_output=True)
+    if proc.returncode != 0:
+        return
 
     ch = proc.stdout.strip()
     if proc.returncode == 0 and ch in id_map:

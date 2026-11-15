@@ -242,44 +242,12 @@ class WorkHubApp(Gtk.Application):
             cr.paint()
 
         if self.layout_mode == "dungeon":
-            # Чёткая пиксель-арт анимация (сетка 6x6 пикселей) поверх пиксель-арт обоев The Dungeon of God!
             dt = time.monotonic() - self.t0
-            frame = int(dt * 10)
-
-            # 1. Пиксельное пламя в двух жаровнях по бокам алтаря (координаты 106*6=636 и 214*6=1284)
-            for bx in (636, 1284):
-                by = 122 * 6
-                for px_i in range(-2, 3):
-                    fh = ((frame + px_i * 3) % 4) + 2
-                    for py_i in range(fh):
-                        if py_i == 0:
-                            cr.set_source_rgb(1.0, 0.92, 0.45)
-                        elif py_i < fh - 1:
-                            cr.set_source_rgb(0.98, 0.55, 0.18)
-                        else:
-                            cr.set_source_rgb(0.85, 0.22, 0.14)
-                        cr.rectangle(bx + px_i * 6, by - py_i * 6, 6, 6)
-                        cr.fill()
-
-            # 2. Левитирующий пиксельный меч Бога Подземелья над центральным алтарём
-            bob = int(round(math.sin(dt * 3.0) * 2.0)) * 6
-            sx, sy = 960, 612 + bob
-            # Золотая рукоять и гарда (по сетке 6px)
-            cr.set_source_rgb(0.98, 0.78, 0.25)
-            cr.rectangle(sx - 3, sy - 42, 6, 18); cr.fill()
-            cr.rectangle(sx - 18, sy - 24, 36, 6); cr.fill()
-            # Багрово-золотое пиксельное лезвие
-            cr.set_source_rgb(0.92, 0.24, 0.18)
-            cr.rectangle(sx - 6, sy - 18, 12, 36); cr.fill()
-            cr.set_source_rgb(1.0, 0.86, 0.40)
-            cr.rectangle(sx - 3, sy - 18, 6, 42); cr.fill()
-
-            # 3. Квадратные пиксельные искры углей (6x6px), поднимающиеся из лавы
             for x0, spd, vx, sz, ph in self.embers:
-                cyc = ((dt * (spd / 280.0)) + ph) % 1.0
-                ex = (int((x0 * W + cyc * vx * 2.5) // 6) * 6) % W
-                ey = int((H - cyc * (H * 0.88)) // 6) * 6
-                cr.set_source_rgba(0.98, 0.76, 0.24, (1.0 - cyc) * 0.90)
+                cyc = ((dt * (spd / 320.0)) + ph) % 1.0
+                ex = (int((x0 * W + cyc * vx * 2.0) // 6) * 6) % W
+                ey = int((H - cyc * (H * 0.85)) // 6) * 6
+                cr.set_source_rgba(0.98, 0.76, 0.24, (1.0 - cyc) * 0.75)
                 cr.rectangle(ex, ey, 6, 6); cr.fill()
 
         cr.restore()
@@ -319,23 +287,8 @@ class WorkHubApp(Gtk.Application):
     def make_compact_dock(self, prefix_sym="◈", rofi_label="Все приложения"):
         dock = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         dock.add_css_class("bottom-dock"); dock.set_halign(Gtk.Align.CENTER); dock.set_vexpand(False)
-        for lbl, cmd in [
-            (f"{prefix_sym} Терминал", "~/.local/bin/launch-free-ws foot"),
-            (f"{prefix_sym} Проводник", "~/.local/bin/launch-free-ws ~/.local/bin/cyber-fm"),
-            (f"{prefix_sym} Браузер", "~/.local/bin/launch-free-ws firefox"),
-            (f"{prefix_sym} Поверх окон", "~/.local/bin/hyprwork-pin-window"),
-            (f"{prefix_sym} Скриншот", "~/.local/bin/cyber-tool shot"),
-        ]:
-            b = Gtk.Button(label=lbl); b.add_css_class("dock-item")
-            b.connect("clicked", lambda _b, c=cmd: self.spawn_raw(c))
-            dock.append(b)
-
-        self.dock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.dock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         dock.append(self.dock_box)
-
-        all_b = Gtk.Button(label=f"🚀 {rofi_label} [Rofi]"); all_b.add_css_class("primary-btn")
-        all_b.connect("clicked", lambda _b: self.spawn_raw(f'rofi -show drun -theme "{ROFI_THEME}" -run-command "$HOME/.local/bin/launch-free-ws {{cmd}}"'))
-        dock.append(all_b)
         return dock
 
     # ==========================================================================
@@ -389,10 +342,9 @@ class WorkHubApp(Gtk.Application):
         root_box.append(ftr)
 
     # ==========================================================================
-    # 2. THE DUNGEON OF GOD (Открытый живой рабочий стол + RPG-панель + Угловой Алтарь + Хотбар)
+    # 2. THE DUNGEON OF GOD (Фон из главного меню игры + RPG-панель + Док закреплённых)
     # ==========================================================================
     def build_world_dungeon(self, root_box):
-        # 1. Верхняя RPG HUD-панель
         rpg_top = Gtk.CenterBox(); rpg_top.add_css_class("rpg-bar"); rpg_top.set_vexpand(False)
         lz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6); hb.add_css_class("brand-pill")
@@ -401,6 +353,7 @@ class WorkHubApp(Gtk.Application):
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); lz.append(self.ws_box)
         bp = Gtk.Button(label="+ Этаж"); bp.add_css_class("ws-new-btn"); bp.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(bp)
         self.bg_menu_btn = Gtk.Button(label="🎒 Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
+        pin_b = Gtk.Button(label="📌 Док"); pin_b.add_css_class("ctrl-pill"); pin_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu")); lz.append(pin_b)
         tb = Gtk.Button(label="⚔ Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); lz.append(tb)
         rpg_top.set_start_widget(lz)
 
@@ -420,18 +373,13 @@ class WorkHubApp(Gtk.Application):
         rpg_top.set_end_widget(rz)
         root_box.append(rpg_top)
 
-        # 2. Открытый рабочий стол (центр полностью свободен для живых обоев с мечом и вратами!)
         mid_space = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL); mid_space.set_vexpand(True); mid_space.set_hexpand(True)
-
-        # Компактный угловой виджет «Алтарь Артефактов» слева внизу (не закрывает центр!)
-        shrine_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        shrine_card.add_css_class("rpg-bar"); shrine_card.set_size_request(310, -1)
+        shrine_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        shrine_card.add_css_class("rpg-bar"); shrine_card.set_size_request(290, -1)
         shrine_card.set_valign(Gtk.Align.END); shrine_card.set_halign(Gtk.Align.START)
         shrine_card.append(Gtk.Label(label="🎲 АЛТАРЬ АРТЕФАКТОВ // ssOh-v1", xalign=0, css_classes=["panel-header"]))
-        self.loot_lbl = Gtk.Label(
-            label="[МИФИЧЕСКИЙ] ⚔ Клинок Бога\n• Урон в прыжке: +45%  • Крит: +20%",
-            xalign=0, css_classes=["panel-sub"]
-        )
+        self.loot_lbl = Gtk.Label(label="[МИФИЧЕСКИЙ] ⚔ Клинок Бога
+• Урон в прыжке: +45%  • Крит: +20%", xalign=0, css_classes=["panel-sub"])
         shrine_card.append(self.loot_lbl)
         b_roll = Gtk.Button(label="🎲 Выковать случайный предмет"); b_roll.add_css_class("primary-btn")
         b_roll.connect("clicked", self.on_roll_dungeon_loot)
@@ -439,8 +387,7 @@ class WorkHubApp(Gtk.Application):
         mid_space.append(shrine_card)
         root_box.append(mid_space)
 
-        # 3. Нижний пояс-хотбар искателя подземелий (RPG Action Belt)
-        root_box.append(self.make_compact_dock("⚔", "Гримуар свитков"))
+        root_box.append(self.make_compact_dock())
 
     def on_roll_dungeon_loot(self, _b):
         artifacts = [
@@ -452,13 +399,13 @@ class WorkHubApp(Gtk.Application):
         ]
         name, stats = random.choice(artifacts)
         if self.loot_lbl:
-            self.loot_lbl.set_label(f"{name}\n{stats}")
+            self.loot_lbl.set_label(f"{name}
+{stats}")
 
     # ==========================================================================
-    # 3. ЛЕСНОЙ РУЧЕЙ (Открытый стол с соснами и ручьём + Парящий Waybar + Док)
+    # 3. ЛЕСНОЙ РУЧЕЙ (Гармоничный стеклянный лесной Waybar + Док закреплённых)
     # ==========================================================================
     def build_world_forest(self, root_box):
-        # Верхний парящий Waybar из 3 капсул
         wb = Gtk.CenterBox(); wb.set_vexpand(False)
 
         pl = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8); pl.add_css_class("waybar-pill")
@@ -466,6 +413,7 @@ class WorkHubApp(Gtk.Application):
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); pl.append(self.ws_box)
         nb = Gtk.Button(label="+ Поляна"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); pl.append(nb)
         self.bg_menu_btn = Gtk.Button(label="🌿 Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); pl.append(self.bg_menu_btn)
+        pin_b = Gtk.Button(label="📌 Док"); pin_b.add_css_class("ctrl-pill"); pin_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu")); pl.append(pin_b)
         tb = Gtk.Button(label="🌿 Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); pl.append(tb)
         wb.set_start_widget(pl)
 
@@ -486,15 +434,14 @@ class WorkHubApp(Gtk.Application):
         wb.set_end_widget(pr)
         root_box.append(wb)
 
-        # Открытый центр рабочего стола + маленький угловой виджет «Таймер Потока» справа вверху
         mid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL); mid.set_vexpand(True); mid.set_hexpand(True)
         sp = Gtk.Box(); sp.set_hexpand(True); mid.append(sp)
 
         zen_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        zen_card.add_css_class("widget-panel"); zen_card.set_size_request(240, -1)
+        zen_card.add_css_class("waybar-pill"); zen_card.set_size_request(220, -1)
         zen_card.set_valign(Gtk.Align.START); zen_card.set_halign(Gtk.Align.END)
-        zen_card.append(Gtk.Label(label="🌿 ТАЙМЕР ПОТОКА", xalign=0, css_classes=["panel-header"]))
-        self.pomo_lbl = Gtk.Label(label="20:00", xalign=0, css_classes=["timer-digits"]); zen_card.append(self.pomo_lbl)
+        zen_card.append(Gtk.Label(label="🌿 ТАЙМЕР ПОТОКА", xalign=0.5, css_classes=["panel-header"]))
+        self.pomo_lbl = Gtk.Label(label="20:00", xalign=0.5, css_classes=["timer-digits"]); zen_card.append(self.pomo_lbl)
         bp = Gtk.Button(label="Старт / Пауза"); bp.add_css_class("primary-btn")
         bp.connect("clicked", lambda _b: setattr(self, "pomo_running", not self.pomo_running))
         zen_card.append(bp)
@@ -502,65 +449,68 @@ class WorkHubApp(Gtk.Application):
         root_box.append(mid)
         GLib.timeout_add_seconds(1, self.on_pomo_tick)
 
-        # Нижний стеклянный док
-        root_box.append(self.make_compact_dock("🌿", "Все программы"))
+        root_box.append(self.make_compact_dock())
 
     # ==========================================================================
-    # 4. ИМПАСТО ПЕЙЗАЖ (Открытый холст с 3D-мазками + Узкий левый мольберт + Палитра в углу)
+    # 4. ИМПАСТО ПЕЙЗАЖ (Тёплая галерейная шапка в цветах картины + Палитра мазков + Чистый док)
     # ==========================================================================
     def build_world_impasto(self, root_box):
-        atelier = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16); atelier.set_hexpand(True); atelier.set_vexpand(True)
+        # Верхняя парящая галерейная рама в тонах заката и сумеречных гор картины
+        top_frame = Gtk.CenterBox(); top_frame.add_css_class("top-deck"); top_frame.set_vexpand(False)
 
-        # Левый вертикальный мольберт-док (Side-Waybar 235px)
-        easel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        easel.add_css_class("side-rail"); easel.set_size_request(235, -1); easel.set_vexpand(True)
-        easel.append(Gtk.Label(label="🎨 ИМПАСТО // ХОЛСТ", xalign=0, css_classes=["panel-header"]))
-        self.clock_lbl = Gtk.Label(label="00:00", xalign=0, css_classes=["big-clock"]); easel.append(self.clock_lbl)
+        lz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        lz.append(Gtk.Label(label="🎨 ИМПАСТО // МАСТЕРСКАЯ", css_classes=["panel-header"]))
+        self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); lz.append(self.ws_box)
+        nb = Gtk.Button(label="+ Холст"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(nb)
+        self.bg_menu_btn = Gtk.Button(label="🎨 Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
+        pin_b = Gtk.Button(label="📌 Док"); pin_b.add_css_class("ctrl-pill"); pin_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu")); lz.append(pin_b)
+        tb = Gtk.Button(label="🎨 Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); lz.append(tb)
+        top_frame.set_start_widget(lz)
 
-        self.cpu_lbl = Gtk.Label(label="CPU 0%", xalign=0, css_classes=["metric-lbl"]); self.cpu_bar = Gtk.ProgressBar()
-        self.ram_lbl = Gtk.Label(label="RAM --", xalign=0, css_classes=["metric-lbl"]); self.ram_bar = Gtk.ProgressBar(); self.ram_bar.add_css_class("gauge-cyan")
-        self.bat_lbl = Gtk.Label(label="BAT --%", xalign=0, css_classes=["metric-lbl"]); self.bat_bar = Gtk.ProgressBar(); self.bat_bar.add_css_class("bat-good")
-        for w in (self.cpu_lbl, self.cpu_bar, self.ram_lbl, self.ram_bar, self.bat_lbl, self.bat_bar): easel.append(w)
+        cz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        self.clock_lbl = Gtk.Label(label="00:00", css_classes=["clock-time"]); cz.append(self.clock_lbl)
+        self.cpu_lbl = Gtk.Label(label="CPU 0%", css_classes=["metric-lbl"]); cz.append(self.cpu_lbl)
+        self.ram_lbl = Gtk.Label(label="RAM --", css_classes=["metric-lbl"]); cz.append(self.ram_lbl)
+        self.bat_lbl = Gtk.Label(label="BAT --%", css_classes=["metric-lbl"]); cz.append(self.bat_lbl)
+        top_frame.set_center_widget(cz)
 
-        easel.append(Gtk.Label(label="🎨 АКТИВНЫЕ ХОЛСТЫ", xalign=0, css_classes=["panel-header"]))
-        self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); easel.append(self.ws_box)
-        row_b = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        nb = Gtk.Button(label="+ Холст"); nb.add_css_class("ws-new-btn"); nb.set_hexpand(True); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws"))
-        self.bg_menu_btn = Gtk.Button(label="🎨 Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.set_hexpand(True); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu"))
-        row_b.append(nb); row_b.append(self.bg_menu_btn); easel.append(row_b)
+        rz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.wifi_btn = Gtk.Button(); self.wifi_btn.add_css_class("wifi-btn"); self.wifi_btn.set_child(ui_svg("wifi-high.svg", 15))
+        self.wifi_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-wifi-menu")); rz.append(self.wifi_btn)
+        self.kb_btn = Gtk.Button(label="EN"); self.kb_btn.add_css_class("kb-btn"); self.kb_btn.connect("clicked", lambda _b: self.spawn_raw("hyprctl switchxkblayout all next")); rz.append(self.kb_btn)
+        self.pwr_btn = Gtk.Button(); self.pwr_btn.add_css_class("ctrl-pill"); self.pwr_btn.connect("clicked", self.on_toggle_power); self.update_pwr_label(); rz.append(self.pwr_btn)
+        rz.append(self.make_sliders_pair(46))
+        rz.append(self.make_sys_power_capsule())
+        top_frame.set_end_widget(rz)
+        root_box.append(top_frame)
 
-        tb = Gtk.Button(label="🎨 Сменить мир [SUPER+T]"); tb.add_css_class("primary-btn"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); easel.append(tb)
+        # Полностью открытый рельефный пейзаж + аккуратная палитра пигментов картины слева внизу
+        mid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL); mid.set_vexpand(True); mid.set_hexpand(True)
+        pal_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        pal_card.add_css_class("widget-panel"); pal_card.set_valign(Gtk.Align.END); pal_card.set_halign(Gtk.Align.START)
+        pal_card.append(Gtk.Label(label="🖌 ПИГМЕНТЫ ХОЛСТА (КОПИРОВАТЬ HEX)", xalign=0, css_classes=["panel-header"]))
+        sw_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        for s_name, s_hex in [("Охра", "#F2CC8F"), ("Терракота", "#E07A5F"), ("Индиго", "#262338"), ("Шалфей", "#81B29A")]:
+            sb = Gtk.Button(label=f"🎨 {s_name}"); sb.add_css_class("secondary-btn")
+            sb.connect("clicked", lambda _b, h=s_hex, n=s_name: self.spawn_raw(f"printf '{h}' | wl-copy && notify-send '🎨 ИМПАСТО' 'Пигмент {n} ({h}) скопирован!'"))
+            sw_row.append(sb)
+        pal_card.append(sw_row)
+        mid.append(pal_card)
+        root_box.append(mid)
 
-        easel.append(Gtk.Label(label="🎨 ПАЛИТРА МАСЛА (HEX)", xalign=0, css_classes=["panel-header"]))
-        for s_name, s_hex in [("Охра Золотая", "#F2CC8F"), ("Терракота", "#E07A5F"), ("Ультрамарин", "#3D405B"), ("Шалфей Масло", "#81B29A")]:
-            sb = Gtk.Button(label=f"🖌 {s_name} ({s_hex})"); sb.add_css_class("secondary-btn")
-            sb.connect("clicked", lambda _b, h=s_hex, n=s_name: self.spawn_raw(f"printf '{h}' | wl-copy && notify-send '🎨 ПАЛИТРА ИМПАСТО' 'Краска {n} ({h}) скопирована!'"))
-            easel.append(sb)
-
-        sp = Gtk.Box(); sp.set_vexpand(True); easel.append(sp)
-        self.pwr_btn = Gtk.Button(); self.pwr_btn.add_css_class("ctrl-pill"); self.pwr_btn.connect("clicked", self.on_toggle_power); self.update_pwr_label(); easel.append(self.pwr_btn)
-        easel.append(self.make_sliders_pair(48))
-        easel.append(self.make_sys_power_capsule())
-        atelier.append(easel)
-
-        # Правая часть (85% экрана) — ПОЛНОСТЬЮ ОТКРЫТЫЙ РЕЛЬЕФНЫЙ ПЕЙЗАЖ С БУГОРКАМИ КРАСКИ + компактный док внизу!
-        canvas_zone = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); canvas_zone.set_hexpand(True); canvas_zone.set_vexpand(True)
-        sp_c = Gtk.Box(); sp_c.set_vexpand(True); canvas_zone.append(sp_c)
-        canvas_zone.append(self.make_compact_dock("🎨", "Галерея программ"))
-        atelier.append(canvas_zone)
-        root_box.append(atelier)
+        root_box.append(self.make_compact_dock())
 
     # ==========================================================================
-    # 5. GAMEDEV ENGINE STUDIO (Открытый 2D Viewport + Тулбар движка + Компактный инспектор)
+    # 5. GAMEDEV ENGINE STUDIO (Открытый 2D Viewport + Тулбар движка + Док закреплённых)
     # ==========================================================================
     def build_world_gamedev(self, root_box):
-        # Верхний Тулбар Движка
         bar = Gtk.CenterBox(); bar.add_css_class("ide-toolbar"); bar.set_vexpand(False)
         lz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         lz.append(Gtk.Label(label="🎮 ENGINE // STUDIO", css_classes=["panel-header"]))
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); lz.append(self.ws_box)
         nb = Gtk.Button(label="+ Scene"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(nb)
         self.bg_menu_btn = Gtk.Button(label="📦 Nodes [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
+        pin_b = Gtk.Button(label="📌 Док"); pin_b.add_css_class("ctrl-pill"); pin_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu")); lz.append(pin_b)
         tb = Gtk.Button(label="🎮 Сменить мир"); tb.add_css_class("ctrl-pill"); tb.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-theme menu")); lz.append(tb)
         bar.set_start_widget(lz)
 
@@ -583,12 +533,11 @@ class WorkHubApp(Gtk.Application):
         bar.set_end_widget(rz)
         root_box.append(bar)
 
-        # Открытый центральный 2D Viewport + компактный угловой виджет Инспектора справа внизу
         mid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL); mid.set_vexpand(True); mid.set_hexpand(True)
         sp = Gtk.Box(); sp.set_hexpand(True); mid.append(sp)
 
         insp = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        insp.add_css_class("ide-panel"); insp.set_size_request(300, -1)
+        insp.add_css_class("ide-panel"); insp.set_size_request(290, -1)
         insp.set_valign(Gtk.Align.END); insp.set_halign(Gtk.Align.END)
         insp.append(Gtk.Label(label="🔍 INSPECTOR // TELEMETRY", xalign=0, css_classes=["panel-header"]))
         self.cpu_lbl = Gtk.Label(label="CPU: 0%", xalign=0, css_classes=["panel-sub"]); self.cpu_bar = Gtk.ProgressBar()
@@ -599,8 +548,7 @@ class WorkHubApp(Gtk.Application):
         mid.append(insp)
         root_box.append(mid)
 
-        # Нижний док разработчика игр
-        root_box.append(self.make_compact_dock("🎮", "Все инструменты"))
+        root_box.append(self.make_compact_dock())
 
     def do_activate(self):
         settings = Gtk.Settings.get_default()
@@ -698,17 +646,32 @@ class WorkHubApp(Gtk.Application):
                 btn.add_controller(rc)
                 self.flow.append(btn); self.cards.append((name.lower(), btn))
 
-        # В темах 2, 3, 4, 5 добавляем закреплённые программы в компактный нижний док
+        # В темах 2, 3, 4, 5 в нижнем доке отображаются ТОЛЬКО закреплённые приложения!
+        self.last_pin_mtime = os.path.getmtime(PIN_FILE) if os.path.isfile(PIN_FILE) else 0
         if self.dock_box is not None:
             while True:
                 c = self.dock_box.get_first_child()
                 if c is None: break
                 self.dock_box.remove(c)
-            favs = [it for it in items if it[0] in self.pinned][:4]
-            for name, cmd, _ic, _cat in favs:
-                db = Gtk.Button(label=f"★ {name[:12]}"); db.add_css_class("dock-item")
-                db.connect("clicked", lambda _b, c=cmd: self.spawn_raw(f"$HOME/.local/bin/launch-free-ws {c}"))
-                self.dock_box.append(db)
+            favs = [it for it in items if it[0] in self.pinned]
+            if not favs:
+                empty_b = Gtk.Button(label="📌 Нажмите «📌 Док» сверху, чтобы закрепить программы")
+                empty_b.add_css_class("dock-item")
+                empty_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu"))
+                self.dock_box.append(empty_b)
+            else:
+                for name, cmd, icon_spec, _cat in favs:
+                    db = Gtk.Button(); db.add_css_class("dock-item")
+                    db.set_tooltip_text(f"{name} (ЛКМ: запустить • ПКМ: открепить из дока)")
+                    hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+                    hb.append(make_cyber_icon_widget(icon_spec, "applications-system-symbolic", 22))
+                    hb.append(Gtk.Label(label=name[:18]))
+                    db.set_child(hb)
+                    db.connect("clicked", lambda _b, c=cmd: self.spawn_raw(f"$HOME/.local/bin/launch-free-ws {c}"))
+                    rc = Gtk.GestureClick.new(); rc.set_button(3)
+                    rc.connect("pressed", lambda _g, _n, _x, _y, nm=name: self.toggle_pin(nm))
+                    db.add_controller(rc)
+                    self.dock_box.append(db)
 
     def toggle_pin(self, name):
         if name in self.pinned: self.pinned.remove(name)
@@ -721,6 +684,13 @@ class WorkHubApp(Gtk.Application):
             if btn.get_parent(): btn.get_parent().set_visible((not q) or (q in tl))
 
     def refresh_workspaces(self):
+        try:
+            mt = os.path.getmtime(PIN_FILE) if os.path.isfile(PIN_FILE) else 0
+            if mt != getattr(self, "last_pin_mtime", 0):
+                self.pinned = load_pinned()
+                self.populate_apps()
+        except Exception:
+            pass
         try:
             if os.path.isfile(KB_FILE) and self.kb_btn:
                 kb_code = open(KB_FILE).read().strip() or "EN"

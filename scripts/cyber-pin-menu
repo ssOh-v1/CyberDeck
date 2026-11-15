@@ -1,0 +1,61 @@
+#!/usr/bin/python3
+import os, re, glob, json, subprocess
+
+os.environ.pop("LD_PRELOAD", None)
+HOME = os.path.expanduser("~")
+PIN_FILE = os.path.join(HOME, ".config/cyberdeck/pinned_work_apps.json")
+ROFI_WIFI = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
+
+def load_pins():
+    try:
+        if os.path.isfile(PIN_FILE):
+            return set(json.load(open(PIN_FILE, encoding="utf-8")))
+    except Exception:
+        pass
+    return set()
+
+def save_pins(pins):
+    os.makedirs(os.path.dirname(PIN_FILE), exist_ok=True)
+    json.dump(sorted(pins), open(PIN_FILE, "w", encoding="utf-8"), ensure_ascii=False)
+
+apps, seen = [], set()
+for ad in (os.path.join(HOME, ".local/share/applications"), "/usr/share/applications"):
+    if not os.path.isdir(ad): continue
+    for df in sorted(glob.glob(os.path.join(ad, "*.desktop"))):
+        try:
+            txt = open(df, errors="ignore").read()
+            if re.search(r"^NoDisplay=true", txt, re.M) or re.search(r"^Hidden=true", txt, re.M): continue
+            nm = re.search(r"^Name=(.*)$", txt, re.M)
+            if not nm: continue
+            name = nm.group(1).strip()
+            if name not in seen:
+                seen.add(name)
+                apps.append(name)
+        except Exception:
+            pass
+
+pins = load_pins()
+apps.sort(key=lambda x: (0 if x in pins else 1, x.lower()))
+
+lines, name_map = [], {}
+for name in apps:
+    row = f"★ [В ДОКЕ]   {name}" if name in pins else f"☆ [ДОБАВИТЬ] {name}"
+    lines.append(row)
+    name_map[row] = name
+
+cmd = ["rofi", "-dmenu", "-i", "-p", "📌 НАСТРОЙКА НИЖНЕГО ДОКА (ЗАКРЕПЛЕНИЕ)"]
+if os.path.isfile(ROFI_WIFI):
+    cmd += ["-theme", ROFI_WIFI]
+
+proc = subprocess.run(cmd, input="\n".join(lines), text=True, capture_output=True)
+if proc.returncode != 0:
+    raise SystemExit(0)
+
+ch = proc.stdout.strip()
+if ch in name_map:
+    target = name_map[ch]
+    if target in pins:
+        pins.remove(target)
+    else:
+        pins.add(target)
+    save_pins(pins)
