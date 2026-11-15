@@ -1,0 +1,107 @@
+#!/usr/bin/python3
+import os, math, cairo
+
+HOME = os.path.expanduser("~")
+CACHE_DIR = os.path.join(HOME, ".cache/cyberdeck")
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+W, H = 1920, 1080
+surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
+cr = cairo.Context(surf)
+
+# 1. Глубокая матово-графитовая подложка
+lg = cairo.LinearGradient(0, 0, W, H)
+lg.add_color_stop_rgb(0.0, 0.055, 0.059, 0.071)
+lg.add_color_stop_rgb(0.5, 0.075, 0.082, 0.094)
+lg.add_color_stop_rgb(1.0, 0.051, 0.055, 0.067)
+cr.set_source(lg)
+cr.paint()
+
+cx, cy = W * 0.5, H * 0.5
+
+# 2. Мягкое радиальное свечение в центре под часами и полем пароля
+rg = cairo.RadialGradient(cx, cy, 40, cx, cy, 640)
+rg.add_color_stop_rgba(0.0, 0.48, 0.51, 0.56, 0.11)
+rg.add_color_stop_rgba(0.55, 0.28, 0.30, 0.34, 0.05)
+rg.add_color_stop_rgba(1.0, 0, 0, 0, 0)
+cr.set_source(rg)
+cr.paint()
+
+# 3. Тонкая инженерная сетка
+cr.set_line_width(0.8)
+cr.set_source_rgba(0.50, 0.53, 0.58, 0.035)
+for x in range(32, W, 32):
+    cr.move_to(x, 0); cr.line_to(x, H)
+for y in range(32, H, 32):
+    cr.move_to(0, y); cr.line_to(W, y)
+cr.stroke()
+
+cr.set_line_width(1.2)
+cr.set_source_rgba(0.55, 0.58, 0.64, 0.09)
+for x in range(192, W, 192):
+    cr.move_to(x, 0); cr.line_to(x, H)
+for y in range(192, H, 192):
+    cr.move_to(0, y); cr.line_to(W, y)
+cr.stroke()
+
+# 4. Центральная диафрагма безопасности вокруг зоны авторизации
+for rad, w_ln, al, dash in [
+    (360, 1.2, 0.18, []),
+    (320, 1.8, 0.28, [18, 10]),
+    (275, 1.0, 0.14, []),
+    (235, 1.5, 0.22, [6, 8]),
+]:
+    cr.set_line_width(w_ln)
+    cr.set_dash(dash)
+    cr.set_source_rgba(0.62, 0.65, 0.71, al)
+    cr.arc(cx, cy, rad, 0, 2 * math.pi)
+    cr.stroke()
+cr.set_dash([])
+
+# Деления лимба вокруг центрального кольца
+for deg in range(0, 360, 15):
+    ang = math.radians(deg)
+    r_in = 344 if deg % 45 == 0 else 350
+    r_out = 360
+    cr.set_line_width(2.0 if deg % 45 == 0 else 1.0)
+    cr.set_source_rgba(0.72, 0.75, 0.80, 0.38 if deg % 45 == 0 else 0.18)
+    cr.move_to(cx + math.cos(ang) * r_in, cy + math.sin(ang) * r_in)
+    cr.line_to(cx + math.cos(ang) * r_out, cy + math.sin(ang) * r_out)
+    cr.stroke()
+
+# 5. Боковые направляющие скобы и техническая телеметрия
+cr.set_line_width(2.0)
+cr.set_source_rgba(0.58, 0.62, 0.68, 0.35)
+for sx in (-1, 1):
+    bx = cx + sx * 430
+    cr.move_to(bx - sx * 24, cy - 170)
+    cr.line_to(bx, cy - 170)
+    cr.line_to(bx, cy + 170)
+    cr.line_to(bx - sx * 24, cy + 170)
+    cr.stroke()
+
+# Угловые рамки экрана
+m, ln = 28, 48
+cr.set_line_width(2.2)
+cr.set_source_rgba(0.65, 0.68, 0.74, 0.45)
+for x1, y1, x2, y2, x3, y3 in [
+    (m, m + ln, m, m, m + ln, m),
+    (W - m - ln, m, W - m, m, W - m, m + ln),
+    (m, H - m - ln, m, H - m, m + ln, H - m),
+    (W - m - ln, H - m, W - m, H - m, W - m, H - m - ln),
+]:
+    cr.move_to(x1, y1); cr.line_to(x2, y2); cr.line_to(x3, y3)
+cr.stroke()
+
+cr.select_font_face("JetBrainsMono Nerd Font", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+cr.set_font_size(11)
+cr.set_source_rgba(0.58, 0.62, 0.68, 0.48)
+cr.move_to(54, 52)
+cr.show_text("▣ STUDIO WORKSTATION // SECURITY VAULT LOCK")
+cr.move_to(W - 390, 52)
+cr.show_text("AUTH_PROTOCOL: PAM_WAYLAND // ENCRYPTED")
+cr.move_to(54, H - 40)
+cr.show_text("HINT: PRESS [ALT + SHIFT] TO SWITCH KEYMAP")
+
+out_p = os.path.join(CACHE_DIR, "lock_hud_bg.png")
+surf.write_to_png(out_p)

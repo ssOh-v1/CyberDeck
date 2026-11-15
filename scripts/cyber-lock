@@ -1,26 +1,20 @@
 #!/bin/bash
-if [ "${1:-}" = "--demo" ]; then
-    if [ -f /usr/lib/libgtk4-layer-shell.so ]; then
-        LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" exec /usr/bin/python3 "$HOME/.local/bin/cyber-lock-anim.py" demo
-    fi
-    exec /usr/bin/python3 "$HOME/.local/bin/cyber-lock-anim.py" demo
+unset LD_PRELOAD
+if pgrep -x hyprlock >/dev/null 2>&1; then
+    exit 0
 fi
 
-pgrep -x hyprlock >/dev/null 2>&1 && exit 0
+# 1. Запускаем анимацию закрытия створок (она сама стартует hyprlock в пиковой фазе)
+LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" /usr/bin/python3 "$HOME/.local/bin/cyber-lock-anim.py" lock
 
-if [ -f /usr/lib/libgtk4-layer-shell.so ]; then
-    LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" /usr/bin/python3 "$HOME/.local/bin/cyber-lock-anim.py" lock >/dev/null 2>&1 &
-else
-    /usr/bin/python3 "$HOME/.local/bin/cyber-lock-anim.py" lock >/dev/null 2>&1 &
-fi
+# 2. Ждём завершения сессии hyprlock (пока пользователь не введёт пароль)
+for _ in $(seq 1 20); do
+    pgrep -x hyprlock >/dev/null 2>&1 && break
+    sleep 0.05
+done
+while pgrep -x hyprlock >/dev/null 2>&1; do
+    sleep 0.12
+done
 
-# Дожидаемся смыкания гермостворок (0.50с) и запускаем реальный PAM-экран hyprlock
-sleep 0.50
-hyprlock
-
-# Сразу после разблокировки запускаем анимацию размыкания гермостворок
-if [ -f /usr/lib/libgtk4-layer-shell.so ]; then
-    LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" exec /usr/bin/python3 "$HOME/.local/bin/cyber-lock-anim.py" unlock >/dev/null 2>&1
-else
-    exec /usr/bin/python3 "$HOME/.local/bin/cyber-lock-anim.py" unlock >/dev/null 2>&1
-fi
+# 3. Запускаем анимацию раскрытия створок при входе обратно на рабочий стол
+LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" /usr/bin/python3 "$HOME/.local/bin/cyber-lock-anim.py" unlock &

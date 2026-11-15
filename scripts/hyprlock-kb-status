@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+import json, subprocess
+try:
+    devs = json.loads(subprocess.check_output(["hyprctl", "devices", "-j"], text=True, stderr=subprocess.DEVNULL))
+    for k in devs.get("keyboards", []):
+        if k.get("main"):
+            km = k.get("active_keymap", "EN").lower()
+            if any(x in km for x in ("ru", "rus", "рус", "cyr")):
+                print("󰌌  РАСКЛАДКА:  EN  ──▸  [ RU // РУС ]   •   Alt+Shift")
+            else:
+                print("󰌌  РАСКЛАДКА:  [ EN // US ]  ◂──  RU   •   Alt+Shift")
+            raise SystemExit(0)
+except Exception:
+    pass
+print("󰌌  РАСКЛАДКА:  [ EN / RU ]   •   Alt+Shift")

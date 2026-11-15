@@ -1,5 +1,16 @@
 #!/usr/bin/python3
-import os, sys, json, socket, signal, subprocess
+from ctypes import CDLL, RTLD_GLOBAL
+try:
+    CDLL("/usr/lib/libgtk4-layer-shell.so", mode=RTLD_GLOBAL)
+except Exception:
+    pass
+
+import os, sys, json, math, time, socket, signal, threading, subprocess
+import gi
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gtk4LayerShell", "1.0")
+from gi.repository import Gtk, Gdk, GLib, Gtk4LayerShell
+import cairo
 
 os.environ.pop("LD_PRELOAD", None)
 
@@ -20,73 +31,220 @@ open(PID_FILE, "w").write(str(os.getpid()))
 def norm_layout(raw):
     low = raw.lower()
     if any(k in low for k in ("ru", "rus", "рус", "cyrillic")):
-        return "RU", "Русская раскладка", "EN  ──▸  [ RU ]"
-    return "EN", "English layout", "[ EN ]  ◂──  RU"
+        return "RU", "РУССКАЯ РАСКЛАДКА", "Кириллица  •  UTF-8"
+    return "EN", "ENGLISH LAYOUT", "Latin US  •  UTF-8"
 
-def build_switch_svg(code):
-    svg_path = f"/tmp/cyber_kb_badge_{UID}.svg"
-    is_ru = (code == "RU")
-    bg_en = "#181a1f" if is_ru else "#343942"
-    fg_en = "#6c727d" if is_ru else "#ffffff"
-    bg_ru = "#343942" if is_ru else "#181a1f"
-    fg_ru = "#ffffff" if is_ru else "#6c727d"
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="56" height="40" viewBox="0 0 56 40">
-  <rect x="1" y="4" width="54" height="32" rx="7" fill="#121316" stroke="#454a52" stroke-width="1.5"/>
-  <rect x="4" y="7" width="23" height="26" rx="5" fill="{bg_en}"/>
-  <rect x="29" y="7" width="23" height="26" rx="5" fill="{bg_ru}"/>
-  <text x="15.5" y="24" text-anchor="middle" font-family="JetBrainsMono Nerd Font, Inter, monospace" font-weight="800" font-size="11" fill="{fg_en}">EN</text>
-  <text x="40.5" y="24" text-anchor="middle" font-family="JetBrainsMono Nerd Font, Inter, monospace" font-weight="800" font-size="11" fill="{fg_ru}">RU</text>
-</svg>"""
-    open(svg_path, "w", encoding="utf-8").write(svg)
-    return svg_path
+def rrect(cr, x, y, w, h, r):
+    cr.new_sub_path()
+    cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+    cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+    cr.arc(x + r, y + h - r, r, math.pi / 2, math.pi)
+    cr.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+    cr.close_path()
 
-def send_kb_notify(code, title_txt, sub_txt):
-    open(STATE_FILE, "w").write(code)
-    subprocess.Popen([os.path.join(HOME, ".local/bin/cyber-kb-sync-x11")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    icon_p = build_switch_svg(code)
-    subprocess.Popen([
-        "notify-send", "-a", "cyber-kb",
-        "-h", "string:x-canonical-private-synchronous:cyber-kb",
-        "-i", icon_p,
-        f"{title_txt}",
-        f"<tt><span foreground='#9ea4b0'>{sub_txt}</span></tt>"
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+class StudioKeymapOSD(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id="org.studio.KeymapOSD")
+        self.win = None
+        self.area = None
+        self.code = "EN"
+        self.title_txt = "ENGLISH LAYOUT"
+        self.sub_txt = "Latin US  •  UTF-8"
+        self.show_t0 = 0.0
+        self.anim_pos = 0.0      # 0.0 = EN, 1.0 = RU (плавная пружинная интерполяция)
+        self.target_pos = 0.0
+        self.duration = 1.25
+        self.tick_id = None
 
-try:
-    devs = json.loads(subprocess.check_output(["hyprctl", "devices", "-j"], text=True, stderr=subprocess.DEVNULL))
-    for k in devs.get("keyboards", []):
-        if k.get("main"):
-            c, _, _ = norm_layout(k.get("active_keymap", "EN"))
-            open(STATE_FILE, "w").write(c)
-            break
-except Exception:
-    open(STATE_FILE, "w").write("EN")
+    def do_activate(self):
+        prov = Gtk.CssProvider()
+        prov.load_from_string("window { background-color: transparent; }")
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_USER + 45
+        )
 
-sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
-xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{UID}")
-sock_candidates = [
-    os.path.join(xdg, "hypr", sig, ".socket2.sock"),
-    f"/tmp/hypr/{sig}/.socket2.sock",
-]
-sock_path = next((p for p in sock_candidates if os.path.exists(p)), None)
-if not sock_path:
-    sys.exit(0)
+        self.win = Gtk.ApplicationWindow(application=self, title="StudioKeymapOSD")
+        self.win.set_default_size(340, 96)
+        Gtk4LayerShell.init_for_window(self.win)
+        Gtk4LayerShell.set_namespace(self.win, "studio-kb-osd")
+        Gtk4LayerShell.set_layer(self.win, Gtk4LayerShell.Layer.OVERLAY)
+        Gtk4LayerShell.set_anchor(self.win, Gtk4LayerShell.Edge.TOP, True)
+        Gtk4LayerShell.set_margin(self.win, Gtk4LayerShell.Edge.TOP, 52)
+        Gtk4LayerShell.set_exclusive_zone(self.win, -1)
+        Gtk4LayerShell.set_keyboard_mode(self.win, Gtk4LayerShell.KeyboardMode.NONE)
 
-last_code = ""
-with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-    s.connect(sock_path)
-    buf = ""
-    while True:
-        chunk = s.recv(4096)
-        if not chunk:
-            break
-        buf += chunk.decode("utf-8", errors="ignore")
-        while "\n" in buf:
-            line, buf = buf.split("\n", 1)
-            if line.startswith("activelayout>>"):
-                parts = line.split(">>", 1)[1].split(",")
-                if len(parts) >= 2:
-                    code, title_txt, sub_txt = norm_layout(parts[1].strip())
-                    if code != last_code:
-                        last_code = code
-                        send_kb_notify(code, title_txt, sub_txt)
+        self.area = Gtk.DrawingArea()
+        self.area.set_size_request(340, 96)
+        self.area.set_draw_func(self.on_draw)
+        self.win.set_child(self.area)
+        self.win.present()
+        self.win.set_visible(False)
+
+        # Читаем стартовую раскладку
+        try:
+            devs = json.loads(subprocess.check_output(["hyprctl", "devices", "-j"], text=True, stderr=subprocess.DEVNULL))
+            for k in devs.get("keyboards", []):
+                if k.get("main"):
+                    c, t, s = norm_layout(k.get("active_keymap", "EN"))
+                    self.code, self.title_txt, self.sub_txt = c, t, s
+                    self.anim_pos = 1.0 if c == "RU" else 0.0
+                    self.target_pos = self.anim_pos
+                    open(STATE_FILE, "w").write(c)
+                    break
+        except Exception:
+            open(STATE_FILE, "w").write("EN")
+
+        threading.Thread(target=self.listen_hypr_socket, daemon=True).start()
+
+        # Если передан аргумент --preview — сразу показываем красивое окно OSD для демонстрации!
+        if "--preview" in sys.argv:
+            GLib.timeout_add(150, lambda: (self.trigger_osd(self.code, self.title_txt, self.sub_txt), False)[1])
+
+    def trigger_osd(self, code, title_txt, sub_txt):
+        self.code = code
+        self.title_txt = title_txt
+        self.sub_txt = sub_txt
+        self.target_pos = 1.0 if code == "RU" else 0.0
+        self.show_t0 = time.monotonic()
+        self.win.set_visible(True)
+        if self.tick_id is None:
+            self.tick_id = self.area.add_tick_callback(self.on_tick)
+        return False
+
+    def on_tick(self, widget, _clock):
+        dt = time.monotonic() - self.show_t0
+        # Плавное скольжение активной клавиши EN <-> RU
+        self.anim_pos += (self.target_pos - self.anim_pos) * 0.26
+        if dt >= self.duration:
+            self.win.set_visible(False)
+            self.tick_id = None
+            return GLib.SOURCE_REMOVE
+        widget.queue_draw()
+        return GLib.SOURCE_CONTINUE
+
+    def on_draw(self, _area, cr, w, h, *_args):
+        dt = time.monotonic() - self.show_t0
+        # Плавное появление и затухание
+        if dt < 0.12:
+            alpha = dt / 0.12
+        elif dt > self.duration - 0.22:
+            alpha = max(0.0, (self.duration - dt) / 0.22)
+        else:
+            alpha = 1.0
+
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        cr.set_source_rgba(0, 0, 0, 0)
+        cr.paint()
+        cr.set_operator(cairo.OPERATOR_OVER)
+
+        # 1. Внешний корпус механической капсулы (328x84)
+        px, py, pw, ph = 6, 6, w - 12, h - 12
+        rrect(cr, px, py, pw, ph, 11)
+        cr.set_source_rgba(0.075, 0.082, 0.098, 0.96 * alpha)
+        cr.fill_preserve()
+        cr.set_line_width(1.5)
+        cr.set_source_rgba(0.36, 0.39, 0.45, 0.90 * alpha)
+        cr.stroke()
+
+        # 2. Левый блок с двумя механическими клавишами [EN] и [RU] + скользящий селектор
+        kx, ky, kw, kh = px + 12, py + 12, 108, 48
+        rrect(cr, kx, ky, kw, kh, 8)
+        cr.set_source_rgba(0.05, 0.055, 0.065, 0.95 * alpha)
+        cr.fill_preserve()
+        cr.set_line_width(1.0)
+        cr.set_source_rgba(0.24, 0.27, 0.31, 0.90 * alpha)
+        cr.stroke()
+
+        # Скользящая 3D-клавиша активной раскладки
+        slot_w = (kw - 8) * 0.5
+        pill_x = kx + 4 + self.anim_pos * slot_w
+        rrect(cr, pill_x, ky + 4, slot_w, kh - 8, 6)
+        klg = cairo.LinearGradient(pill_x, ky + 4, pill_x, ky + kh - 4)
+        klg.add_color_stop_rgba(0.0, 0.25, 0.28, 0.33, 0.98 * alpha)
+        klg.add_color_stop_rgba(1.0, 0.16, 0.18, 0.22, 0.98 * alpha)
+        cr.set_source(klg)
+        cr.fill_preserve()
+        cr.set_line_width(1.3)
+        cr.set_source_rgba(0.65, 0.69, 0.76, 0.95 * alpha)
+        cr.stroke()
+
+        cr.select_font_face("JetBrainsMono Nerd Font", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(13.5)
+
+        # Подпись EN
+        en_col = (0.95, 0.97, 1.0) if self.code == "EN" else (0.45, 0.48, 0.54)
+        ext_en = cr.text_extents("EN")
+        cr.set_source_rgba(*en_col, alpha)
+        cr.move_to(kx + 4 + slot_w * 0.5 - ext_en.width * 0.5, ky + kh * 0.5 + ext_en.height * 0.5 - 1)
+        cr.show_text("EN")
+
+        # Подпись RU
+        ru_col = (0.95, 0.97, 1.0) if self.code == "RU" else (0.45, 0.48, 0.54)
+        ext_ru = cr.text_extents("RU")
+        cr.set_source_rgba(*ru_col, alpha)
+        cr.move_to(kx + 4 + slot_w * 1.5 - ext_ru.width * 0.5, ky + kh * 0.5 + ext_ru.height * 0.5 - 1)
+        cr.show_text("RU")
+
+        # 3. Правая текстовая часть: заголовок раскладки и кодировка
+        tx = kx + kw + 14
+        cr.select_font_face("Inter", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(12.5)
+        cr.set_source_rgba(0.92, 0.94, 0.97, alpha)
+        cr.move_to(tx, py + 31)
+        cr.show_text(self.title_txt)
+
+        cr.select_font_face("JetBrainsMono Nerd Font", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(10.5)
+        cr.set_source_rgba(0.60, 0.64, 0.71, alpha)
+        cr.move_to(tx, py + 50)
+        cr.show_text(self.sub_txt)
+
+        # 4. Нижняя тонкая шкала таймера обратного отсчёта
+        rem = max(0.0, min(1.0, 1.0 - (dt / self.duration)))
+        bar_x, bar_y, bar_w = px + 14, py + ph - 9, pw - 28
+        rrect(cr, bar_x, bar_y, bar_w, 3, 1.5)
+        cr.set_source_rgba(0.14, 0.16, 0.19, 0.90 * alpha)
+        cr.fill()
+        if rem > 0.01:
+            rrect(cr, bar_x, bar_y, bar_w * rem, 3, 1.5)
+            cr.set_source_rgba(0.62, 0.66, 0.73, 0.92 * alpha)
+            cr.fill()
+
+    def listen_hypr_socket(self):
+        sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
+        xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{UID}")
+        sock_candidates = [
+            os.path.join(xdg, "hypr", sig, ".socket2.sock"),
+            f"/tmp/hypr/{sig}/.socket2.sock",
+        ]
+        sock_path = next((p for p in sock_candidates if os.path.exists(p)), None)
+        if not sock_path:
+            return
+
+        last_code = self.code
+        while True:
+            try:
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                    s.connect(sock_path)
+                    buf = ""
+                    while True:
+                        chunk = s.recv(4096)
+                        if not chunk:
+                            break
+                        buf += chunk.decode("utf-8", errors="ignore")
+                        while "\n" in buf:
+                            line, buf = buf.split("\n", 1)
+                            if line.startswith("activelayout>>"):
+                                parts = line.split(">>", 1)[1].split(",")
+                                if len(parts) >= 2:
+                                    code, title_txt, sub_txt = norm_layout(parts[1].strip())
+                                    if code != last_code:
+                                        last_code = code
+                                        open(STATE_FILE, "w").write(code)
+                                        subprocess.Popen([os.path.join(HOME, ".local/bin/cyber-kb-sync-x11")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                        GLib.idle_add(self.trigger_osd, code, title_txt, sub_txt)
+            except Exception:
+                time.sleep(1.0)
+
+if __name__ == "__main__":
+    StudioKeymapOSD().run(None)
