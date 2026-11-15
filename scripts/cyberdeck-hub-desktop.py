@@ -418,7 +418,7 @@ class WorkHubApp(Gtk.Application):
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         left_pillar.append(self.ws_box)
 
-        row_ acts = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        row_acts = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         b_nws = Gtk.Button(label="+ Стол"); b_nws.add_css_class("ws-new-btn"); b_nws.set_hexpand(True); b_nws.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws"))
         self.bg_menu_btn = Gtk.Button(label="◈ Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.set_hexpand(True); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu"))
         row_acts.append(b_nws); row_acts.append(self.bg_menu_btn)
