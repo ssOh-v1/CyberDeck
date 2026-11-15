@@ -23,6 +23,18 @@ except Exception:
 
 os.environ.pop("LD_PRELOAD", None)
 
+# Гарантия единственного экземпляра стола (убиваем любые старые копии, чтобы темы никогда не накладывались)
+_my_pid = os.getpid()
+for _p in os.listdir("/proc"):
+    if _p.isdigit() and int(_p) != _my_pid:
+        try:
+            _cmd = open(f"/proc/{_p}/cmdline", "rb").read().decode("utf-8", "ignore")
+            if "hub-desktop.py" in _cmd:
+                os.kill(int(_p), 9)
+        except Exception:
+            pass
+
+
 HOME = os.path.expanduser("~")
 UID = os.getuid()
 CACHE_DIR = os.path.join(HOME, ".cache/cyberdeck")
@@ -192,7 +204,8 @@ class CyberDeckHubApp(Gtk.Application):
 
         left_zone = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6); left_zone.set_valign(Gtk.Align.CENTER)
         brand = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=7); brand.add_css_class("brand-pill"); brand.set_valign(Gtk.Align.CENTER)
-        bdot = Gtk.Label(label="◈"); bdot.add_css_class("brand-dot")
+        t_meta = json.load(open(os.path.join(HOME, ".config/cyberdeck/theme.json"))) if os.path.isfile(os.path.join(HOME, ".config/cyberdeck/theme.json")) else {}
+        bdot = Gtk.Label(label=t_meta.get("symbol", "◈")); bdot.add_css_class("brand-dot")
         mode_tag = "LAPTOP" if self.hw.get("form_factor") == "laptop" else "PC"
         bt = Gtk.Label(label=f"CYBER DECK // {mode_tag}"); bt.add_css_class("brand-title")
         brand.append(bdot); brand.append(bt); left_zone.append(brand)

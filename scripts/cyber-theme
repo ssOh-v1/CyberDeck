@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, re, glob, json, math, shutil, tempfile, subprocess, cairo
+import os, sys, re, glob, json, math, time, random, shutil, tempfile, subprocess, cairo
 
 os.environ.pop("LD_PRELOAD", None)
 HOME = os.path.expanduser("~")
@@ -11,45 +11,95 @@ os.makedirs(CFG_DIR, exist_ok=True)
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 THEMES = {
-    "cyber-cyan": {
-        "title": "◈ Cyber Cyan // Тактический Индиго и Бирюза [Дефолт]",
-        "short": "Cyan",
+    "cyber-deck": {
+        "title": "◈ CyberDeck V2 // Тактический Индиго и Бирюза [Оригинал]",
+        "short": "CyberDeck",
+        "badge": "WORK DECK",
+        "game_badge": "GAME DECK",
+        "symbol": "◈",
+        "arch": "tactical",
         "primary": "#4c6ef5",
         "accent":  "#22b8cf",
         "soft":    "#66d9e8",
         "bg":      "#07090f",
+        "bg_alt":  "#0d1323",
+        "fg":      "#dce3f5",
+        "card_bg": "rgba(13, 18, 30, 0.95)",
+        "deck_bg": "rgba(11, 15, 26, 0.96)",
+        "radius":  12,
+        "hypr_round": 10,
     },
-    "crimson-matrix": {
-        "title": "◈ Crimson Matrix // Красный Неон (Arasaka HUD)",
-        "short": "Crimson",
+    "arasaka-ronin": {
+        "title": "❖ CyberDeck: Ronin // Кибер-Самурай (Алый Неон и Золото)",
+        "short": "Ronin",
+        "badge": "RONIN DECK",
+        "game_badge": "RONIN GAME",
+        "symbol": "❖",
+        "arch": "ronin",
         "primary": "#e03131",
-        "accent":  "#ff6b6b",
-        "soft":    "#ffa8a8",
-        "bg":      "#0b0709",
-    },
-    "emerald-netrunner": {
-        "title": "◈ Emerald Netrunner // Матричный Изумруд",
-        "short": "Emerald",
-        "primary": "#0ca678",
-        "accent":  "#20c997",
-        "soft":    "#63e6be",
-        "bg":      "#060b09",
-    },
-    "amber-deus": {
-        "title": "◈ Amber Gold // Кибер-Янтарь и Золото",
-        "short": "Amber",
-        "primary": "#f08c00",
         "accent":  "#fcc419",
-        "soft":    "#ffe066",
-        "bg":      "#0b0906",
+        "soft":    "#ff8787",
+        "bg":      "#0b0608",
+        "bg_alt":  "#190d11",
+        "fg":      "#f5e6e8",
+        "card_bg": "rgba(21, 11, 15, 0.95)",
+        "deck_bg": "rgba(16, 8, 11, 0.96)",
+        "radius":  4,
+        "hypr_round": 4,
     },
-    "violet-phantom": {
-        "title": "◈ Violet Phantom // Квантовый Фиолетовый",
-        "short": "Violet",
-        "primary": "#7950f2",
-        "accent":  "#b197fc",
-        "soft":    "#d0bfff",
-        "bg":      "#08060e",
+    "matrix-construct": {
+        "title": "⌬ CyberDeck: Netrunner // Матричный Изумруд и Фосфор",
+        "short": "Netrunner",
+        "badge": "NET DECK",
+        "game_badge": "NET GAME",
+        "symbol": "⌬",
+        "arch": "matrix",
+        "primary": "#0ca678",
+        "accent":  "#38d9a9",
+        "soft":    "#63e6be",
+        "bg":      "#050a08",
+        "bg_alt":  "#0b1712",
+        "fg":      "#d3f9d8",
+        "card_bg": "rgba(9, 20, 15, 0.95)",
+        "deck_bg": "rgba(7, 15, 11, 0.96)",
+        "radius":  8,
+        "hypr_round": 7,
+    },
+    "synth-outrun": {
+        "title": "▲ CyberDeck: Outrun // Ночной Горизонт (Пурпур и Бирюза)",
+        "short": "Outrun",
+        "badge": "OUTRUN DECK",
+        "game_badge": "OUTRUN GAME",
+        "symbol": "▲",
+        "arch": "synth",
+        "primary": "#d63384",
+        "accent":  "#00f5d4",
+        "soft":    "#f783ac",
+        "bg":      "#090612",
+        "bg_alt":  "#160e29",
+        "fg":      "#f3d9fa",
+        "card_bg": "rgba(19, 12, 33, 0.95)",
+        "deck_bg": "rgba(14, 9, 25, 0.96)",
+        "radius":  14,
+        "hypr_round": 12,
+    },
+    "cryo-protocol": {
+        "title": "✦ CyberDeck: Cryo // Орбитальный Крио-Лёд и Кобальт",
+        "short": "Cryo",
+        "badge": "CRYO DECK",
+        "game_badge": "CRYO GAME",
+        "symbol": "✦",
+        "arch": "cryo",
+        "primary": "#1c7ed6",
+        "accent":  "#74c0fc",
+        "soft":    "#a5d8ff",
+        "bg":      "#060b12",
+        "bg_alt":  "#0e1929",
+        "fg":      "#e7f5ff",
+        "card_bg": "rgba(12, 22, 36, 0.95)",
+        "deck_bg": "rgba(9, 17, 28, 0.96)",
+        "radius":  12,
+        "hypr_round": 10,
     },
 }
 
@@ -57,29 +107,415 @@ def hex_rgb(h):
     h = h.lstrip("#")
     return tuple(int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))
 
+def hex_rgb_int(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
 def load_current():
     try:
-        data = json.load(open(STATE_FILE, encoding="utf-8"))
-        if data.get("id") in THEMES:
-            return data["id"]
+        d = json.load(open(STATE_FILE, encoding="utf-8"))
+        if d.get("id") in THEMES:
+            return d["id"]
     except Exception:
         pass
-    return "cyber-cyan"
+    return "cyber-deck"
 
-def rebuild_cursor(prim_hex, acc_hex):
-    theme_dir = os.path.join(HOME, ".local/share/icons/CyberDeck-Cursor")
+def build_full_theme_css(t):
+    p, a, s, bg, bg_alt, fg = t["primary"], t["accent"], t["soft"], t["bg"], t["bg_alt"], t["fg"]
+    cbg, dbg = t["card_bg"], t["deck_bg"]
+    r = int(t["radius"])
+    r_sm = max(3, r - 3)
+    arch = t["arch"]
+
+    # Каждая тема сохраняет фамильную структуру CyberDeck, но имеет собственный акцентный почерк рамок
+    if arch == "ronin":
+        deck_border = f"border: 1px solid {p}; border-bottom: 2px solid {a};"
+        card_border = f"border: 1px solid {p}; border-left: 3px solid {a};"
+    elif arch == "matrix":
+        deck_border = f"border: 1px solid {a};"
+        card_border = f"border: 1px solid {p}; border-top: 2px solid {a};"
+    elif arch == "synth":
+        deck_border = f"border: 1px solid {p}; border-top: 2px solid {a};"
+        card_border = f"border: 1px solid {p}; border-bottom: 2px solid {a};"
+    elif arch == "cryo":
+        deck_border = f"border: 1px solid {a};"
+        card_border = f"border: 1px solid {p};"
+    else:
+        deck_border = f"border: 1px solid #243252;"
+        card_border = f"border: 1px solid #202a42;"
+
+    return f"""
+window {{
+    background-color: {bg};
+    color: {fg};
+}}
+scrolledwindow, viewport, flowbox, flowboxchild {{
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    outline: none;
+    padding: 0px;
+}}
+button, entry {{
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    outline: none;
+}}
+.hub-overlay {{
+    background-color: transparent;
+    padding: 22px 34px;
+}}
+.top-deck {{
+    background-color: {dbg};
+    {deck_border}
+    border-radius: {r}px;
+    padding: 7px 12px;
+}}
+.brand-pill {{
+    background-color: {bg_alt};
+    border: 1px solid {p};
+    border-radius: {r_sm}px;
+    padding: 0px 11px;
+    min-height: 36px;
+}}
+.brand-dot {{ color: {a}; font-size: 13px; font-weight: bold; }}
+.brand-title {{ font-size: 13px; font-weight: bold; color: {fg}; }}
+
+button.ws-btn {{
+    background-color: {bg_alt};
+    color: {fg};
+    border: 1px solid {p};
+    border-radius: {r_sm}px;
+    padding: 0px 10px;
+    min-height: 36px;
+    font-size: 12px;
+    font-weight: bold;
+}}
+button.ws-btn:hover {{
+    background-color: {p};
+    color: #ffffff;
+    border-color: {a};
+}}
+button.ws-new-btn {{
+    background-color: {bg_alt};
+    color: {a};
+    border: 1px solid {a};
+    border-radius: {r_sm}px;
+    padding: 0px 11px;
+    min-height: 36px;
+    font-size: 12px;
+    font-weight: bold;
+}}
+button.ws-new-btn:hover {{
+    background-color: {a};
+    color: {bg};
+}}
+.telemetry-pod {{
+    background-color: {bg};
+    border: 1px solid {p};
+    border-radius: {r_sm}px;
+    padding: 0px 11px;
+    min-height: 36px;
+}}
+.pod-sep {{ background-color: {p}; min-width: 1px; margin: 7px 3px; opacity: 0.45; }}
+.metric-lbl {{ font-size: 11px; font-weight: bold; color: {fg}; }}
+.net-badge {{ font-size: 11px; font-weight: bold; color: {a}; }}
+
+progressbar trough {{
+    background-color: {bg_alt};
+    border-radius: 3px;
+    min-height: 5px;
+    min-width: 34px;
+}}
+progressbar progress {{
+    background-color: {p};
+    border-radius: 3px;
+    min-height: 5px;
+}}
+progressbar.gauge-cyan progress {{ background-color: {a}; }}
+progressbar.bat-good progress   {{ background-color: {a}; }}
+progressbar.bat-warn progress   {{ background-color: #fcc419; }}
+progressbar.bat-crit progress   {{ background-color: #ff6b6b; }}
+
+button.wifi-btn, button.kb-btn {{
+    background-color: {bg_alt};
+    color: {a};
+    border: 1px solid {p};
+    border-radius: {r_sm}px;
+    padding: 0px 9px;
+    min-height: 36px;
+    font-size: 12px;
+    font-weight: bold;
+}}
+button.wifi-btn:hover, button.kb-btn:hover {{
+    border-color: {a};
+    background-color: {p};
+    color: #ffffff;
+}}
+button.ctrl-pill, button.ctrl-pill-perf {{
+    background-color: {bg_alt};
+    color: {fg};
+    border: 1px solid {a};
+    border-radius: {r_sm}px;
+    padding: 0px 11px;
+    min-height: 36px;
+    font-size: 12px;
+    font-weight: bold;
+}}
+button.ctrl-pill:hover, button.ctrl-pill-perf:hover {{
+    background-color: {p};
+    border-color: {a};
+}}
+.audio-capsule, .power-capsule {{
+    background-color: {bg};
+    border: 1px solid {p};
+    border-radius: {r_sm}px;
+    padding: 0px 6px;
+    min-height: 36px;
+}}
+button.audio-icon-btn, button.icon-act-btn {{
+    background-color: transparent;
+    color: {fg};
+    border: none;
+    border-radius: {max(2, r_sm - 2)}px;
+    padding: 0px 7px;
+    min-height: 30px;
+    font-size: 11px;
+    font-weight: bold;
+}}
+button.audio-icon-btn:hover, button.icon-act-btn:hover {{
+    background-color: {p};
+    color: #ffffff;
+}}
+button.danger-act-btn {{
+    background-color: transparent;
+    color: #ff8787;
+    border: none;
+    border-radius: {max(2, r_sm - 2)}px;
+    padding: 0px 7px;
+    min-height: 30px;
+    font-size: 11px;
+    font-weight: bold;
+}}
+button.danger-act-btn:hover {{ background-color: #3b141e; }}
+.vol-pct {{ font-size: 11px; font-weight: bold; color: {s}; min-width: 30px; }}
+
+scale {{ padding: 0px 3px; }}
+scale trough {{ background-color: {bg_alt}; border-radius: 3px; min-height: 6px; }}
+scale highlight {{ background-color: {a}; border-radius: 3px; }}
+scale slider {{
+    background-color: {fg};
+    border: 2px solid {p};
+    border-radius: {r_sm}px;
+    min-width: 12px;
+    min-height: 12px;
+    margin: -4px 0px;
+}}
+.clock-pill {{
+    background-color: {bg_alt};
+    border: 1px solid {a};
+    border-radius: {r_sm}px;
+    padding: 0px 11px;
+    min-height: 36px;
+}}
+.clock-time {{ font-size: 15px; font-weight: bold; color: {fg}; }}
+.clock-hz   {{ font-size: 10px; font-weight: bold; color: {a}; }}
+
+entry.search-entry {{
+    background-color: {bg_alt};
+    color: {fg};
+    border: 1px solid {p};
+    border-left: 3px solid {a};
+    border-radius: {r}px;
+    padding: 8px 14px;
+    font-size: 14px;
+}}
+entry.search-entry:focus {{ border-color: {a}; }}
+
+button.primary-btn {{
+    background-color: {bg_alt};
+    color: {fg};
+    border: 1px solid {p};
+    border-left: 3px solid {a};
+    border-radius: {r}px;
+    padding: 8px 16px;
+    font-weight: bold;
+}}
+button.primary-btn:hover {{ background-color: {p}; border-color: {a}; }}
+
+button.secondary-btn {{
+    background-color: {bg_alt};
+    color: {s};
+    border: 1px solid {a};
+    border-radius: {r}px;
+    padding: 8px 14px;
+    font-weight: bold;
+}}
+button.secondary-btn:hover {{ background-color: {a}; color: {bg}; }}
+
+button.app-card {{
+    background-color: {cbg};
+    {card_border}
+    border-radius: {r}px;
+    padding: 12px 15px;
+    min-width: 265px;
+    min-height: 92px;
+}}
+button.app-card:hover {{
+    background-color: {bg_alt};
+    border-color: {a};
+}}
+.stripe-pinned {{ background-color: {a}; border-radius: 3px; min-width: 4px; }}
+.stripe-normal {{ background-color: {p}; border-radius: 3px; min-width: 4px; }}
+.icon-frame    {{ background-color: {bg_alt}; border: 1px solid {p}; border-radius: {r_sm}px; padding: 8px; }}
+.card-title    {{ font-size: 14px; font-weight: bold; color: {fg}; }}
+.card-sub      {{ font-size: 10px; font-weight: bold; color: {s}; opacity: 0.78; }}
+.cat-chip      {{ background-color: {bg}; color: {a}; border: 1px solid {p}; border-radius: {max(2, r_sm - 3)}px; padding: 1px 6px; font-size: 9px; font-weight: bold; }}
+.launch-glyph  {{ font-size: 14px; font-weight: bold; color: {a}; }}
+
+.footer-bar {{
+    background-color: {dbg};
+    {deck_border}
+    border-radius: {r}px;
+    padding: 8px 18px;
+}}
+.key-badge {{
+    background-color: {bg_alt};
+    color: {a};
+    border: 1px solid {p};
+    border-radius: {max(2, r_sm - 2)}px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: bold;
+}}
+.key-desc {{ color: #8b9ab8; font-size: 12px; margin-right: 12px; }}
+"""
+
+def render_cyberdeck_variant_bg(t):
+    # Каждая тема строится на фирменном HUD-чертеже CyberDeck (сетка + угловые скобы + шевроны),
+    # но имеет уникальный центральный/боковой модуль своей серии
+    W, H = 1920, 1080
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
+    cr = cairo.Context(surf)
+    PRIM, ACC, BG = hex_rgb(t["primary"]), hex_rgb(t["accent"]), hex_rgb(t["bg"])
+    arch = t["arch"]
+
+    cr.set_source_rgb(*BG); cr.paint()
+
+    # 1. Фирменные угловые неоновые ореолы CyberDeck
+    for cx, cy, rad, col, al in [(W*0.15, H*0.14, 620, PRIM, 0.12), (W*0.85, H*0.86, 620, ACC, 0.10)]:
+        rg = cairo.RadialGradient(cx, cy, 10, cx, cy, rad)
+        rg.add_color_stop_rgba(0, *col, al); rg.add_color_stop_rgba(1, *col, 0)
+        cr.set_source(rg); cr.paint()
+
+    # 2. Фирменная двойная инженерная сетка (24px + 96px с перекрестиями)
+    cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.025)
+    for x in range(24, W, 24): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(24, H, 24): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
+
+    cr.set_source_rgba(*PRIM, 0.065)
+    for x in range(96, W, 96): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(96, H, 96): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
+
+    cr.set_source_rgba(*ACC, 0.18)
+    for x in range(192, W - 60, 192):
+        for y in range(192, H - 60, 192):
+            cr.move_to(x - 4, y); cr.line_to(x + 4, y)
+            cr.move_to(x, y - 4); cr.line_to(x, y + 4)
+    cr.stroke()
+
+    # 3. Индивидуальный HUD-узор конкретной темы поверх базового чертежа
+    if arch == "tactical":
+        for rx, ry, rr in [(W*0.82, H*0.56, 195), (W*0.16, H*0.64, 145)]:
+            cr.set_line_width(1.2); cr.set_source_rgba(*PRIM, 0.14)
+            cr.arc(rx, ry, rr, 0, 2*math.pi); cr.stroke()
+            cr.set_line_width(2.4); cr.set_source_rgba(*ACC, 0.24)
+            cr.arc(rx, ry, rr * 1.1, -0.5, 0.6); cr.stroke()
+    elif arch == "ronin":
+        # Диагональные силовые векторы и ромбовидный узел Ronin
+        for rx, ry, rr in [(W*0.82, H*0.56, 190), (W*0.16, H*0.64, 140)]:
+            cr.set_line_width(1.8); cr.set_source_rgba(*PRIM, 0.20)
+            cr.move_to(rx, ry - rr); cr.line_to(rx + rr, ry); cr.line_to(rx, ry + rr); cr.line_to(rx - rr, ry); cr.close_path(); cr.stroke()
+            cr.set_line_width(2.2); cr.set_source_rgba(*ACC, 0.25)
+            cr.move_to(rx - rr*1.2, ry); cr.line_to(rx + rr*1.2, ry); cr.stroke()
+    elif arch == "matrix":
+        # Гексагональные узлы и тонкие вертикальные трассы данных
+        random.seed(42)
+        cr.set_line_width(1.4)
+        for x in range(96, W, 96):
+            y0 = random.randint(80, H - 380)
+            hlen = random.randint(140, 280)
+            lg = cairo.LinearGradient(x, y0, x, y0 + hlen)
+            lg.add_color_stop_rgba(0, *PRIM, 0.0); lg.add_color_stop_rgba(1, *ACC, 0.24)
+            cr.set_source(lg); cr.move_to(x, y0); cr.line_to(x, y0 + hlen); cr.stroke()
+        for rx, ry, rr in [(W*0.82, H*0.56, 180), (W*0.16, H*0.64, 135)]:
+            cr.set_line_width(1.6); cr.set_source_rgba(*ACC, 0.22)
+            cr.new_sub_path()
+            for i in range(6):
+                ang = math.pi/3 * i + math.pi/6
+                cr.line_to(rx + rr*math.cos(ang), ry + rr*math.sin(ang))
+            cr.close_path(); cr.stroke()
+    elif arch == "synth":
+        # Двойные неоновые дуги и перспективные лучи в нижней части чертежа
+        for rx, ry, rr in [(W*0.82, H*0.56, 195), (W*0.16, H*0.64, 145)]:
+            cr.set_line_width(2.0); cr.set_source_rgba(*PRIM, 0.22)
+            cr.arc(rx, ry, rr, math.pi, 2*math.pi); cr.stroke()
+            cr.set_source_rgba(*ACC, 0.24)
+            cr.arc(rx, ry, rr * 0.82, 0, math.pi); cr.stroke()
+    elif arch == "cryo":
+        # Крио-кольца астролябии с градуировкой
+        for rx, ry, rr in [(W*0.82, H*0.56, 195), (W*0.16, H*0.64, 145)]:
+            cr.set_line_width(1.3); cr.set_source_rgba(*ACC, 0.22)
+            cr.arc(rx, ry, rr, 0, 2*math.pi); cr.stroke()
+            for deg in range(0, 360, 30):
+                a = math.radians(deg)
+                cr.move_to(rx + (rr-8)*math.cos(a), ry + (rr-8)*math.sin(a))
+                cr.line_to(rx + (rr+8)*math.cos(a), ry + (rr+8)*math.sin(a))
+            cr.stroke()
+
+    # 4. Фирменные периметральные скобы и шевроны CyberDeck
+    m, ln = 14, 52
+    cr.set_line_width(2.4); cr.set_source_rgba(*PRIM, 0.75)
+    for x1, y1, x2, y2, x3, y3 in [
+        (m, m + ln, m, m, m + ln, m), (W - m - ln, m, W - m, m, W - m, m + ln),
+        (m, H - m - ln, m, H - m, m + ln, H - m), (W - m - ln, H - m, W - m, H - m, W - m, H - m - ln),
+    ]:
+        cr.move_to(x1, y1); cr.line_to(x2, y2); cr.line_to(x3, y3)
+    cr.stroke()
+
+    cr.set_line_width(2.2); cr.set_source_rgba(*ACC, 0.42)
+    for i in range(12):
+        ox = 84 + i * 11
+        cr.move_to(ox, m); cr.line_to(ox + 7, m + 7)
+        bx = W - 216 + i * 11
+        cr.move_to(bx, H - m - 7); cr.line_to(bx + 7, H - m)
+    cr.stroke()
+
+    for nm in ("work_hud_bg.png", "gaming_hud_bg.png", "cyberdeck_hud_bg.png", "sddm_bg.png", "lock_hud_bg.png"):
+        surf.write_to_png(os.path.join(CACHE_DIR, nm))
+    surf.write_to_png(os.path.join(HOME, ".config/hypr/assets/terminal_hud_bg.png"))
+
+def rebuild_cursor_and_flush_cache(theme_id, t):
+    # Создаём папку с УНИКАЛЬНЫМ именем темы курсора, чтобы Hyprland и GTK4 мгновенно сбросили кэш!
+    cur_name = f"CyberDeck-Cursor-{theme_id}"
+    icons_root = os.path.join(HOME, ".local/share/icons")
+    # Удаляем старые тематические папки курсора
+    for old_d in glob.glob(os.path.join(icons_root, "CyberDeck-Cursor*")):
+        shutil.rmtree(old_d, ignore_errors=True)
+
+    theme_dir = os.path.join(icons_root, cur_name)
     cursors_dir = os.path.join(theme_dir, "cursors")
-    shutil.rmtree(theme_dir, ignore_errors=True)
     os.makedirs(cursors_dir, exist_ok=True)
     open(os.path.join(theme_dir, "index.theme"), "w", encoding="utf-8").write(
-        "[Icon Theme]\nName=CyberDeck-Cursor\nComment=CyberDeck Adaptive Cursor\nInherits=Adwaita\n"
+        f"[Icon Theme]\nName={cur_name}\nComment=CyberDeck {t['short']} Cursor\nInherits=Adwaita\n"
     )
 
-    INDIGO = hex_rgb(prim_hex)
-    CYAN   = hex_rgb(acc_hex)
-    DARK   = (0.039, 0.055, 0.098)
-    LIGHT  = (0.92, 0.95, 1.0)
-    RED    = (1.0, 0.42, 0.42)
+    PRIM, ACC, DARK, FG = hex_rgb(t["primary"]), hex_rgb(t["accent"]), hex_rgb(t["bg"]), hex_rgb(t["fg"])
+    arch = t["arch"]
 
     def new_surf(sz):
         s = cairo.ImageSurface(cairo.FORMAT_ARGB32, sz, sz)
@@ -88,60 +524,64 @@ def rebuild_cursor(prim_hex, acc_hex):
         return s, cr
 
     def draw_arrow(cr):
-        pts = [(3,2),(3,24),(8.8,19.2),(12.6,27.5),(16.0,25.8),(12.2,17.6),(19.8,17.6)]
+        if arch == "ronin":
+            pts = [(3, 2), (3, 25), (8.5, 19.5), (13.5, 28), (17.0, 26.2), (12.0, 17.8), (20.5, 16.5)]
+        elif arch == "matrix":
+            pts = [(3, 2), (3, 24), (8.8, 19.2), (12.6, 27.5), (16.0, 25.8), (12.2, 17.6), (19.8, 17.6)]
+        elif arch == "synth":
+            pts = [(3, 2), (4.2, 24.5), (9.8, 19.0), (14.5, 27.0), (17.8, 25.0), (13.0, 17.2), (20.5, 16.0)]
+        else:
+            pts = [(3, 2), (3, 24), (8.8, 19.2), (12.6, 27.5), (16.0, 25.8), (12.2, 17.6), (19.8, 17.6)]
+
+        cr.save(); cr.translate(1.2, 1.5); cr.move_to(*pts[0])
+        for p in pts[1:]: cr.line_to(*p)
+        cr.close_path(); cr.set_source_rgba(0, 0, 0, 0.50); cr.fill(); cr.restore()
+
         cr.move_to(*pts[0])
         for p in pts[1:]: cr.line_to(*p)
-        cr.close_path(); cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
-        lg = cairo.LinearGradient(3,2,19,27)
-        lg.add_color_stop_rgb(0.0, *CYAN); lg.add_color_stop_rgb(0.65, *INDIGO); lg.add_color_stop_rgb(1.0, *CYAN)
-        cr.set_source(lg); cr.set_line_width(1.8); cr.stroke()
-        cr.arc(4.3, 4.6, 1.2, 0, 2*math.pi); cr.set_source_rgb(*CYAN); cr.fill()
+        cr.close_path()
+        cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
+
+        lg = cairo.LinearGradient(3, 2, 20, 27)
+        lg.add_color_stop_rgb(0.0, *ACC); lg.add_color_stop_rgb(0.6, *PRIM); lg.add_color_stop_rgb(1.0, *ACC)
+        cr.set_source(lg); cr.set_line_width(2.0); cr.stroke()
+
+        # Акцентное ядро внутри стрелки
+        cr.arc(5.2, 6.2, 1.5, 0, 2*math.pi); cr.set_source_rgb(*ACC); cr.fill()
 
     def draw_pointer(cr):
         pts = [(6,5),(6,23),(11.2,18.8),(15.5,26),(18.5,24.4),(14.2,17.2),(21,17.2)]
         cr.move_to(*pts[0])
         for p in pts[1:]: cr.line_to(*p)
         cr.close_path(); cr.set_source_rgba(*DARK, 0.96); cr.fill_preserve()
-        cr.set_source_rgb(*CYAN); cr.set_line_width(1.8); cr.stroke()
+        cr.set_source_rgb(*ACC); cr.set_line_width(1.9); cr.stroke()
         cx, cy, r = 6.0, 5.0, 3.6
         cr.move_to(cx, cy-r); cr.line_to(cx+r, cy); cr.line_to(cx, cy+r); cr.line_to(cx-r, cy); cr.close_path()
-        cr.set_source_rgba(*DARK, 0.95); cr.fill_preserve(); cr.set_source_rgb(*LIGHT); cr.set_line_width(1.4); cr.stroke()
+        cr.set_source_rgba(*PRIM, 0.95); cr.fill_preserve(); cr.set_source_rgb(*FG); cr.set_line_width(1.3); cr.stroke()
 
     def draw_ibeam(cr):
-        for w, col, al in [(4.2,(0,0,0),0.65), (1.9,CYAN,1.0)]:
+        for w, col, al in [(4.2,(0,0,0),0.65), (2.0,ACC,1.0)]:
             cr.set_line_width(w); cr.set_source_rgba(*col, al)
             cr.move_to(16,5); cr.line_to(16,27); cr.move_to(11.5,5); cr.line_to(20.5,5); cr.move_to(11.5,27); cr.line_to(20.5,27); cr.stroke()
 
     def draw_cross(cr):
-        cr.set_line_width(1.8); cr.set_source_rgb(*CYAN)
+        cr.set_line_width(1.9); cr.set_source_rgb(*ACC)
         for x1,y1,x2,y2 in [(16,3,16,11),(16,21,16,29),(3,16,11,16),(21,16,29,16)]: cr.move_to(x1,y1); cr.line_to(x2,y2)
         cr.stroke()
-        cr.set_line_width(1.3); cr.set_source_rgba(*INDIGO, 0.9); cr.arc(16,16,6.5,0,2*math.pi); cr.stroke()
+        cr.set_line_width(1.4); cr.set_source_rgb(*PRIM); cr.arc(16,16,6.5,0,2*math.pi); cr.stroke()
 
     def draw_darrow(cr, ang):
         cr.save(); cr.translate(16,16); cr.rotate(math.radians(ang))
-        for lw, col, al in [(4.2,(0,0,0),0.6), (2.0,CYAN,1.0)]:
-            cr.set_line_width(lw); cr.set_source_rgba(*col, al)
-            cr.move_to(-10,0); cr.line_to(10,0); cr.move_to(-6,-4.5); cr.line_to(-11,0); cr.line_to(-6,4.5); cr.move_to(6,-4.5); cr.line_to(11,0); cr.line_to(6,4.5); cr.stroke()
+        cr.set_line_width(2.2); cr.set_source_rgb(*ACC)
+        cr.move_to(-10,0); cr.line_to(10,0); cr.move_to(-6,-4.5); cr.line_to(-11,0); cr.line_to(-6,4.5); cr.move_to(6,-4.5); cr.line_to(11,0); cr.line_to(6,4.5); cr.stroke()
         cr.restore()
-
-    def draw_grab(cr, closed=False):
-        r = 7.5 if closed else 9.5
-        cr.arc(16,16,r,0,2*math.pi); cr.set_source_rgba(*DARK,0.95); cr.fill_preserve()
-        cr.set_line_width(2.0); cr.set_source_rgb(*(CYAN if closed else INDIGO)); cr.stroke()
-
-    def draw_deny(cr):
-        cr.arc(16,16,10.5,0,2*math.pi); cr.set_source_rgba(*DARK,0.92); cr.fill_preserve()
-        cr.set_line_width(2.4); cr.set_source_rgb(*RED); cr.stroke()
-        cr.move_to(9.2,9.2); cr.line_to(22.8,22.8); cr.stroke()
 
     def draw_spin(cr, ph, mini=False):
         cx, cy, r = (22.5, 21.5, 6.2) if mini else (16.0, 16.0, 10.5)
-        cr.arc(cx,cy,r,0,2*math.pi); cr.set_source_rgba(*DARK,0.85); cr.fill_preserve()
-        cr.set_line_width(2.0); cr.set_source_rgba(*INDIGO,0.35); cr.stroke()
+        cr.arc(cx,cy,r,0,2*math.pi); cr.set_source_rgba(*DARK,0.88); cr.fill()
         a0 = ph * 2 * math.pi
-        cr.set_line_width(2.4); cr.set_source_rgb(*CYAN); cr.arc(cx,cy,r,a0,a0+math.pi*0.9); cr.stroke()
-        cr.set_source_rgb(*INDIGO); cr.arc(cx,cy,r,a0+math.pi,a0+math.pi*1.55); cr.stroke()
+        cr.set_line_width(2.4); cr.set_source_rgb(*ACC); cr.arc(cx,cy,r,a0,a0+math.pi*0.9); cr.stroke()
+        cr.set_source_rgb(*PRIM); cr.arc(cx,cy,r,a0+math.pi,a0+math.pi*1.55); cr.stroke()
 
     tmp = tempfile.mkdtemp(prefix="cd_cur_")
     try:
@@ -157,12 +597,12 @@ def rebuild_cursor(prim_hex, acc_hex):
         def b_anim(name, hx32, hy32, mini=False):
             lines = []
             for sz in sizes:
-                for fr in range(12):
+                for fr in range(10):
                     s, cr = new_surf(sz)
                     if mini: draw_arrow(cr)
-                    draw_spin(cr, fr/12.0, mini)
+                    draw_spin(cr, fr/10.0, mini)
                     png = os.path.join(tmp, f"{name}_{sz}_{fr}.png"); s.write_to_png(png)
-                    lines.append(f"{sz} {int(round(hx32*sz/32.0))} {int(round(hy32*sz/32.0))} {png} 55")
+                    lines.append(f"{sz} {int(round(hx32*sz/32.0))} {int(round(hy32*sz/32.0))} {png} 60")
             cfg = os.path.join(tmp, f"{name}.cfg"); open(cfg,"w").write("\n".join(lines)+"\n")
             subprocess.run(["xcursorgen", cfg, os.path.join(cursors_dir, name)], check=True)
 
@@ -175,9 +615,9 @@ def rebuild_cursor(prim_hex, acc_hex):
         b_static("sb_v_double_arrow", 16, 16, lambda cr: draw_darrow(cr,90))
         b_static("bd_double_arrow", 16, 16, lambda cr: draw_darrow(cr,45))
         b_static("fd_double_arrow", 16, 16, lambda cr: draw_darrow(cr,-45))
-        b_static("grab", 16, 16, lambda cr: draw_grab(cr,False))
-        b_static("grabbing", 16, 16, lambda cr: draw_grab(cr,True))
-        b_static("not_allowed", 16, 16, draw_deny)
+        b_static("grab", 16, 16, draw_cross)
+        b_static("grabbing", 16, 16, draw_cross)
+        b_static("not_allowed", 16, 16, draw_cross)
         b_anim("watch", 16, 16, False)
         b_anim("left_ptr_watch", 3, 2, True)
 
@@ -204,115 +644,437 @@ def rebuild_cursor(prim_hex, acc_hex):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-def render_backgrounds(prim_hex, acc_hex, bg_hex):
-    PRIM, ACC, BG = hex_rgb(prim_hex), hex_rgb(acc_hex), hex_rgb(bg_hex)
-    W, H = 1920, 1080
-    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
-    cr = cairo.Context(surf)
-    cr.set_source_rgb(*BG); cr.paint()
+    # Дублируем в базовое имя CyberDeck-Cursor для совместимости
+    shutil.copytree(theme_dir, os.path.join(icons_root, "CyberDeck-Cursor"))
 
-    for cx, cy, rad, col, al in [(W * 0.15, H * 0.12, 620, PRIM, 0.11), (W * 0.85, H * 0.86, 640, ACC, 0.09)]:
-        rg = cairo.RadialGradient(cx, cy, 10, cx, cy, rad)
-        rg.add_color_stop_rgba(0.0, *col, al); rg.add_color_stop_rgba(1.0, *col, 0.0)
-        cr.set_source(rg); cr.paint()
+    # Обновляем локальные index.theme, GTK3/4, Xresources и GSettings на новое уникальное имя cur_name
+    for d_idx in (os.path.join(HOME, ".icons/default/index.theme"), os.path.join(HOME, ".local/share/icons/default/index.theme")):
+        os.makedirs(os.path.dirname(d_idx), exist_ok=True)
+        open(d_idx, "w", encoding="utf-8").write(f"[Icon Theme]\nName=Default\nInherits={cur_name}\n")
 
-    cr.set_line_width(1.0); cr.set_source_rgba(*PRIM, 0.06)
-    for x in range(96, W, 96): cr.move_to(x, 0); cr.line_to(x, H)
-    for y in range(96, H, 96): cr.move_to(0, y); cr.line_to(W, y)
-    cr.stroke()
+    open(os.path.join(HOME, ".Xresources"), "w", encoding="utf-8").write(f"Xcursor.theme: {cur_name}\nXcursor.size: 28\n")
+    subprocess.run(["xrdb", "-merge", os.path.join(HOME, ".Xresources")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    m, ln = 14, 52
-    cr.set_line_width(2.2); cr.set_source_rgba(*ACC, 0.72)
-    for x1, y1, x2, y2, x3, y3 in [
-        (m, m + ln, m, m, m + ln, m), (W - m - ln, m, W - m, m, W - m, m + ln),
-        (m, H - m - ln, m, H - m, m + ln, H - m), (W - m - ln, H - m, W - m, H - m, W - m, H - m - ln),
-    ]:
-        cr.move_to(x1, y1); cr.line_to(x2, y2); cr.line_to(x3, y3)
-    cr.stroke()
+    for gdir in (os.path.join(HOME, ".config/gtk-3.0"), os.path.join(HOME, ".config/gtk-4.0")):
+        os.makedirs(gdir, exist_ok=True)
+        open(os.path.join(gdir, "settings.ini"), "w", encoding="utf-8").write(
+            f"[Settings]\ngtk-application-prefer-dark-theme=1\ngtk-cursor-theme-name={cur_name}\ngtk-cursor-theme-size=28\ngtk-icon-theme-name=CyberDeck-Icons\ngtk-font-name=Noto Sans 10\n"
+        )
 
-    for nm in ("work_hud_bg.png", "gaming_hud_bg.png", "cyberdeck_hud_bg.png", "sddm_bg.png"):
-        surf.write_to_png(os.path.join(CACHE_DIR, nm))
+    subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "cursor-theme", cur_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["hyprctl", "setcursor", cur_name, "28"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return cur_name
 
-def recolor_file(path, old_p, old_a, new_p, new_a):
-    if not os.path.isfile(path):
-        return
-    txt = open(path, "r", encoding="utf-8", errors="ignore").read()
-    # Меняем базовые индиго/циан или предыдущие цвета на новые
-    for op in ("#4c6ef5", "#364fc7", "#3b5bdb", old_p):
-        if op: txt = re.sub(re.escape(op), new_p, txt, flags=re.I)
-    for oa in ("#22b8cf", "#66d9e8", old_a):
-        if oa: txt = re.sub(re.escape(oa), new_a, txt, flags=re.I)
-    open(path, "w", encoding="utf-8").write(txt)
+def update_all_terminals_live(t):
+    p_hex, a_hex, s_hex, bg_hex, bg_alt, fg_hex = t["primary"], t["accent"], t["soft"], t["bg"], t["bg_alt"], t["fg"]
+    p_c, a_c, s_c, bg_c, bg_ac, fg_c = p_hex.lstrip("#"), a_hex.lstrip("#"), s_hex.lstrip("#"), bg_hex.lstrip("#"), bg_alt.lstrip("#"), fg_hex.lstrip("#")
+    pr, pg, pb = hex_rgb_int(p_hex)
+    ar, ag, ab = hex_rgb_int(a_hex)
+    sr, sg_i, sb = hex_rgb_int(s_hex)
+    sym = t["symbol"]
+    short = t["short"].upper()
 
-def apply_theme(theme_id):
+    # 1. Полностью обновляем ~/.config/foot/foot.ini
+    foot_ini = f"""[main]
+font=monospace:size=11.5
+pad=18x14 center
+initial-color-theme=dark
+
+[cursor]
+style=beam
+blink=no
+
+[csd]
+preferred=none
+
+[colors-dark]
+alpha=1.0
+background={bg_c}
+foreground={fg_c}
+cursor={bg_c} {a_c}
+selection-foreground=f0f4ff
+selection-background={bg_ac}
+urls={a_c}
+
+regular0={bg_c}
+regular1=ff6b6b
+regular2=20c997
+regular3=fcc419
+regular4={p_c}
+regular5={s_c}
+regular6={a_c}
+regular7={fg_c}
+
+bright0=495678
+bright1=ff8787
+bright2=63e6be
+bright3=ffe066
+bright4={p_c}
+bright5={s_c}
+bright6={a_c}
+bright7=ffffff
+"""
+    os.makedirs(os.path.join(HOME, ".config/foot"), exist_ok=True)
+    open(os.path.join(HOME, ".config/foot/foot.ini"), "w", encoding="utf-8").write(foot_ini)
+
+    # 2. Обновляем ~/.config/kitty/cyber-deck.conf
+    kitty_conf = f"""background {bg_hex}
+foreground {fg_hex}
+cursor {a_hex}
+cursor_text_color {bg_hex}
+selection_background {bg_alt}
+selection_foreground #ffffff
+color0 {bg_hex}
+color4 {p_hex}
+color6 {a_hex}
+color12 {p_hex}
+color14 {a_hex}
+background_opacity 1.0
+background_image {HOME}/.config/hypr/assets/terminal_hud_bg.png
+background_image_layout scaled
+"""
+    os.makedirs(os.path.join(HOME, ".config/kitty"), exist_ok=True)
+    open(os.path.join(HOME, ".config/kitty/cyber-deck.conf"), "w", encoding="utf-8").write(kitty_conf)
+    subprocess.run(["pkill", "-USR1", "-x", "kitty"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # 3. Обновляем HUD-рельсу и промпт ~/.config/cyberdeck/cyber-shell.sh с RGB-цветами выбранной темы!
+    shell_sh = f"""unset LD_PRELOAD
+case $- in
+    *i*) ;;
+    *) return ;;
+esac
+
+__cyber_deck_mode() {{
+    if [[ "${{HYPRLAND_CONFIG:-}}" == *"game"* ]]; then
+        printf "GAME"
+    else
+        printf "{short}"
+    fi
+}}
+
+__cyber_print_hud_rail() {{
+    local ec=$?
+    local cols=$(( ${{COLUMNS:-$(tput cols 2>/dev/null || echo 80)}} - 1 ))
+    [ "$cols" -lt 44 ] && cols=44
+
+    local mode
+    mode=$(__cyber_deck_mode)
+    local dir="${{PWD/#$HOME/\\~}}"
+    [ "${{#dir}}" -gt 32 ] && dir="…${{dir: -31}}"
+
+    local git_b=""
+    if [ -d .git ] || git rev-parse --git-dir >/dev/null 2>&1; then
+        git_b=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+    fi
+
+    local t_now
+    t_now=$(date +%H:%M)
+    local st_plain="OK"
+    [ "$ec" -ne 0 ] && st_plain="ERR:$ec"
+
+    local left_plain="╭─{sym} [CYBER//${{mode}} ∷ ${{USER}}]─[${{dir}}]"
+    [ -n "$git_b" ] && left_plain="${{left_plain}}─[⎇ ${{git_b}}]"
+    local right_plain="[${{st_plain}} • ${{t_now}}]─╮"
+
+    local fill_len=$(( cols - ${{#left_plain}} - ${{#right_plain}} ))
+    [ "$fill_len" -lt 2 ] && fill_len=2
+
+    local C_IND="\\e[38;2;{pr};{pg};{pb}m"
+    local C_DIM="\\e[38;2;{max(15, pr//2)};{max(15, pg//2)};{max(15, pb//2)}m"
+    local C_CYN="\\e[1;38;2;{ar};{ag};{ab}m"
+    local C_TXT="\\e[1;38;2;240;244;255m"
+    local C_PTH="\\e[1;38;2;{sr};{sg_i};{sb}m"
+    local C_GRN="\\e[1;38;2;99;230;190m"
+    local C_RED="\\e[1;38;2;255;107;107m"
+    local C_RST="\\e[0m"
+
+    local middle=""
+    if [ "$fill_len" -ge 12 ]; then
+        local l_pad=$(( (fill_len - 8) / 2 ))
+        local r_pad=$(( fill_len - 8 - l_pad ))
+        local seg_l seg_r
+        printf -v seg_l '%*s' "$l_pad" ''; seg_l="${{seg_l// /─}}"
+        printf -v seg_r '%*s' "$r_pad" ''; seg_r="${{seg_r// /─}}"
+        middle="${{C_DIM}}${{seg_l}}${{C_CYN}} ////// ${{C_DIM}}${{seg_r}}"
+    else
+        printf -v middle '%*s' "$fill_len" ''; middle="${{C_DIM}}${{middle// /─}}"
+    fi
+
+    local git_col=""
+    [ -n "$git_b" ] && git_col="${{C_IND}}─[${{C_GRN}}⎇ ${{git_b}}${{C_IND}}]"
+
+    local st_col="${{C_GRN}}OK"
+    [ "$ec" -ne 0 ] && st_col="${{C_RED}}ERR:${{ec}}"
+
+    printf "\\n${{C_IND}}╭─${{C_CYN}}{sym}${{C_IND}} [${{C_CYN}}CYBER//${{mode}}${{C_IND}} ∷ ${{C_TXT}}${{USER}}${{C_IND}}]─[${{C_PTH}}${{dir}}${{C_IND}}]${{git_col}}${{middle}}${{C_IND}}[${{st_col}}${{C_IND}} • ${{C_TXT}}${{t_now}}${{C_IND}}]─╮${{C_RST}}\\n"
+    return "$ec"
+}}
+
+if [ -n "${{BASH_VERSION:-}}" ]; then
+    __cyber_prompt_cmd() {{
+        local ec=$?
+        (exit "$ec")
+        __cyber_print_hud_rail
+        if [ "$ec" -eq 0 ]; then
+            PS1="\\[\\e[38;2;{pr};{pg};{pb}m\\]╰─\\[\\e[1;38;2;{ar};{ag};{ab}m\\]{sym} ⟫\\[\\e[0m\\] "
+        else
+            PS1="\\[\\e[38;2;{pr};{pg};{pb}m\\]╰─\\[\\e[1;38;2;255;107;107m\\]✘ ⟫\\[\\e[0m\\] "
+        fi
+    }}
+    PROMPT_COMMAND="__cyber_prompt_cmd"
+elif [ -n "${{ZSH_VERSION:-}}" ]; then
+    precmd() {{ __cyber_print_hud_rail; }}
+    setopt PROMPT_SUBST
+    PROMPT='%F{{{p_hex}}}╰─%(?.%B%F{{{a_hex}}}{sym} ⟫.%B%F{{#ff6b6b}}✘ ⟫)%b%f '
+fi
+
+if [ -z "${{CYBER_BANNER_SHOWN:-}}" ] && [ "${{SHLVL:-1}}" -le 2 ]; then
+    export CYBER_BANNER_SHOWN=1
+    printf "\\e[38;2;{pr};{pg};{pb}m┏━━\\e[1;38;2;{ar};{ag};{ab}m{sym} CYBERDECK // {short} CONSOLE\\e[0m\\e[38;2;{pr};{pg};{pb}m━━┫ \\e[38;2;{sr};{sg_i};{sb}mSYS.NODE // %s\\e[38;2;{pr};{pg};{pb}m ┣━━\\e[38;2;{ar};{ag};{ab}m//////\\e[38;2;{pr};{pg};{pb}m━━┓\\e[0m\\n" "$(uname -r)"
+    if command -v fastfetch >/dev/null 2>&1 && [ "$(tput cols 2>/dev/null || echo 80)" -ge 72 ]; then
+        fastfetch
+    fi
+fi
+"""
+    open(os.path.join(CFG_DIR, "cyber-shell.sh"), "w", encoding="utf-8").write(shell_sh)
+
+    # 4. Обновляем логотип и RGB-конфиг Fastfetch
+    logo_txt = f"""$1      ╭────────── $2{sym}$1 ──────────╮
+$1    ╭─╯   $2▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄$1   ╰─╮
+$2   ╱    $1╭─╯$3  {sym} {short:<9}$1╰─╮$2    ╲
+$2  │     $1│  $2╭───────────╮  $1│$2     │
+$2  │     $1│  $2│ $3  ╔═══╗  $2 │  $1│$2     │
+$1  {sym}─────┼──$2┤ $3  ║ {sym} ║  $2 ├──$1┼─────{sym}
+$2  │     $1│  $2│ $3  ╚═══╝  $2 │  $1│$2     │
+$2  │     $1│  $2╰───────────╯  $1│$2     │
+$2   ╲    $1╰─╮$3  HUD // V2  $1╭─╯$2    ╱
+$1    ╰─╮   $2▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀$1   ╭─╯
+$1      ╰────────── $2{sym}$1 ──────────╯
+"""
+    os.makedirs(os.path.join(HOME, ".config/fastfetch"), exist_ok=True)
+    open(os.path.join(HOME, ".config/fastfetch/cyber_logo.txt"), "w", encoding="utf-8").write(logo_txt)
+
+    ff_cfg = f"""{{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {{
+    "type": "file",
+    "source": "~/.config/fastfetch/cyber_logo.txt",
+    "color": {{
+      "1": "38;2;{ar};{ag};{ab}",
+      "2": "38;2;{pr};{pg};{pb}",
+      "3": "38;2;240;244;255"
+    }},
+    "padding": {{ "top": 1, "left": 2, "right": 3 }}
+  }},
+  "display": {{
+    "separator": "  ⟫  ",
+    "color": {{
+      "keys": "38;2;{ar};{ag};{ab}",
+      "title": "38;2;240;244;255"
+    }}
+  }},
+  "modules": [
+    {{
+      "type": "custom",
+      "format": "\\u001b[38;2;{pr};{pg};{pb}m╭──────────── \\u001b[38;2;{ar};{ag};{ab}m{sym} CYBERDECK // {short}\\u001b[38;2;{pr};{pg};{pb}m ────────────╮\\u001b[0m"
+    }},
+    {{
+      "type": "command",
+      "key": "{sym} OPERATOR",
+      "text": "printf 'CYBER-NODE // %s@%s' \\"$USER\\" \\"$(uname -n)\\""
+    }},
+    {{ "type": "os",       "key": "{sym} SYSTEM  " }},
+    {{ "type": "kernel",   "key": "{sym} KERNEL  " }},
+    {{ "type": "wm",       "key": "{sym} ENGINE  " }},
+    {{ "type": "terminal", "key": "{sym} CONSOLE " }},
+    {{ "type": "cpu",      "key": "{sym} CPU     " }},
+    {{ "type": "gpu",      "key": "{sym} GPU     " }},
+    {{ "type": "memory",   "key": "{sym} MEMORY  " }},
+    {{ "type": "battery",  "key": "{sym} POWER   " }},
+    {{ "type": "cursor",   "key": "{sym} CURSOR  " }},
+    {{ "type": "icons",    "key": "{sym} ICONS   " }},
+    {{
+      "type": "custom",
+      "format": "\\u001b[38;2;{pr};{pg};{pb}m╰────────────────────────────────────────────────╯\\u001b[0m"
+    }},
+    {{ "type": "colors", "symbol": "circle", "paddingLeft": 2 }}
+  ]
+}}
+"""
+    open(os.path.join(HOME, ".config/fastfetch/config.jsonc"), "w", encoding="utf-8").write(ff_cfg)
+
+    # 5. Обновляем тему Btop
+    btop_t = f"""theme[main_bg]="{bg_hex}"
+theme[main_fg]="{fg_hex}"
+theme[title]="#ffffff"
+theme[hi_fg]="{a_hex}"
+theme[selected_bg]="{bg_alt}"
+theme[selected_fg]="#ffffff"
+theme[inactive_fg]="#5c6b8a"
+theme[graph_text]="{s_hex}"
+theme[meter_bg]="{bg_alt}"
+theme[proc_misc]="{a_hex}"
+theme[cpu_box]="{p_hex}"
+theme[mem_box]="{p_hex}"
+theme[net_box]="{p_hex}"
+theme[proc_box]="{p_hex}"
+theme[div_line]="{p_hex}"
+theme[cpu_start]="{a_hex}"
+theme[cpu_mid]="{p_hex}"
+theme[cpu_end]="{s_hex}"
+"""
+    os.makedirs(os.path.join(HOME, ".config/btop/themes"), exist_ok=True)
+    open(os.path.join(HOME, ".config/btop/themes/cyber-deck.theme"), "w", encoding="utf-8").write(btop_t)
+
+    # 6. ЖИВАЯ ИНЪЕКЦИЯ OSC-ЦВЕТОВ ВО ВСЕ ОТКРЫТЫЕ ОКНА ТЕРМИНАЛА (мгновенная смена фона, курсора и ANSI без перезапуска!)
+    osc_seq = (
+        f"\033]11;{bg_hex}\007"
+        f"\033]10;{fg_hex}\007"
+        f"\033]12;{a_hex}\007"
+        f"\033]4;0;{bg_hex}\007"
+        f"\033]4;4;{p_hex}\007"
+        f"\033]4;5;{s_hex}\007"
+        f"\033]4;6;{a_hex}\007"
+        f"\033]4;12;{p_hex}\007"
+        f"\033]4;13;{s_hex}\007"
+        f"\033]4;14;{a_hex}\007"
+    )
+    uid = os.getuid()
+    for pts in glob.glob("/dev/pts/[0-9]*"):
+        try:
+            if os.stat(pts).st_uid == uid:
+                with open(pts, "wb", buffering=0) as f:
+                    f.write(osc_seq.encode("ascii"))
+        except Exception:
+            pass
+
+def apply_backend(theme_id):
     if theme_id not in THEMES:
-        theme_id = "cyber-cyan"
-    old_id = load_current()
-    old_t = THEMES.get(old_id, THEMES["cyber-cyan"])
-    new_t = THEMES[theme_id]
+        theme_id = "cyber-deck"
+    t = THEMES[theme_id]
+    p_hex, a_hex, s_hex, bg_hex = t["primary"], t["accent"], t["soft"], t["bg"]
+    rad = int(t["radius"])
 
-    p_hex, a_hex, bg_hex = new_t["primary"], new_t["accent"], new_t["bg"]
-    json.dump({"id": theme_id, **new_t}, open(STATE_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    # 1. Сохраняем состояние и генерируем полный CSS рабочего стола
+    json.dump({"id": theme_id, **t}, open(STATE_FILE, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    open(os.path.join(CFG_DIR, "active_hub.css"), "w", encoding="utf-8").write(build_full_theme_css(t))
 
-    # 1. Перекрашиваем иконки, Rofi, Mako, GTK, Firefox и Терминалы
-    for fpath in [
-        os.path.join(HOME, ".local/bin/cyber-icons-sync"),
-        os.path.join(HOME, ".local/bin/cyber-firefox-sync"),
-        os.path.join(HOME, ".config/hypr/gaming_launcher.rasi"),
-        os.path.join(HOME, ".config/hypr/cyber_wifi.rasi"),
-        os.path.join(HOME, ".config/mako/config"),
-        os.path.join(HOME, ".config/gtk-3.0/gtk.css"),
-        os.path.join(HOME, ".config/gtk-4.0/gtk.css"),
-        os.path.join(HOME, ".config/kitty/cyber-deck.conf"),
-    ] + glob.glob(os.path.join(HOME, ".config/hypr/assets/ui/*.svg")):
-        recolor_file(fpath, old_t["primary"], old_t["accent"], p_hex, a_hex)
+    # 2. Обновляем иконки UI, пакет иконок приложений и Firefox
+    for svg_f in glob.glob(os.path.join(HOME, ".config/hypr/assets/ui/*.svg")):
+        stxt = open(svg_f, "r", encoding="utf-8").read()
+        stxt = re.sub(r"#[0-9a-fA-F]{6}", lambda m: (
+            p_hex if m.group(0).lower() in ("#4c6ef5","#e03131","#0ca678","#d63384","#f03e98","#1c7ed6","#339af0","#364fc7") else
+            (a_hex if m.group(0).lower() in ("#22b8cf","#fcc419","#38d9a9","#40f99b","#20c997","#00f5d4","#74c0fc","#99e9f2","#66d9e8") else m.group(0))
+        ), stxt)
+        open(svg_f, "w", encoding="utf-8").write(stxt)
 
-    # Foot ini использует цвета без #
-    foot_p = os.path.join(HOME, ".config/foot/foot.ini")
-    if os.path.isfile(foot_p):
-        ftxt = open(foot_p, "r", encoding="utf-8").read()
-        ftxt = re.sub(r"cursor=07090f [0-9a-fA-F]{6}", f"cursor=07090f {a_hex.lstrip('#')}", ftxt)
-        ftxt = re.sub(r"regular4=[0-9a-fA-F]{6}", f"regular4={p_hex.lstrip('#')}", ftxt)
-        ftxt = re.sub(r"regular6=[0-9a-fA-F]{6}", f"regular6={a_hex.lstrip('#')}", ftxt)
-        open(foot_p, "w", encoding="utf-8").write(ftxt)
+    for script_p in (os.path.join(HOME, ".local/bin/cyber-icons-sync"), os.path.join(HOME, ".local/bin/cyber-firefox-sync")):
+        if os.path.isfile(script_p):
+            txt = open(script_p, "r", encoding="utf-8").read()
+            txt = re.sub(r"#[0-9a-fA-F]{6}", lambda m: (
+                p_hex if m.group(0).lower() in ("#4c6ef5","#e03131","#0ca678","#d63384","#f03e98","#1c7ed6","#339af0","#364fc7") else
+                (a_hex if m.group(0).lower() in ("#22b8cf","#fcc419","#38d9a9","#40f99b","#20c997","#00f5d4","#74c0fc","#99e9f2") else m.group(0))
+            ), txt)
+            open(script_p, "w", encoding="utf-8").write(txt)
 
-    # 2. Пересобираем иконки, Firefox, курсор и фоны
     subprocess.run([os.path.join(HOME, ".local/bin/cyber-icons-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run([os.path.join(HOME, ".local/bin/cyber-firefox-sync")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    rebuild_cursor(p_hex, a_hex)
-    render_backgrounds(p_hex, a_hex, bg_hex)
 
-    # 3. Обновляем рамки окон Hyprland и перезагружаем курсор на лету
-    p_clean, a_clean = p_hex.lstrip("#"), a_hex.lstrip("#")
+    # 3. Генерируем фоны, терминал (включая живые открытые окна!) и новый курсор со сбросом кэша
+    render_cyberdeck_variant_bg(t)
+    update_all_terminals_live(t)
+    cur_name = rebuild_cursor_and_flush_cache(theme_id, t)
+
+    # 4. Обновляем Mako, Rofi и GTK3/4 проводник
+    mako_cfg = f"""font=Noto Sans Bold 11
+markup=1
+icons=1
+background-color={bg_hex}f5
+text-color={t['fg']}
+border-color={p_hex}
+border-size=2
+border-radius={rad}
+padding=12,16
+margin=18
+width=340
+height=110
+max-icon-size=32
+icon-path={HOME}/.config/hypr/assets/ui:{HOME}/.local/share/icons/CyberDeck-Icons
+default-timeout=2500
+ignore-timeout=1
+layer=overlay
+anchor=top-right
+
+[urgency=high]
+border-color=#ff6b6b
+default-timeout=4000
+
+[app-name=cyber-kb]
+background-color={bg_hex}fa
+border-color={a_hex}
+default-timeout=1250
+width=275
+padding=10,14
+"""
+    open(os.path.join(HOME, ".config/mako/config"), "w", encoding="utf-8").write(mako_cfg)
+
+    for rasi_p in (os.path.join(HOME, ".config/hypr/gaming_launcher.rasi"), os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")):
+        if os.path.isfile(rasi_p):
+            rtxt = open(rasi_p, "r", encoding="utf-8").read()
+            rtxt = re.sub(r"cyan:\s*#[0-9a-fA-F]{6};", f"cyan:        {a_hex};", rtxt)
+            rtxt = re.sub(r"indigo:\s*#[0-9a-fA-F]{6};", f"indigo:      {p_hex};", rtxt)
+            rtxt = re.sub(r"bg:\s*#[0-9a-fA-F]{6};", f"bg:          {bg_hex};", rtxt)
+            open(rasi_p, "w", encoding="utf-8").write(rtxt)
+
+    # 5. Обновляем Hyprland (рамки окон, скругление и переменную курсора)
+    p_c, a_c = p_hex.lstrip("#"), a_hex.lstrip("#")
+    h_round = int(t["hypr_round"])
     for hconf in glob.glob(os.path.join(HOME, ".config/hypr/*.conf")):
         htxt = open(hconf, "r", encoding="utf-8").read()
-        htxt = re.sub(r"col\.active_border\s*=\s*.*", f"col.active_border = rgba({p_clean}ff) rgba({a_clean}ff) 45deg", htxt)
+        htxt = re.sub(r"col\.active_border\s*=\s*.*", f"col.active_border = rgba({p_c}ff) rgba({a_c}ff) 45deg", htxt)
+        htxt = re.sub(r"rounding\s*=\s*\d+", f"rounding = {h_round}", htxt)
+        htxt = re.sub(r"env\s*=\s*XCURSOR_THEME,.*", f"env = XCURSOR_THEME,{cur_name}", htxt)
+        htxt = re.sub(r"exec-once\s*=\s*hyprctl setcursor .*", f"exec-once = hyprctl setcursor {cur_name} 28", htxt)
         open(hconf, "w", encoding="utf-8").write(htxt)
 
-    subprocess.run(["hyprctl", "--batch", f"keyword general:col.active_border rgba({p_clean}ff) rgba({a_clean}ff) 45deg ; setcursor CyberDeck-Cursor 28"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "cursor-theme", "Default"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "cursor-theme", "CyberDeck-Cursor"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    # 4. Синхронизируем SDDM и GRUB через sudo-хелпер
-    subprocess.run(["sudo", "-n", "/usr/local/bin/cyber-theme-sys-sync", HOME, p_hex, a_hex], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    # 5. Перезапускаем Mako и активный рабочий стол для мгновенного применения
-    subprocess.run(["makoctl", "reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for hub_scr, hub_cmd in [("work-hub-desktop.py", "work-hub"), ("game-hub-desktop.py", "game-hub"), ("cyberdeck-hub-desktop.py", "cyberdeck-hub")]:
-        if subprocess.call(["pgrep", "-f", hub_scr], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0:
-            subprocess.run(["pkill", "-9", "-f", hub_scr], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.Popen([os.path.join(HOME, ".local/bin", hub_cmd)], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    subprocess.Popen([
-        "notify-send", "-a", "cyber-kb",
-        f"◈ ТЕМА ПРИМЕНЕНА // {new_t['short'].upper()}",
-        "Синхронизированы: Рабочий стол, Курсор, Иконки, Терминал, Firefox, SDDM и GRUB (для Firefox перезапустите браузер)"
+    subprocess.run([
+        "hyprctl", "--batch",
+        f"keyword general:col.active_border rgba({p_c}ff) rgba({a_c}ff) 45deg ; keyword decoration:rounding {h_round} ; setcursor {cur_name} 28"
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # 6. Синхронизируем SDDM и GRUB
+    subprocess.run(["sudo", "-n", "/usr/local/bin/cyber-theme-sys-sync", HOME, p_hex, a_hex, cur_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["makoctl", "reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # 7. Бесшовный перезапуск фонового рабочего стола позади бронестворок
+    is_game = ("game" in os.environ.get("HYPRLAND_CONFIG", "").lower()) or (subprocess.call(["pgrep", "-f", "game-hub-desktop.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0)
+    target_py = "game-hub-desktop.py" if is_game else "work-hub-desktop.py"
+    target_ns = "gaming-hub-wallpaper" if is_game else "work-hub-wallpaper"
+
+    for old_proc in ("work-hub-desktop.py", "game-hub-desktop.py", "cyberdeck-hub-desktop.py"):
+        subprocess.run(["pkill", "-9", "-f", old_proc], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    for _ in range(30):
+        if subprocess.call(["pgrep", "-f", "hub-desktop.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
+            break
+        time.sleep(0.04)
+
+    env = os.environ.copy()
+    if os.path.isfile("/usr/lib/libgtk4-layer-shell.so"):
+        env["LD_PRELOAD"] = "/usr/lib/libgtk4-layer-shell.so"
+    subprocess.Popen(["python3", os.path.join(HOME, ".local/bin", target_py)], env=env, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    for _ in range(40):
+        try:
+            if target_ns in subprocess.check_output(["hyprctl", "layers", "-j"], text=True, stderr=subprocess.DEVNULL):
+                break
+        except Exception:
+            pass
+        time.sleep(0.05)
 
 def show_menu():
     cur = load_current()
-    lines = []
-    id_map = {}
+    lines, id_map = [], {}
     for tid, meta in THEMES.items():
         mark = "   [● АКТИВНА]" if tid == cur else ""
         row = f"{meta['title']}{mark}"
@@ -320,19 +1082,22 @@ def show_menu():
         id_map[row] = tid
 
     proc = subprocess.run(
-        ["rofi", "-dmenu", "-i", "-p", "◈ ТЕМА ОКРУЖЕНИЯ", "-theme", ROFI_WIFI],
+        ["rofi", "-dmenu", "-i", "-p", "◈ ВЫБОР ТЕМЫ ОКРУЖЕНИЯ", "-theme", ROFI_WIFI],
         input="\n".join(lines), text=True, capture_output=True
     )
     ch = proc.stdout.strip()
     if proc.returncode == 0 and ch in id_map:
-        apply_theme(id_map[ch])
+        new_id = id_map[ch]
+        subprocess.Popen(["python3", os.path.join(HOME, ".local/bin/cyber-theme-anim.py"), cur, new_id], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 if __name__ == "__main__":
     act = sys.argv[1] if len(sys.argv) > 1 else "menu"
-    if act == "get":
-        cur = load_current()
-        print(THEMES[cur]["short"])
+    if act == "--apply-backend" and len(sys.argv) > 2:
+        apply_backend(sys.argv[2])
     elif act == "apply" and len(sys.argv) > 2:
-        apply_theme(sys.argv[2])
+        cur = load_current()
+        subprocess.Popen(["python3", os.path.join(HOME, ".local/bin/cyber-theme-anim.py"), cur, sys.argv[2]], start_new_session=True)
+    elif act == "get":
+        print(THEMES[load_current()]["short"])
     else:
         show_menu()
