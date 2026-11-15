@@ -1,15 +1,36 @@
 #!/bin/bash
 unset LD_PRELOAD
-# 1. Гарантируем, что фоновые обои студии отображаются всегда и никогда не пропадают
-if ! pgrep -x swaybg >/dev/null 2>&1; then
-    nohup swaybg -i "$HOME/.cache/cyberdeck/work_hud_bg.png" -m fill >/dev/null 2>&1 &
+
+# Гарантируем, что скрипт запускается строго в одном экземпляре
+LOCK_F="/tmp/studio_daemons_${UID}.lock"
+exec 9>"$LOCK_F"
+if ! flock -n 9; then
+    exit 0
 fi
 
-# 2. Запускаем системную верхнюю панель Waybar (всегда видна над окнами, скрывается в fullscreen)
-if ! pgrep -x waybar >/dev/null 2>&1; then
-    nohup waybar >/dev/null 2>&1 &
-fi
+# Завершаем любые старые или дублирующиеся процессы перед чистым стартом
+pkill -9 -x waybar 2>/dev/null || true
+pkill -9 -x swaybg 2>/dev/null || true
+pkill -9 -f "cyber-kb-osd" 2>/dev/null || true
+pkill -TERM -f "work-hub-desktop.py" 2>/dev/null || true
+sleep 0.25
 
-# 3. Демон уведомлений Mako и индикатор раскладки клавиатуры
+# 1. Запускаем ровно один экземпляр обоев swaybg
+nohup swaybg -i "$HOME/.cache/cyberdeck/work_hud_bg.png" -m fill >/dev/null 2>&1 &
+
+# 2. Запускаем ровно один экземпляр Waybar
+nohup waybar >/tmp/waybar.log 2>&1 &
+
+# 3. Запускаем демон уведомлений Mako и OSD раскладки
 pgrep -x mako >/dev/null 2>&1 || nohup mako >/dev/null 2>&1 &
-pgrep -f "cyber-kb-osd" >/dev/null 2>&1 || nohup "$HOME/.local/bin/cyber-kb-osd" >/dev/null 2>&1 &
+LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" nohup /usr/bin/python3 "$HOME/.local/bin/cyber-kb-osd" >/dev/null 2>&1 &
+
+# 4. Бессмертный цикл поддержания виджетов рабочего стола (автоперезапуск при любом сбое)
+(
+    while [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ] && hyprctl monitors >/dev/null 2>&1; do
+        if ! pgrep -f "work-hub-desktop.py" >/dev/null 2>&1; then
+            LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" /usr/bin/python3 "$HOME/.local/bin/work-hub-desktop.py" >/tmp/work-hub.err 2>&1
+        fi
+        sleep 1.5
+    done
+) &

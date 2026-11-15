@@ -35,23 +35,27 @@ os.environ["GTK_THEME"] = "Adwaita:dark"
 import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gtk, Gdk, GLib, Pango, Gtk4LayerShell
+from gi.repository import Gtk, Gdk, GLib, Gio, Pango, Gtk4LayerShell
 import cairo
 
 os.environ.pop("LD_PRELOAD", None)
 
+
+signal.signal(signal.SIGHUP, signal.SIG_IGN)
+if SINGLE_PIN_WID is None:
+    _pid_f = f"/tmp/studio_widgets_{UID}.pid"
+    if os.path.isfile(_pid_f):
+        try:
+            _old = int(open(_pid_f).read().strip())
+            if _old != os.getpid():
+                os.kill(_old, signal.SIGTERM)
+                time.sleep(0.15)
+        except Exception:
+            pass
+    open(_pid_f, "w").write(str(os.getpid()))
+
 SINGLE_PIN_WID = sys.argv[2] if (len(sys.argv) > 2 and sys.argv[1] == "--pin-window") else None
 
-if SINGLE_PIN_WID is None:
-    _my_pid = os.getpid()
-    for _p in os.listdir("/proc"):
-        if _p.isdigit() and int(_p) != _my_pid:
-            try:
-                _cmd = open(f"/proc/{_p}/cmdline", "rb").read().decode("utf-8", "ignore")
-                if ("work-hub-desktop.py" in _cmd or "cyberdeck-hub-desktop.py" in _cmd) and "--pin-window" not in _cmd:
-                    os.kill(int(_p), 9)
-            except Exception:
-                pass
 
 RU_MONTHS = ["", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"]
 
@@ -564,8 +568,8 @@ class OverlayWidgetCard:
         cfg = self.st[self.wid]
         w = max(int(cfg.get("min_w", 210)), int(cfg.get("w", 280)))
         h = max(int(cfg.get("min_h", 110)), int(cfg.get("h", 180)))
-        x = max(4, min(W_MON - 60, int(cfg.get("x", 18))))
-        y = max(36, min(H_MON - 36, int(cfg.get("y", 46))))
+        x = max(4, min(W_MON - w - 4, int(cfg.get("x", 18))))
+        y = max(36, min(H_MON - (26 if is_col else h) - 4, int(cfg.get("y", 46))))
         is_col = bool(cfg.get("collapsed", False)) and not self.is_standalone
 
         if not self.is_standalone:
@@ -641,7 +645,7 @@ class OverlayWidgetCard:
 class StudioDesktopApp(Gtk.Application):
     def __init__(self):
         app_id = f"org.alpora.PinWidget.{SINGLE_PIN_WID}.{os.getpid()}" if SINGLE_PIN_WID else "org.alpora.WorkDeckLayer"
-        super().__init__(application_id=app_id)
+        super().__init__(application_id=app_id, flags=Gio.ApplicationFlags.NON_UNIQUE)
         self.st = load_widgets_state()
         self.cards = {}
         self.pinned = self.load_pinned()
@@ -672,7 +676,8 @@ class StudioDesktopApp(Gtk.Application):
 
         if SINGLE_PIN_WID is None:
             atexit.register(lambda: save_widgets_state(self.st))
-            for sig_num in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            signal.signal(signal.SIGHUP, signal.SIG_IGN)
+            for sig_num in (signal.SIGTERM, signal.SIGINT):
                 try:
                     signal.signal(sig_num, self._on_exit_signal)
                 except Exception:
