@@ -8,9 +8,9 @@ W, H = 1920, 1080
 surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
 cr = cairo.Context(surf)
 
-BLUE  = (0.278, 0.549, 0.749)  # #478cbf
-GREEN = (0.388, 0.851, 0.580)  # #63d994
-RED   = (1.000, 0.420, 0.420)  # #ff6b6b
+BLUE  = (0.361, 0.384, 0.427)
+GREEN = (0.580, 0.608, 0.655)
+RED   = (0.450, 0.475, 0.515)
 
 def rrect(x, y, w, h, r):
     cr.new_sub_path()
@@ -22,9 +22,9 @@ def rrect(x, y, w, h, r):
 
 # 1. Фон 2D/3D Viewport с инженерной сеткой и координатными линейками
 lg = cairo.LinearGradient(0, 0, W, H)
-lg.add_color_stop_rgb(0.0, 0.043, 0.055, 0.075)
-lg.add_color_stop_rgb(0.5, 0.055, 0.071, 0.094)
-lg.add_color_stop_rgb(1.0, 0.039, 0.051, 0.071)
+lg.add_color_stop_rgb(0.0, 0.067, 0.071, 0.082)
+lg.add_color_stop_rgb(0.5, 0.082, 0.086, 0.098)
+lg.add_color_stop_rgb(1.0, 0.063, 0.067, 0.078)
 cr.set_source(lg); cr.paint()
 
 rg = cairo.RadialGradient(W * 0.5, H * 0.52, 20, W * 0.5, H * 0.52, 620)
@@ -57,7 +57,7 @@ for bx, hdr, rows, col in [
 ]:
     by, bw, bh = int(cy - 105), 290, 210
     rrect(bx, by, bw, bh, 8)
-    cr.set_source_rgba(0.055, 0.071, 0.098, 0.94); cr.fill_preserve()
+    cr.set_source_rgba(0.090, 0.098, 0.114, 0.94); cr.fill_preserve()
     cr.set_line_width(1.4); cr.set_source_rgba(*col, 0.65); cr.stroke()
     cr.set_source_rgb(*col); cr.rectangle(bx, by, bw, 3); cr.fill()
     cr.set_font_size(11); cr.set_source_rgb(0.90, 0.95, 1.0)
@@ -71,7 +71,7 @@ for bx, hdr, rows, col in [
 # 3. Центральный контейнер меню ядер GRUB
 mx, my, mw, mh = int(W * 0.27), int(H * 0.26), int(W * 0.46), int(H * 0.50)
 rrect(mx, my, mw, mh, 10)
-cr.set_source_rgba(0.051, 0.067, 0.090, 0.97); cr.fill_preserve()
+cr.set_source_rgba(0.082, 0.086, 0.098, 0.97); cr.fill_preserve()
 cr.set_line_width(1.6); cr.set_source_rgba(*BLUE, 0.65); cr.stroke()
 cr.set_source_rgb(*GREEN); cr.rectangle(mx + mw * 0.5 - 110, my, 220, 3); cr.fill()
 
@@ -90,7 +90,7 @@ pc = cairo.Context(pill)
 pc.new_sub_path()
 pc.arc(S - R, R, R, -math.pi/2, 0); pc.arc(S - R, S - R, R, 0, math.pi/2)
 pc.arc(R, S - R, R, math.pi/2, math.pi); pc.arc(R, R, R, math.pi, 3*math.pi/2); pc.close_path()
-pc.set_source_rgba(0.09, 0.14, 0.21, 0.98); pc.fill_preserve()
+pc.set_source_rgba(0.14, 0.15, 0.18, 0.98); pc.fill_preserve()
 pc.set_line_width(1.6); pc.set_source_rgba(*BLUE, 0.98); pc.stroke()
 pc.set_source_rgba(*GREEN, 1.0); pc.rectangle(2, 5, 3.5, S - 10); pc.fill()
 

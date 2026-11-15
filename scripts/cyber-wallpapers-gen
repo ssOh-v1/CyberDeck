@@ -1,260 +1,185 @@
 #!/usr/bin/python3
-import os, sys, re, glob, math, random, subprocess, cairo
-from PIL import Image, ImageDraw, ImageFilter, ImageEnhance, ImageChops
+import os, sys, math, random, cairo
 
 HOME = os.path.expanduser("~")
 WALL_DIR = os.path.join(HOME, ".config/cyberdeck/wallpapers")
+CACHE_DIR = os.path.join(HOME, ".cache/cyberdeck")
 os.makedirs(WALL_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
-def download_photo(urls, out_path):
-    for url in urls:
-        try:
-            r = subprocess.run(
-                ["curl", "-L", "-f", "-s", "--connect-timeout", "5", "--max-time", "15", "-A", "Mozilla/5.0", "-o", out_path, url],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            if r.returncode == 0 and os.path.isfile(out_path) and os.path.getsize(out_path) > 40000:
-                return True
-        except Exception:
-            pass
-    return False
-
-# ------------------------------------------------------------------------------
-# ТЕМА 2: АВТОПОИСК НАСТОЯЩЕГО ФОНА ГЛАВНОГО МЕНЮ ИГРЫ THE DUNGEON OF GOD
-# ------------------------------------------------------------------------------
-def find_game_menu_background():
-    skip_dirs = {
-        ".cache", ".config", ".local", ".mozilla", ".steam", ".var", ".cargo",
-        ".rustup", ".npm", ".git", "__pycache__", "venv", ".venv", "node_modules", "CyberDeck"
-    }
-    candidates = []
-
-    for root, dirs, files in os.walk(HOME):
-        dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".Trash")]
-        rel = os.path.relpath(root, HOME)
-        if rel.count(os.sep) > 5:
-            continue
-
-        low_root = root.lower()
-        is_game_dir = any(k in low_root for k in ("dungeon", "god", "rogue", "game", "platformer", "pygame", "itch"))
-
-        # Проверяем .py файлы на упоминание фона главного меню
-        for f in files:
-            if f.endswith(".py") and any(k in f.lower() for k in ("menu", "main", "game", "title", "settings")):
-                full_py = os.path.join(root, f)
-                try:
-                    txt = open(full_py, "r", encoding="utf-8", errors="ignore").read()
-                    if "pygame" in txt:
-                        is_game_dir = True
-                        for m in re.findall(r'["\']([^"\']+\.(?:png|jpg|jpeg|bmp|webp))["\']', txt, re.I):
-                            if any(k in m.lower() for k in ("menu", "bg", "back", "title", "dungeon", "wall", "sky", "layer")):
-                                cand_p = os.path.normpath(os.path.join(root, m))
-                                if os.path.isfile(cand_p):
-                                    candidates.append((1000, cand_p))
-                except Exception:
-                    pass
-
-        for f in files:
-            lf = f.lower()
-            if not lf.endswith((".png", ".jpg", ".jpeg", ".webp", ".bmp")):
-                continue
-            if any(skip_w in lf for skip_w in ("icon", "cursor", "font", "btn", "button", "heart", "coin", "ui_", " shot_")):
-                continue
-            full_p = os.path.join(root, f)
-            try:
-                with Image.open(full_p) as im:
-                    w, h = im.size
-                    if w < 120 or h < 90 or w < h * 1.1:
-                        continue
-            except Exception:
-                continue
-
-            score = 0
-            if is_game_dir:
-                score += 200
-            if "dungeon" in low_root or "god" in low_root:
-                score += 350
-            if "menu" in lf and ("bg" in lf or "back" in lf):
-                score += 500
-            elif "menu" in lf or "title" in lf:
-                score += 320
-            elif "bg" in lf or "background" in lf or "backdrop" in lf:
-                score += 260
-            elif "layer" in lf or "dungeon" in lf:
-                score += 150
-
-            if score >= 200:
-                candidates.append((score, full_p))
-
-    if candidates:
-        candidates.sort(key=lambda x: (-x[0], -os.path.getsize(x[1])))
-        best_path = candidates[0][1]
-        print(f"⚔ Найден фон из проекта игры: {best_path}")
-        return best_path
-    return None
-
-def build_dungeon_wallpaper():
-    out_p = os.path.join(WALL_DIR, "dungeon-of-god.png")
-    found_bg = find_game_menu_background()
-
-    if found_bg:
-        try:
-            im = Image.open(found_bg).convert("RGB")
-            w, h = im.size
-            # Если фон пиксель-артовый — масштабируем через NEAREST для сохранения чётких пикселей игры!
-            resample_mode = Image.Resampling.NEAREST if w <= 960 else Image.Resampling.LANCZOS
-            im = im.resize((1920, 1080), resample=resample_mode)
-            im.save(out_p, "PNG")
-            return
-        except Exception:
-            pass
-
-    # Если исходник игры в архиве или рисуется кодом — создаём атмосферный фон главного меню в стиле тёмного подземелья Pygame
-    pw, ph = 320, 180
-    img = Image.new("RGBA", (pw, ph), (10, 8, 12, 255))
-    dr = ImageDraw.Draw(img)
-    random.seed(101)
-
-    # Тёмная каменная стена зала главного меню с глубокой виньеткой
-    for by in range(0, ph, 10):
-        ox = 10 if (by // 10) % 2 else 0
-        for bx in range(-10, pw, 20):
-            dist_c = math.hypot((bx - 160) / 160.0, (by - 90) / 90.0)
-            v = max(0.25, 1.0 - dist_c * 0.65)
-            sh = random.randint(-3, 4)
-            r = int((26 + sh) * v)
-            g = int((18 + sh // 2) * v)
-            b = int((24 + sh) * v)
-            dr.rectangle([bx + ox, by, bx + ox + 18, by + 8], fill=(r, g, b, 255))
-            dr.line([bx + ox + 1, by, bx + ox + 17, by], fill=(min(255, r + 8), min(255, g + 6), min(255, b + 8), 255))
-
-    # Массивная каменная арка входа в подземелье по центру главного меню
-    cx, cy = 160, 98
-    dr.rectangle([cx - 52, cy - 42, cx + 52, ph], fill=(6, 4, 7, 255))
-    dr.arc([cx - 56, cy - 88, cx + 56, cy + 16], start=180, end=360, fill=(48, 32, 36, 255), width=6)
-    dr.line([cx - 55, cy - 38, cx - 55, ph], fill=(48, 32, 36, 255), width=6)
-    dr.line([cx + 55, cy - 38, cx + 55, ph], fill=(48, 32, 36, 255), width=6)
-
-    # Ступени, уходящие вглубь тьмы подземелья
-    for st_i in range(6):
-        sw = 46 - st_i * 5
-        sy = ph - st_i * 8 - 4
-        c_st = max(8, 34 - st_i * 4)
-        dr.rectangle([cx - sw, sy - 4, cx + sw, sy], fill=(c_st, int(c_st*0.7), int(c_st*0.8), 255))
-
-    # Два настенных факела по бокам арки главного меню
-    for tx in (cx - 72, cx + 72):
-        ty = cy - 18
-        dr.rectangle([tx - 2, ty, tx + 2, ty + 14], fill=(65, 42, 28, 255))
-        dr.rectangle([tx - 3, ty - 6, tx + 3, ty], fill=(235, 110, 30, 255))
-        dr.rectangle([tx - 1, ty - 9, tx + 1, ty - 2], fill=(255, 215, 75, 255))
-
-    sharp = img.resize((1920, 1080), resample=Image.Resampling.NEAREST)
-    glow = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
-    gdr = ImageDraw.Draw(glow)
-    for gx, gy, gr, col in [
-        ((cx - 72) * 6, (cy - 22) * 6, 260, (245, 130, 35, 68)),
-        ((cx + 72) * 6, (cy - 22) * 6, 260, (245, 130, 35, 68)),
-        (960, 540, 420, (180, 45, 30, 28)),
-    ]:
-        gdr.ellipse([gx - gr, gy - gr, gx + gr, gy + gr], fill=col)
-    glow = glow.filter(ImageFilter.GaussianBlur(radius=75))
-    Image.alpha_composite(sharp, glow).convert("RGB").save(out_p, "PNG")
-
-# ------------------------------------------------------------------------------
-# ТЕМА 3: ЛЕСНОЙ РУЧЕЙ (Фото горного ручья + единая изумрудно-солнечная цветокоррекция)
-# ------------------------------------------------------------------------------
-def build_forest_wallpaper():
-    out_p = os.path.join(WALL_DIR, "forest-stream.png")
-    raw_p = "/tmp/forest_stream_dl.jpg"
-    urls = [
-        "https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=1920&q=90",
-        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=90",
-        "https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=1920&q=90",
-    ]
-    if download_photo(urls, raw_p):
-        im = Image.open(raw_p).convert("RGB").resize((1920, 1080), Image.Resampling.LANCZOS)
-        os.remove(raw_p)
-        im = ImageEnhance.Color(im).enhance(1.18)
-        im = ImageEnhance.Contrast(im).enhance(1.06)
-        im.save(out_p, "PNG")
-        return
-
-    im = Image.new("RGB", (1920, 1080), (14, 32, 24))
-    im.save(out_p, "PNG")
-
-# ------------------------------------------------------------------------------
-# ТЕМА 4: ИМПАСТО ПЕЙЗАЖ (Рельефная картина маслом с 3D-бугорками мазков кисти)
-# ------------------------------------------------------------------------------
-def build_impasto_wallpaper():
-    out_p = os.path.join(WALL_DIR, "impasto-landscape.png")
-    raw_p = "/tmp/impasto_dl.jpg"
-    urls = [
-        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=90",
-        "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1920&q=90",
-    ]
-    if download_photo(urls, raw_p):
-        src = Image.open(raw_p).convert("RGB").resize((1920, 1080), Image.Resampling.LANCZOS)
-        os.remove(raw_p)
-    else:
-        src = Image.new("RGB", (1920, 1080), (42, 32, 38))
-
-    src = ImageEnhance.Color(src).enhance(1.48)
-    src = ImageEnhance.Contrast(src).enhance(1.16)
-    pix = src.load()
-
-    # Рисуем холст настоящими направленными 3D-мазками мастихина (каждый мазок берёт цвет пейзажа и создаёт физический бугорок!)
+def build_gamedev_grey_wallpaper():
     W, H = 1920, 1080
     surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
     cr = cairo.Context(surf)
 
-    random.seed(314)
-    # 2 слоя мазков: сначала широкие фоновые мазки холста, затем детальные рельефные бугорки краски
-    for step_x, step_y, w_min, w_max, h_min, h_max in [(26, 18, 34, 52, 13, 19), (16, 11, 18, 30, 8, 13)]:
-        for y in range(0, H, step_y):
-            for x in range(0, W, step_x):
-                jx = min(W - 1, max(0, x + random.randint(-6, 6)))
-                jy = min(H - 1, max(0, y + random.randint(-5, 5)))
-                r_i, g_i, b_i = pix[jx, jy]
-                r, g, b = r_i / 255.0, g_i / 255.0, b_i / 255.0
+    # Матовая графитово-серая подложка (#121316 -> #16181c)
+    lg = cairo.LinearGradient(0, 0, W, H)
+    lg.add_color_stop_rgb(0.0, 0.067, 0.071, 0.082)
+    lg.add_color_stop_rgb(0.5, 0.082, 0.086, 0.098)
+    lg.add_color_stop_rgb(1.0, 0.063, 0.067, 0.078)
+    cr.set_source(lg); cr.paint()
 
-                # Направление мазка повторяет течение облаков, склоны гор и рябь воды
-                if jy < H * 0.42:
-                    ang = math.sin(jx * 0.005) * 0.28 + random.uniform(-0.08, 0.08)
-                elif jy < H * 0.68:
-                    ang = (-0.42 if jx < W * 0.5 else 0.38) + random.uniform(-0.12, 0.12)
-                else:
-                    ang = math.sin(jy * 0.02) * 0.14 + random.uniform(-0.06, 0.06)
+    # Мягкий нейтрально-серый градиент в центре
+    rg = cairo.RadialGradient(W * 0.5, H * 0.52, 20, W * 0.5, H * 0.52, 700)
+    rg.add_color_stop_rgba(0.0, 0.45, 0.48, 0.52, 0.08)
+    rg.add_color_stop_rgba(1.0, 0, 0, 0, 0)
+    cr.set_source(rg); cr.paint()
 
-                sw = random.uniform(w_min, w_max)
-                sh = random.uniform(h_min, h_max)
+    # Инженерная сетка (спокойный серый цвет)
+    cr.set_line_width(0.8); cr.set_source_rgba(0.50, 0.53, 0.58, 0.03)
+    for x in range(16, W, 16): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(16, H, 16): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
 
-                cr.save()
-                cr.translate(jx, jy)
-                cr.rotate(ang)
-                hw, hh = sw * 0.5, sh * 0.5
+    cr.set_line_width(1.0); cr.set_source_rgba(0.50, 0.53, 0.58, 0.06)
+    for x in range(64, W, 64): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(64, H, 64): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
 
-                # 1. Глубокая тень под нижним краем бугорка краски
-                cr.set_source_rgba(max(0, r * 0.28), max(0, g * 0.26), max(0, b * 0.25), 0.82)
-                cr.arc(0, 2.6, hw, 0, 2 * math.pi); cr.fill()
+    cr.set_line_width(1.3); cr.set_source_rgba(0.55, 0.58, 0.63, 0.12)
+    for x in range(256, W, 256): cr.move_to(x, 0); cr.line_to(x, H)
+    for y in range(256, H, 256): cr.move_to(0, y); cr.line_to(W, y)
+    cr.stroke()
 
-                # 2. Густое тело масляного мазка
-                cr.save()
-                cr.scale(1.0, max(0.38, sh / sw))
-                cr.set_source_rgb(r, g, b)
-                cr.arc(0, 0, hw, 0, 2 * math.pi); cr.fill()
+    cr.select_font_face("monospace", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+    cr.set_font_size(9.5)
+    for x in range(256, W, 256):
+        for y in range(256, H, 256):
+            cr.set_source_rgba(0.60, 0.63, 0.68, 0.25)
+            cr.move_to(x - 4, y); cr.line_to(x + 4, y)
+            cr.move_to(x, y - 4); cr.line_to(x, y + 4); cr.stroke()
+            cr.set_source_rgba(0.50, 0.53, 0.58, 0.28)
+            cr.move_to(x + 6, y - 5)
+            cr.show_text(f"SECTOR [{(x-960)//256:+d},{(y-512)//256:+d}]")
 
-                # 3. Выпуклый световой гребень бугорка сверху-слева (3D блик краски)
-                cr.set_line_width(2.4)
-                cr.set_source_rgba(min(1, r * 1.32 + 0.10), min(1, g * 1.28 + 0.08), min(1, b * 1.22 + 0.06), 0.88)
-                cr.arc(0, -1.3, hw * 0.80, math.pi * 1.08, math.pi * 1.92); cr.stroke()
-                cr.restore()
-                cr.restore()
+    # Линейки координат
+    cr.set_source_rgba(0.08, 0.09, 0.10, 0.85)
+    cr.rectangle(0, 62, 28, H - 124); cr.rectangle(28, 62, W - 56, 22); cr.fill()
+    cr.set_line_width(1.0); cr.set_source_rgba(0.50, 0.53, 0.58, 0.32)
+    for x in range(64, W - 64, 16):
+        th = 9 if x % 64 == 0 else 4
+        cr.move_to(x, 84 - th); cr.line_to(x, 84)
+        if x % 128 == 0:
+            cr.move_to(x + 3, 74); cr.show_text(f"{x - 960:+d}")
+    for y in range(96, H - 80, 16):
+        tw = 9 if y % 64 == 0 else 4
+        cr.move_to(28 - tw, y); cr.line_to(28, y)
+    cr.stroke()
 
-    surf.write_to_png(out_p)
+    # Главные оси координат (приглушённый серый)
+    cx, cy = W * 0.5, H * 0.54
+    cr.set_line_width(1.5)
+    cr.set_source_rgba(0.55, 0.58, 0.63, 0.26)
+    cr.move_to(28, cy); cr.line_to(W - 28, cy)
+    cr.move_to(cx, 84); cr.line_to(cx, H - 60); cr.stroke()
+
+    # Левый верхний угол: Граф нод в строгих серых оттенках
+    nodes = [
+        (64,  112, 145, 68, "Input_Controller", ["axis_x", "jump_pressed"]),
+        (255, 102, 155, 78, "Player_FSM_State", ["STATE: IDLE", "vel_xy"]),
+        (255, 202, 155, 68, "Physics2D_Solver", ["gravity: 980", "ray_hit"]),
+        (456, 142, 150, 74, "Vulkan_SpritePass", ["contrast: 1.0", "out_rgba"]),
+    ]
+    wires = [
+        (64+145, 112+36, 255, 102+34),
+        (64+145, 112+52, 255, 202+34),
+        (255+155, 102+44, 456, 142+32),
+        (255+155, 202+36, 456, 142+52),
+    ]
+    cr.set_line_width(1.8)
+    for x1, y1, x2, y2 in wires:
+        cr.set_source_rgba(0.55, 0.58, 0.64, 0.38)
+        cr.move_to(x1, y1); cr.curve_to(x1 + 45, y1, x2 - 45, y2, x2, y2); cr.stroke()
+
+    for nx, ny, nw, nh, ntitle, nports in nodes:
+        cr.set_source_rgba(0.10, 0.11, 0.13, 0.90)
+        cr.rectangle(nx, ny, nw, nh); cr.fill_preserve()
+        cr.set_line_width(1.2); cr.set_source_rgba(0.32, 0.35, 0.40, 0.65); cr.stroke()
+        cr.set_source_rgba(0.22, 0.24, 0.28, 0.90)
+        cr.rectangle(nx, ny, nw, 18); cr.fill()
+        cr.set_font_size(9.5); cr.set_source_rgba(0.82, 0.84, 0.88, 0.85)
+        cr.move_to(nx + 6, ny + 13); cr.show_text(f"◆ {ntitle}")
+        for idx, pt_txt in enumerate(nports):
+            py_p = ny + 35 + idx * 18
+            cr.set_source_rgba(0.62, 0.65, 0.70, 0.80)
+            cr.move_to(nx + 10, py_p); cr.show_text(pt_txt)
+            cr.arc(nx, py_p - 3, 3.0, 0, 2*math.pi); cr.set_source_rgba(0.55, 0.58, 0.64, 0.8); cr.fill()
+            cr.arc(nx + nw, py_p - 3, 3.0, 0, 2*math.pi); cr.set_source_rgba(0.55, 0.58, 0.64, 0.8); cr.fill()
+
+    # Правый верхний угол: Профайлер в сером стиле
+    px0, py0, pw0, ph0 = W - 470, 104, 420, 145
+    cr.set_source_rgba(0.10, 0.11, 0.13, 0.88)
+    cr.rectangle(px0, py0, pw0, ph0); cr.fill_preserve()
+    cr.set_line_width(1.2); cr.set_source_rgba(0.32, 0.35, 0.40, 0.65); cr.stroke()
+    cr.set_font_size(10.0); cr.set_source_rgba(0.75, 0.78, 0.82, 0.85)
+    cr.move_to(px0 + 12, py0 + 18); cr.show_text("VULKAN PROFILER // FRAME_TIME: 4.1 ms")
+    cr.set_font_size(9.5); cr.set_source_rgba(0.55, 0.58, 0.64, 0.75)
+    cr.move_to(px0 + 12, py0 + 36); cr.show_text("DrawCalls: 128   •   Vertices: 18,420   •   Physics2D: 0.38 ms")
+    cr.set_line_width(1.8); cr.set_source_rgba(0.50, 0.53, 0.58, 0.55)
+    random.seed(7)
+    for gx in range(px0 + 14, px0 + pw0 - 14, 6):
+        gh = random.randint(12, 48)
+        cr.move_to(gx, py0 + ph0 - 14); cr.line_to(gx, py0 + ph0 - 14 - gh)
+    cr.stroke()
+
+    # Центральная сцена Camera2D и геометрия уровня (монохром)
+    cam_w, cam_h = 1040, 520
+    cam_x, cam_y = cx - cam_w * 0.5, cy - cam_h * 0.5 + 20
+    cr.set_line_width(1.5); cr.set_source_rgba(0.48, 0.51, 0.56, 0.42)
+    cr.rectangle(cam_x, cam_y, cam_w, cam_h); cr.stroke()
+    cr.set_font_size(10.0); cr.set_source_rgba(0.62, 0.65, 0.70, 0.68)
+    cr.move_to(cam_x + 10, cam_y - 8)
+    cr.show_text("Camera2D [Current]  •  Zoom: 1.00x  •  Viewport: 1920x1080")
+
+    level_rects = [
+        (cx - 420, cy + 130, 840, 64, "TileMap_Floor [StaticBody2D]"),
+        (cx - 380, cy - 10,  260, 32, "Platform_A [OneWayCollision]"),
+        (cx - 40,  cy - 74,  220, 32, "Platform_B [MovingPlatform2D]"),
+        (cx + 220, cy + 10,  240, 32, "Platform_C [StaticBody2D]"),
+    ]
+    for rx, ry, rw, rh, rlabel in level_rects:
+        cr.set_source_rgba(0.16, 0.18, 0.21, 0.48)
+        cr.rectangle(rx, ry, rw, rh); cr.fill()
+        cr.set_line_width(1.0); cr.set_source_rgba(0.35, 0.38, 0.42, 0.30)
+        for tx in range(int(rx), int(rx + rw), 32):
+            cr.move_to(tx, ry); cr.line_to(tx, ry + rh)
+        cr.stroke()
+        cr.set_line_width(1.5); cr.set_source_rgba(0.52, 0.55, 0.60, 0.58)
+        cr.rectangle(rx, ry, rw, rh); cr.stroke()
+        cr.set_font_size(9.5); cr.move_to(rx + 6, ry - 5); cr.show_text(rlabel)
+
+    # Таймлайн анимации внизу слева
+    ax0, ay0, aw0, ah0 = 64, H - 185, 760, 96
+    cr.set_source_rgba(0.10, 0.11, 0.13, 0.88)
+    cr.rectangle(ax0, ay0, aw0, ah0); cr.fill_preserve()
+    cr.set_line_width(1.2); cr.set_source_rgba(0.32, 0.35, 0.40, 0.60); cr.stroke()
+    cr.set_font_size(10.0); cr.set_source_rgba(0.68, 0.71, 0.76, 0.80)
+    cr.move_to(ax0 + 12, ay0 + 18)
+    cr.show_text("AnimationPlayer // Track: idle_cycle.anim   •   FPS: 60")
+    for f_i in range(8):
+        fx = ax0 + 14 + f_i * 92
+        fy = ay0 + 28
+        is_act = (f_i == 3)
+        cr.set_source_rgba(*( (0.22, 0.24, 0.28, 0.85) if is_act else (0.13, 0.14, 0.17, 0.85) ))
+        cr.rectangle(fx, fy, 84, 54); cr.fill_preserve()
+        cr.set_line_width(1.5 if is_act else 1.0)
+        cr.set_source_rgba(0.58, 0.61, 0.66, 0.75 if is_act else 0.35); cr.stroke()
+        cr.set_font_size(9.0); cr.set_source_rgba(0.75, 0.78, 0.82, 0.80)
+        cr.move_to(fx + 6, fy + 15); cr.show_text(f"FRM_0{f_i+1}")
+        cr.move_to(fx + 6, fy + 44); cr.show_text(f"{f_i * 33}ms")
+
+    out_w = os.path.join(WALL_DIR, "gamedev-studio.png")
+    surf.write_to_png(out_w)
+    for nm in ("work_hud_bg.png", "gaming_hud_bg.png", "cyberdeck_hud_bg.png", "lock_hud_bg.png"):
+        surf.write_to_png(os.path.join(CACHE_DIR, nm))
+    surf.write_to_png(os.path.join(HOME, ".config/hypr/assets/terminal_hud_bg.png"))
+
+    # Фон для SDDM с мягким центральным затемнением
+    vg = cairo.RadialGradient(W * 0.5, H * 0.5, 160, W * 0.5, H * 0.5, 760)
+    vg.add_color_stop_rgba(0.0, 0.06, 0.065, 0.075, 0.84)
+    vg.add_color_stop_rgba(1.0, 0.04, 0.045, 0.055, 0.30)
+    cr.set_source(vg); cr.paint()
+    surf.write_to_png(os.path.join(CACHE_DIR, "sddm_bg.png"))
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "all"
-    if target in ("all", "dungeon-of-god"):    build_dungeon_wallpaper()
-    if target in ("all", "forest-stream"):     build_forest_wallpaper()
-    if target in ("all", "impasto-landscape"): build_impasto_wallpaper()
+    build_gamedev_grey_wallpaper()

@@ -5,7 +5,7 @@ Rectangle {
     id: root
     width: 1920
     height: 1080
-    color: "#0b0f14"
+    color: "#121316"
 
     property int sessionIndex: (sessionModel && sessionModel.lastIndex >= 0) ? sessionModel.lastIndex : 0
     property string currentTime: Qt.formatTime(new Date(), "HH:mm")
@@ -51,13 +51,13 @@ Rectangle {
         anchors.top: parent.top; anchors.topMargin: 26
         anchors.horizontalCenter: parent.horizontalCenter
         radius: 8
-        color: "#0d1117"
-        border.color: "#30363d"; border.width: 1
+        color: "#141619"
+        border.color: "#2e3238"; border.width: 1
 
         Rectangle {
             width: parent.width; height: 2
             anchors.bottom: parent.bottom
-            color: "#478cbf"
+            color: "#5c626d"
         }
 
         Row {
@@ -66,7 +66,7 @@ Rectangle {
 
             Rectangle {
                 width: 9; height: 9; radius: 5
-                color: "#63d994"
+                color: "#9ea4b0"
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
@@ -77,18 +77,18 @@ Rectangle {
             }
             Text {
                 text: "•   " + root.currentDate + "   •"
-                color: "#79c0ff"
+                color: "#9ea4b0"
                 font.family: "monospace"; font.pixelSize: 12; font.bold: true
                 anchors.verticalCenter: parent.verticalCenter
             }
             Rectangle {
                 width: 165; height: 26; radius: 5
-                color: "#14261d"; border.color: "#2ea043"; border.width: 1
+                color: "#1e2025"; border.color: "#454a52"; border.width: 1
                 anchors.verticalCenter: parent.verticalCenter
                 Text {
                     anchors.centerIn: parent
                     text: "▶ 60.0 FPS // READY"
-                    color: "#63d994"
+                    color: "#9ea4b0"
                     font.family: "monospace"; font.pixelSize: 11; font.bold: true
                 }
             }
@@ -108,12 +108,12 @@ Rectangle {
         }
         Rectangle {
             width: 56; height: 32; radius: 6
-            color: "#161b22"; border.color: "#478cbf"; border.width: 1
+            color: "#1e2025"; border.color: "#5c626d"; border.width: 1
             anchors.bottom: parent.bottom; anchors.bottomMargin: 16
             Text {
                 anchors.centerIn: parent
                 text: root.currentSec
-                color: "#63d994"
+                color: "#9ea4b0"
                 font.family: "monospace"; font.pixelSize: 15; font.bold: true
             }
         }
@@ -129,7 +129,7 @@ Rectangle {
             anchors.centerIn: parent
             width: 530; height: 530; radius: 265
             color: "transparent"
-            border.color: "#478cbf"; border.width: 1
+            border.color: "#5c626d"; border.width: 1
             opacity: 0.28
         }
         Item {
@@ -145,7 +145,7 @@ Rectangle {
                         height: 2.5
                         anchors.top: parent.top; anchors.topMargin: 24
                         anchors.horizontalCenter: parent.horizontalCenter
-                        color: (index % 3 === 0) ? "#63d994" : "#478cbf"
+                        color: (index % 3 === 0) ? "#9ea4b0" : "#5c626d"
                         opacity: 0.75
                     }
                 }
@@ -159,19 +159,19 @@ Rectangle {
         anchors.left: parent.left; anchors.leftMargin: 56
         anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: 42
         radius: 8
-        color: "#12171e"; opacity: 0.94
-        border.color: "#30363d"; border.width: 1
+        color: "#181a1f"; opacity: 0.94
+        border.color: "#2e3238"; border.width: 1
 
-        Rectangle { width: parent.width; height: 3; anchors.top: parent.top; color: "#478cbf" }
+        Rectangle { width: parent.width; height: 3; anchors.top: parent.top; color: "#5c626d" }
 
         Column {
             anchors.fill: parent; anchors.margins: 18
             spacing: 11
-            Text { text: "📂 SceneTree // System Nodes"; color: "#63d994"; font.family: "monospace"; font.pixelSize: 11.5; font.bold: true }
-            Rectangle { width: parent.width; height: 1; color: "#263242" }
+            Text { text: "📂 SceneTree // System Nodes"; color: "#9ea4b0"; font.family: "monospace"; font.pixelSize: 11.5; font.bold: true }
+            Rectangle { width: parent.width; height: 1; color: "#2b2e35" }
             Text { text: "├─ 🎮 Compositor  // Hyprland"; color: "#c9d1d9"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
-            Text { text: "├─ ⚡ Render_API  // Vulkan DRM"; color: "#79c0ff"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
-            Text { text: "├─ 🐍 Runtime     // Python 3 + C#"; color: "#63d994"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
+            Text { text: "├─ ⚡ Render_API  // Vulkan DRM"; color: "#9ea4b0"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
+            Text { text: "├─ 🐍 Runtime     // Python 3 + C#"; color: "#9ea4b0"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
             Text { text: "└─ 🔊 Audio_Bus   // PipeWire DSP"; color: "#c9d1d9"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
         }
     }
@@ -182,18 +182,18 @@ Rectangle {
         anchors.right: parent.right; anchors.rightMargin: 56
         anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: 42
         radius: 8
-        color: "#12171e"; opacity: 0.94
-        border.color: "#30363d"; border.width: 1
+        color: "#181a1f"; opacity: 0.94
+        border.color: "#2e3238"; border.width: 1
 
-        Rectangle { width: parent.width; height: 3; anchors.top: parent.top; color: "#63d994" }
+        Rectangle { width: parent.width; height: 3; anchors.top: parent.top; color: "#9ea4b0" }
 
         Column {
             anchors.fill: parent; anchors.margins: 18
             spacing: 11
-            Text { text: "🔍 Inspector // Target Build"; color: "#79c0ff"; font.family: "monospace"; font.pixelSize: 11.5; font.bold: true }
-            Rectangle { width: parent.width; height: 1; color: "#263242" }
-            Text { text: "◈ hyprwork // Engine IDE + Eco"; color: "#63d994"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
-            Text { text: "◈ hyprgame // Scanout + Boost"; color: "#79c0ff"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
+            Text { text: "🔍 Inspector // Target Build"; color: "#9ea4b0"; font.family: "monospace"; font.pixelSize: 11.5; font.bold: true }
+            Rectangle { width: parent.width; height: 1; color: "#2b2e35" }
+            Text { text: "◈ hyprwork // Engine IDE + Eco"; color: "#9ea4b0"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
+            Text { text: "◈ hyprgame // Scanout + Boost"; color: "#9ea4b0"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
             Text { text: "◈ Hotkey   // [F2] Смена сессии"; color: "#c9d1d9"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
             Text { text: "◈ Hotkey   // [Enter] Запуск"; color: "#c9d1d9"; font.family: "monospace"; font.pixelSize: 11; font.bold: true }
         }
@@ -206,20 +206,20 @@ Rectangle {
         anchors.centerIn: parent
         anchors.verticalCenterOffset: 42
         radius: 10
-        color: "#0d1117"
-        border.color: "#30363d"; border.width: 1.5
+        color: "#141619"
+        border.color: "#2e3238"; border.width: 1.5
 
         Rectangle {
             width: parent.width; height: 3
             anchors.top: parent.top
-            color: "#478cbf"
+            color: "#5c626d"
         }
 
         // Угловые скобы Gizmo (X — красная, Y — изумрудная)
-        Rectangle { width: 22; height: 2.5; anchors.top: parent.top; anchors.left: parent.left; color: "#63d994" }
-        Rectangle { width: 2.5; height: 22; anchors.top: parent.top; anchors.left: parent.left; color: "#63d994" }
-        Rectangle { width: 22; height: 2.5; anchors.bottom: parent.bottom; anchors.right: parent.right; color: "#ff6b6b" }
-        Rectangle { width: 2.5; height: 22; anchors.bottom: parent.bottom; anchors.right: parent.right; color: "#ff6b6b" }
+        Rectangle { width: 22; height: 2.5; anchors.top: parent.top; anchors.left: parent.left; color: "#9ea4b0" }
+        Rectangle { width: 2.5; height: 22; anchors.top: parent.top; anchors.left: parent.left; color: "#9ea4b0" }
+        Rectangle { width: 22; height: 2.5; anchors.bottom: parent.bottom; anchors.right: parent.right; color: "#6c727d" }
+        Rectangle { width: 2.5; height: 22; anchors.bottom: parent.bottom; anchors.right: parent.right; color: "#6c727d" }
 
         Column {
             anchors.fill: parent; anchors.margins: 28
@@ -227,7 +227,7 @@ Rectangle {
 
             Row {
                 spacing: 8
-                Rectangle { width: 4; height: 16; color: "#63d994"; anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { width: 4; height: 16; color: "#9ea4b0"; anchors.verticalCenter: parent.verticalCenter }
                 Text {
                     text: "ЦЕЛЕВАЯ СЕССИЯ ДВИЖКА  •  [F2]"
                     color: "#8b949e"
@@ -243,8 +243,8 @@ Rectangle {
                     Rectangle {
                         width: 196; height: 38; radius: 6
                         property bool isSel: (index === root.sessionIndex)
-                        color: isSel ? "#162334" : "#161b22"
-                        border.color: isSel ? "#63d994" : "#30363d"
+                        color: isSel ? "#25282f" : "#1e2025"
+                        border.color: isSel ? "#9ea4b0" : "#2e3238"
                         border.width: isSel ? 1.6 : 1.0
 
                         Row {
@@ -252,7 +252,7 @@ Rectangle {
                             spacing: 8
                             Rectangle {
                                 width: 8; height: 8; radius: 4
-                                color: parent.parent.isSel ? "#63d994" : "#484f58"
+                                color: parent.parent.isSel ? "#9ea4b0" : "#484f58"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
@@ -273,9 +273,9 @@ Rectangle {
             // Поле оператора
             Rectangle {
                 width: parent.width; height: 46; radius: 6
-                color: "#161b22"
-                border.color: userField.activeFocus ? "#478cbf" : "#30363d"; border.width: 1.4
-                Rectangle { width: 3; height: parent.height; anchors.left: parent.left; color: "#478cbf" }
+                color: "#1e2025"
+                border.color: userField.activeFocus ? "#5c626d" : "#2e3238"; border.width: 1.4
+                Rectangle { width: 3; height: parent.height; anchors.left: parent.left; color: "#5c626d" }
 
                 TextInput {
                     id: userField
@@ -292,9 +292,9 @@ Rectangle {
             // Поле пароля
             Rectangle {
                 width: parent.width; height: 46; radius: 6
-                color: "#161b22"
-                border.color: passField.activeFocus ? "#63d994" : "#30363d"; border.width: 1.4
-                Rectangle { width: 3; height: parent.height; anchors.left: parent.left; color: "#63d994" }
+                color: "#1e2025"
+                border.color: passField.activeFocus ? "#9ea4b0" : "#2e3238"; border.width: 1.4
+                Rectangle { width: 3; height: parent.height; anchors.left: parent.left; color: "#9ea4b0" }
 
                 Text {
                     anchors.left: parent.left; anchors.leftMargin: 16
@@ -311,7 +311,7 @@ Rectangle {
                     verticalAlignment: TextInput.AlignVCenter
                     echoMode: TextInput.Password
                     passwordCharacter: "●"
-                    color: "#63d994"
+                    color: "#9ea4b0"
                     font.family: "Noto Sans"; font.pixelSize: 15; font.bold: true
                     focus: true
                     onAccepted: root.doLogin()
@@ -321,8 +321,8 @@ Rectangle {
             // Кнопка запуска сессии в стиле кнопки Play в Godot / IDE
             Rectangle {
                 width: parent.width; height: 48; radius: 6
-                color: loginArea.containsMouse ? "#2ea043" : "#1b3826"
-                border.color: "#63d994"; border.width: 1.5
+                color: loginArea.containsMouse ? "#454a52" : "#23262c"
+                border.color: "#9ea4b0"; border.width: 1.5
 
                 Text {
                     anchors.centerIn: parent
@@ -345,7 +345,7 @@ Rectangle {
         width: 320; height: 46; radius: 8
         anchors.bottom: parent.bottom; anchors.bottomMargin: 28
         anchors.horizontalCenter: parent.horizontalCenter
-        color: "#0d1117"; border.color: "#30363d"; border.width: 1
+        color: "#141619"; border.color: "#2e3238"; border.width: 1
 
         Row {
             anchors.centerIn: parent
@@ -353,16 +353,16 @@ Rectangle {
 
             Rectangle {
                 width: 142; height: 32; radius: 6
-                color: rebArea.containsMouse ? "#1c2d42" : "#161b22"
-                border.color: "#478cbf"; border.width: 1
-                Text { anchors.centerIn: parent; text: "⟳ Перезагрузка"; color: "#79c0ff"; font.family: "Noto Sans"; font.pixelSize: 12; font.bold: true }
+                color: rebArea.containsMouse ? "#25282f" : "#1e2025"
+                border.color: "#5c626d"; border.width: 1
+                Text { anchors.centerIn: parent; text: "⟳ Перезагрузка"; color: "#9ea4b0"; font.family: "Noto Sans"; font.pixelSize: 12; font.bold: true }
                 MouseArea { id: rebArea; anchors.fill: parent; hoverEnabled: true; onClicked: sddm.reboot() }
             }
             Rectangle {
                 width: 142; height: 32; radius: 6
-                color: offArea.containsMouse ? "#3b141e" : "#161b22"
-                border.color: "#ff6b6b"; border.width: 1
-                Text { anchors.centerIn: parent; text: "⏻ Выключение"; color: "#ff8787"; font.family: "Noto Sans"; font.pixelSize: 12; font.bold: true }
+                color: offArea.containsMouse ? "#2b2426" : "#1e2025"
+                border.color: "#6c727d"; border.width: 1
+                Text { anchors.centerIn: parent; text: "⏻ Выключение"; color: "#9ea4b0"; font.family: "Noto Sans"; font.pixelSize: 12; font.bold: true }
                 MouseArea { id: offArea; anchors.fill: parent; hoverEnabled: true; onClicked: sddm.powerOff() }
             }
         }

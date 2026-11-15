@@ -12,7 +12,7 @@ UID = os.getuid()
 CFG_DIR = os.path.join(HOME, ".config/cyberdeck")
 CACHE_DIR = os.path.join(HOME, ".cache/cyberdeck")
 
-os.environ["XCURSOR_THEME"] = "GameDev-Cursor"
+os.environ["XCURSOR_THEME"] = "GameDev-Cursor-Grey"
 os.environ["XCURSOR_SIZE"] = "28"
 
 ORIG_GTK_THEME = os.environ.get("GTK_THEME")
@@ -165,7 +165,7 @@ class GameDevStudioHub(Gtk.Application):
             cr.set_source_surface(self.bg_surface, 0, 0)
             cr.paint()
         else:
-            cr.set_source_rgb(0.05, 0.067, 0.09)
+            cr.set_source_rgb(0.07, 0.075, 0.086)
             cr.paint()
         cr.restore()
 
@@ -205,7 +205,7 @@ class GameDevStudioHub(Gtk.Application):
         settings = Gtk.Settings.get_default()
         if settings:
             settings.set_property("gtk-application-prefer-dark-theme", True)
-            settings.set_property("gtk-cursor-theme-name", "GameDev-Cursor")
+            settings.set_property("gtk-cursor-theme-name", "GameDev-Cursor-Grey")
             settings.set_property("gtk-cursor-theme-size", 28)
 
         prov = Gtk.CssProvider()
