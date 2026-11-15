@@ -17,8 +17,10 @@
       "title": "38;2;220;224;230"
     },
     "bar": {
-      "charElapsed": "■",
-      "charTotal": "･",
+      "char": {
+        "elapsed": "■",
+        "total": "･"
+      },
       "width": 14
     }
   },
