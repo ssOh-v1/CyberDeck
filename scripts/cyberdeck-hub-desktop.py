@@ -149,20 +149,10 @@ def save_widgets_state(st):
 def resolve_cyber_svg(spec, fallback_glyph="default"):
     theme_apps = os.path.join(HOME, ".local/share/icons/CyberDeck-Icons/scalable/apps")
     raw = os.path.splitext(os.path.basename(spec or ""))[0]
-    low = raw.lower()
-    candidates = [raw, low]
-    if "firefox" in low: candidates.append("firefox")
-    elif any(x in low for x in ("foot", "kitty", "alacritty", "terminal")): candidates.append("foot")
-    elif any(x in low for x in ("code", "vscodium", "zed", "unity", "godot")): candidates.append("code")
-    elif any(x in low for x in ("thunar", "nautilus", "dolphin", "files", "folder")): candidates.append("folder")
-    elif any(x in low for x in ("telegram", "ayugram")): candidates.append("telegram")
-    elif any(x in low for x in ("discord", "vesktop", "legcord")): candidates.append("discord")
-    elif "steam" in low: candidates.append("steam")
-    candidates.append(fallback_glyph)
-    for c in candidates:
-        if c and os.path.isfile(os.path.join(theme_apps, f"{c}.svg")):
-            return os.path.join(theme_apps, f"{c}.svg")
-    return os.path.join(theme_apps, "default.svg") if os.path.isfile(os.path.join(theme_apps, "default.svg")) else None
+    for cand in (spec, raw, raw.lower(), fallback_glyph, "default"):
+        if cand and os.path.isfile(os.path.join(theme_apps, f"{cand}.svg")):
+            return os.path.join(theme_apps, f"{cand}.svg")
+    return None
 
 def make_cyber_icon_widget(icon_spec, size=18):
     svg_path = resolve_cyber_svg(icon_spec)
