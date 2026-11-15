@@ -91,7 +91,7 @@ def get_logical_monitor_size():
 W_MON, H_MON = get_logical_monitor_size()
 
 DEFAULT_WIDGETS = {
-    "ai":       {"title": "✦ GEMINI 2.5 PRO",     "x": 18,          "y": 46,  "w": 355, "h": 315, "base_w": 355, "base_h": 315, "min_w": 255, "min_h": 185, "collapsed": False},
+    "ai":       {"title": "✦ GEMINI ULTRA // 2.5 PRO",     "x": 18,          "y": 46,  "w": 355, "h": 315, "base_w": 355, "base_h": 315, "min_w": 255, "min_h": 185, "collapsed": False},
     "notes":    {"title": "▣ ЗАМЕТКИ",            "x": 18,          "y": 372, "w": 355, "h": 225, "base_w": 355, "base_h": 225, "min_w": 220, "min_h": 145, "collapsed": False},
     "calendar": {"title": "▣ КАЛЕНДАРЬ",          "x": W_MON - 298, "y": 46,  "w": 280, "h": 210, "base_w": 280, "base_h": 205, "min_w": 220, "min_h": 160, "collapsed": False},
     "media":    {"title": "▣ МЕДИАПЛЕЕР",         "x": W_MON - 298, "y": 268, "w": 280, "h": 130, "base_w": 280, "base_h": 128, "min_w": 230, "min_h": 110, "collapsed": False},
@@ -273,53 +273,123 @@ def is_rate_limited_or_bad(text):
     return any(b in low for b in bad_markers)
 
 # ==============================================================================
-# ФЛАГМАНСКОЕ ЯДРО GEMINI 2.5 PRO (ПРЯМОЙ GOOGLE API + МОЩНЫЙ ШЛЮЗ OPENAI-LARGE)
+# ЯДРО GEMINI ULTRA (2.5 PRO 16K + СТРОГАЯ ОЧЕРЕДНОСТЬ РОЛЕЙ + ПОДДЕРЖКА HAPP)
 # ==============================================================================
-def query_native_google_gemini_pro(api_key, sys_prompt, messages):
-    contents = []
-    for m in messages[-12:]:
+def get_saved_gemini_key():
+    if os.path.isfile(GEM_KEY_FILE):
+        try:
+            raw = open(GEM_KEY_FILE, "r", encoding="utf-8").read()
+            clean = re.sub(r"[^A-Za-z0-9_-]", "", raw)
+            if len(clean) >= 20:
+                return clean
+        except Exception:
+            pass
+    return ""
+
+def detect_local_proxy():
+    # Если запущен Happ / Sing-box / Xray, находим активный локальный порт для обхода гео-блокировки Google API
+    for port in (2080, 10808, 10809, 7890, 12334, 1080):
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.08):
+                return f"http://127.0.0.1:{port}"
+        except Exception:
+            pass
+    return None
+
+def build_valid_gemini_contents(messages):
+    # Официальный API Google требует, чтобы диалог строго начинался с роли 'user' и чередовал 'user' <-> 'model'
+    cleaned = []
+    for m in messages[-16:]:
+        txt = (m.get("content") or "").strip()
+        if not txt:
+            continue
+        # Игнорируем старые системные заглушки и сообщения об ошибках
+        if any(bad in txt for bad in ("Публичный бесключевой шлюз", "Публичный шлюз просит", "Старый чат удалён", "История чата", "Создан новый чат", "Канал связи временно", "Привет, Денис!")):
+            continue
         role = "user" if m.get("role") == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": m.get("content", "")}]})
+        # Пропускаем любые сообщения модели, пока не встретится первое сообщение пользователя
+        if not cleaned and role == "model":
+            continue
+        # Если две реплики подряд имеют одинаковую роль — склеиваем их в один блок
+        if cleaned and cleaned[-1]["role"] == role:
+            cleaned[-1]["parts"][0]["text"] += "
+
+" + txt
+        else:
+            cleaned.append({"role": role, "parts": [{"text": txt}]})
+
+    if not cleaned and messages:
+        cleaned = [{"role": "user", "parts": [{"text": messages[-1].get("content", "Привет")}]}]
+    return cleaned
+
+def query_native_google_gemini_pro(api_key, sys_prompt, messages):
+    contents = build_valid_gemini_contents(messages)
     payload = {
         "systemInstruction": {"parts": [{"text": sys_prompt}]},
         "contents": contents,
         "generationConfig": {
             "temperature": 0.65,
-            "maxOutputTokens": 8192,
+            "maxOutputTokens": 16384,
         }
     }
-    # Сначала обращаемся к самой мощной модели gemini-2.5-pro, при лимите квоты — мгновенно к gemini-2.5-flash
-    for g_model in ("gemini-2.5-pro", "gemini-2.5-flash"):
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{g_model}:generateContent?key={api_key}"
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(req, timeout=45) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-                for p in parts:
-                    if "text" in p and p["text"].strip():
-                        return p["text"].strip()
-        except Exception:
-            continue
+    payload_str = json.dumps(payload, ensure_ascii=False)
+    local_proxy = detect_local_proxy()
+
+    # Каскад моделей от флагманской Pro до скоростной 2.5 Flash (если на бесплатном ключе лимит RPM для Pro исчерпан)
+    last_err = ""
+    for g_model in ("gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"):
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{g_model}:generateContent?key={api_key}"
+        for use_proxy in ([False, True] if local_proxy else [False]):
+            cmd = ["curl", "-s", "-L", "--connect-timeout", "8", "--max-time", "45",
+                   "-X", "POST", url, "-H", "Content-Type: application/json", "-d", payload_str]
+            if use_proxy and local_proxy:
+                cmd = ["curl", "-s", "-L", "-x", local_proxy, "--connect-timeout", "8", "--max-time", "45",
+                       "-X", "POST", url, "-H", "Content-Type: application/json", "-d", payload_str]
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True)
+                if not res.stdout.strip():
+                    continue
+                data = json.loads(res.stdout)
+                if "candidates" in data and data["candidates"]:
+                    parts = data["candidates"][0].get("content", {}).get("parts", [])
+                    out_texts = [p.get("text", "") for p in parts if "text" in p and not p.get("thought", False)]
+                    if not out_texts:
+                        out_texts = [p.get("text", "") for p in parts if "text" in p]
+                    ans = "
+".join(out_texts).strip()
+                    if ans:
+                        return ans
+                if "error" in data:
+                    err_obj = data["error"]
+                    msg = err_obj.get("message", str(err_obj))
+                    last_err = msg
+                    # Если гео-блок — пробуем со следующей итерацией через локальный прокси Happ
+                    if "location is not supported" in msg.lower() and not use_proxy and local_proxy:
+                        continue
+                    # Если ключ неверный — сообщаем сразу
+                    if "api_key_invalid" in msg.lower() or "api key not valid" in msg.lower():
+                        return "❌ Сохранённый API-ключ отклонён сервером Google (API key not valid). Скопируй новый ключ на aistudio.google.com/apikey и нажми «🔑 PRO» -> «📋 Вставить ключ»."
+            except Exception as e:
+                last_err = str(e)
+                continue
+
+    if "location is not supported" in last_err.lower():
+        return "🌐 Сервер Google Gemini требует включённый VPN/прокси для твоего региона. Включи туннель в Happ и отправь сообщение снова!"
+    if last_err:
+        return f"⚠ Ответ сервера Google API: {last_err}"
     return None
 
 def query_gemini(messages, session_topic=""):
     topic_ctx = f" Тема текущего чата: «{session_topic}»." if session_topic else ""
     sys_prompt = GEMINI_PERSONA_PROMPT + topic_ctx
 
-    # 1. Прямой канал Google Gemini 2.5 Pro (максимальная мощность и 0 секунд ожидания)
-    if os.path.isfile(GEM_KEY_FILE):
-        gkey = open(GEM_KEY_FILE, "r", encoding="utf-8").read().strip()
-        if gkey:
-            ans_pro = query_native_google_gemini_pro(gkey, sys_prompt, messages)
-            if ans_pro:
-                return ans_pro
+    gkey = get_saved_gemini_key()
+    if gkey:
+        ans_pro = query_native_google_gemini_pro(gkey, sys_prompt, messages)
+        if ans_pro:
+            return ans_pro
 
-    # 2. Бесключевой канал: одиночный чистый запрос к старшей модели openai-large (без цикла спама по IP)
+    # Если ключа нет вообще — используем бесключевой шлюз
     seed = random.randint(10000, 999999)
     payload = {
         "model": "openai-large",
@@ -346,18 +416,11 @@ def query_gemini(messages, session_topic=""):
             except Exception:
                 if not is_rate_limited_or_bad(raw):
                     return raw
-            if "free limit reached" in raw.lower() or "45 seconds" in raw.lower():
-                return (
-                    "⏳ Публичный бесключевой шлюз ограничивает частоту до 1 запроса в 45 секунд.\n\n"
-                    "Чтобы включить полную мощь Gemini 2.5 Pro без ожидания:\n"
-                    "1. Нажми кнопку «🔑» в правом верхнем углу этого виджета.\n"
-                    "2. Выбери «🌐 Открыть Google AI Studio» и скопируй бесплатный ключ.\n"
-                    "3. Снова нажми «🔑» -> «📋 Вставить ключ из буфера обмена»."
-                )
-    except Exception as e:
-        return f"Ошибка сети: {e}"
+    except Exception:
+        pass
 
-    return "⏳ Публичный шлюз просит подождать ~30 секунд перед следующим вопросом (или нажми «🔑» сверху для прямого подключения Gemini 2.5 Pro без лимитов)."
+    return "⏳ Бесключевой канал перегружен. Нажми кнопку «🔑» сверху, чтобы подключить прямой ключ Google AI Studio."
+
 
 class OverlayWidgetCard:
     def __init__(self, app, wid, state_dict, build_body_fn, is_standalone=False, extra_hdr_btns=None):
@@ -727,7 +790,8 @@ class StudioDesktopApp(Gtk.Application):
         chat_row.append(b_del_c)
 
         # Кнопка подключения прямого ключа Gemini 2.5 Pro API
-        b_key = Gtk.Button(label="🔑"); b_key.add_css_class("mini-btn"); b_key.set_has_tooltip(False)
+        self.b_key = Gtk.Button(label="🔑 PRO" if get_saved_gemini_key() else "🔑"); self.b_key.add_css_class("mini-btn"); self.b_key.set_has_tooltip(False)
+        b_key = self.b_key
         b_key.connect("clicked", self.on_set_gemini_key_dialog)
         chat_row.append(b_key)
 
@@ -782,12 +846,14 @@ class StudioDesktopApp(Gtk.Application):
                 except Exception:
                     clip = ""
                 if clip and len(clip) > 15:
-                    open(GEM_KEY_FILE, "w", encoding="utf-8").write(clip)
+                    open(GEM_KEY_FILE, "w", encoding="utf-8").write( re.sub(r"[^A-Za-z0-9_-]", "", clip) )
+                    GLib.idle_add(self.b_key.set_label, "🔑 PRO")
                     self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Прямой ключ из буфера обмена подключён!'")
                 else:
                     manual = rofi_prompt("Вставьте ключ AIzaSy...", [""])
                     if manual.strip():
-                        open(GEM_KEY_FILE, "w", encoding="utf-8").write(manual.strip())
+                        open(GEM_KEY_FILE, "w", encoding="utf-8").write( re.sub(r"[^A-Za-z0-9_-]", "", manual) )
+                        GLib.idle_add(self.b_key.set_label, "🔑 PRO")
                         self.spawn_raw("notify-send -a cyber-kb '✦ GEMINI 2.5 PRO' 'Прямой ключ успешно подключён!'")
             elif "Открыть Google AI Studio" in ch:
                 self.spawn_raw("xdg-open 'https://aistudio.google.com/apikey'")
