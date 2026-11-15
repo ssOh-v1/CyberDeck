@@ -1,146 +1,153 @@
 #!/usr/bin/python3
-import os, glob, json, time, signal, socket, select, subprocess
+import os, sys, json, socket, signal, subprocess
 
 os.environ.pop("LD_PRELOAD", None)
+
 UID = os.getuid()
 HOME = os.path.expanduser("~")
 PID_FILE = f"/tmp/cyber_kb_osd_{UID}.pid"
 STATE_FILE = f"/tmp/alpora_kb_layout_{UID}"
-ICON_PATH = os.path.join(HOME, ".config/hypr/assets/ui/kb.svg")
+THEME_JSON = os.path.join(HOME, ".config/cyberdeck/theme.json")
 
-# Безопасная замена старого экземпляра по точному PID без pkill -f
-if os.path.isfile(PID_FILE):
-    try:
+try:
+    if os.path.isfile(PID_FILE):
         old_pid = int(open(PID_FILE).read().strip())
         if old_pid != os.getpid():
             os.kill(old_pid, signal.SIGTERM)
-            time.sleep(0.08)
-    except Exception:
-        pass
+except Exception:
+    pass
 open(PID_FILE, "w").write(str(os.getpid()))
 
-def parse_layout(layout_str):
-    low = (layout_str or "").lower()
-    if any(k in low for k in ("rus", "ru", "рус", "cyrillic")):
-        return "RU", "Русский [RU]"
-    if any(k in low for k in ("eng", "us", "en", "англ")):
-        return "EN", "English [US]"
-    short = (layout_str or "EN")[:2].upper()
-    return short, layout_str or "EN"
+def norm_layout(raw):
+    low = raw.lower()
+    if any(k in low for k in ("ru", "rus", "рус", "cyrillic")):
+        return "RU", "РУССКИЙ"
+    return "EN", "ENGLISH"
 
-def query_main_keyboard():
+def load_theme_meta():
     try:
-        devs = json.loads(subprocess.check_output(["hyprctl", "devices", "-j"], text=True, stderr=subprocess.DEVNULL))
-        kbs = devs.get("keyboards", [])
-        for kb in kbs:
-            if kb.get("main") and "," in kb.get("layout", ""):
-                return parse_layout(kb.get("active_keymap", "EN"))
-        for kb in kbs:
-            if kb.get("main"):
-                return parse_layout(kb.get("active_keymap", "EN"))
-        for kb in kbs:
-            if "," in kb.get("layout", "") and "virtual" not in kb.get("name", "").lower():
-                return parse_layout(kb.get("active_keymap", "EN"))
+        if os.path.isfile(THEME_JSON):
+            return json.load(open(THEME_JSON, encoding="utf-8"))
     except Exception:
         pass
-    return None, None
+    return {"id": "cyberdeck", "layout": "cyberdeck", "primary": "#4c6ef5", "accent": "#22b8cf", "bg": "#07090f"}
 
-def find_hypr_socket2():
-    xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{UID}")
-    sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
-    candidates = []
-    if sig:
-        candidates.append(os.path.join(xdg, "hypr", sig, ".socket2.sock"))
-        candidates.append(os.path.join("/tmp/hypr", sig, ".socket2.sock"))
-    for p in sorted(glob.glob(os.path.join(xdg, "hypr", "*", ".socket2.sock")), key=os.path.getmtime, reverse=True):
-        candidates.append(p)
-    for p in sorted(glob.glob("/tmp/hypr/*/.socket2.sock"), key=os.path.getmtime, reverse=True):
-        candidates.append(p)
-    for c in candidates:
-        if os.path.exists(c):
-            return c
-    return None
+def build_world_kb_svg(lay, code, prim, acc, bg):
+    svg_path = f"/tmp/cyber_kb_badge_{UID}.svg"
+    if lay == "dungeon":
+        # 2. THE DUNGEON OF GOD: Рунический щит с пламенной окантовкой и кодом языка
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <polygon points="24,3 43,11 39,35 24,45 9,35 5,11" fill="#170c0a" stroke="{acc}" stroke-width="2.4"/>
+  <polygon points="24,7 38,13 35,32 24,40 13,32 10,13" fill="none" stroke="{prim}" stroke-width="1.4"/>
+  <text x="24" y="29" text-anchor="middle" font-family="Noto Sans, serif" font-weight="bold" font-size="15" fill="{acc}">{code}</text>
+</svg>"""
+    elif lay == "forest":
+        # 3. ЛЕСНОЙ РУЧЕЙ: Изумрудный медальон с природным орнаментом
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <circle cx="24" cy="24" r="20" fill="#0d2118" stroke="{acc}" stroke-width="2.2"/>
+  <circle cx="24" cy="24" r="16" fill="none" stroke="{prim}" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <text x="24" y="29" text-anchor="middle" font-family="Noto Sans, sans-serif" font-weight="bold" font-size="14" fill="#e8f7ee">{code}</text>
+</svg>"""
+    elif lay == "impasto":
+        # 4. ИМПАСТО ПЕЙЗАЖ: Холст в золочёной раме с мазками масла
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="4" y="6" width="40" height="36" rx="8" fill="#241a17" stroke="{acc}" stroke-width="2.4"/>
+  <path d="M10 13 Q24 9 38 14" fill="none" stroke="{prim}" stroke-width="3.2" stroke-linecap="round"/>
+  <text x="24" y="31" text-anchor="middle" font-family="Noto Sans, serif" font-weight="bold" font-size="14" fill="{acc}">{code}</text>
+</svg>"""
+    elif lay == "gamedev":
+        # 5. GAMEDEV ENGINE STUDIO: Иконка Node2D с координатными осями X/Y
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="4" y="4" width="40" height="40" rx="6" fill="#161b22" stroke="{prim}" stroke-width="2.2"/>
+  <line x1="8" y1="38" x2="22" y2="38" stroke="#ff6b6b" stroke-width="2.2"/>
+  <line x1="8" y1="38" x2="8" y2="24" stroke="{acc}" stroke-width="2.2"/>
+  <text x="26" y="28" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="14" fill="#e6edf3">{code}</text>
+</svg>"""
+    else:
+        # 1. CYBERDECK CLASSIC: Тактический прицельный модуль
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="5" y="7" width="38" height="34" rx="8" fill="#0d1324" stroke="{prim}" stroke-width="2.0"/>
+  <path d="M5 16 V9 C5 7.8 5.8 7 7 7 H14 M43 32 V39 C43 40.2 42.2 41 41 41 H34" fill="none" stroke="{acc}" stroke-width="2.4"/>
+  <text x="24" y="29" text-anchor="middle" font-family="Noto Sans, monospace" font-weight="bold" font-size="14" fill="{acc}">{code}</text>
+</svg>"""
 
-def send_kb_notify(code, full):
-    try:
-        open(STATE_FILE, "w").write(code)
-    except Exception:
-        pass
+    open(svg_path, "w", encoding="utf-8").write(svg)
+    return svg_path
+
+def send_kb_notify(code, full_name):
+    open(STATE_FILE, "w").write(code)
+    subprocess.Popen([os.path.join(HOME, ".local/bin/cyber-kb-sync-x11")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    t = load_theme_meta()
+    lay = t.get("layout", "cyberdeck")
+    prim = t.get("primary", "#4c6ef5")
+    acc  = t.get("accent", "#22b8cf")
+    bg   = t.get("bg", "#07090f")
+
+    icon_p = build_world_kb_svg(lay, code, prim, acc, bg)
+
+    if lay == "dungeon":
+        rune_desc = "Руны Древних (Кириллица)" if code == "RU" else "Имперский манускрипт (Латиница)"
+        title = f"⚔ СВИТОК НАРЕЧИЯ // [{code}]"
+        body  = f"<b>{full_name}</b>  •  {rune_desc}"
+    elif lay == "forest":
+        flow_desc = "Родной поток речи" if code == "RU" else "Международный поток"
+        title = f"🌿 ДЫХАНИЕ ЛЕСА // [{code}]"
+        body  = f"<b>{full_name}</b>  •  {flow_desc}"
+    elif lay == "impasto":
+        brush_desc = "Кириллическая подпись" if code == "RU" else "Латинская монограмма"
+        title = f"🎨 ПАЛИТРА ВВОДА // [{code}]"
+        body  = f"<b>{full_name}</b>  •  {brush_desc}"
+    elif lay == "gamedev":
+        loc_code = "ru_RU.UTF-8" if code == "RU" else "en_US.UTF-8"
+        title = f"🎮 INPUT_EVENT // KEYMAP_{code}"
+        body  = f"<tt>InputMap.set_locale(\"{loc_code}\")</tt>"
+    else:
+        title = f"◈ РАСКЛАДКА // {code}"
+        body  = f"<b>{full_name}</b>  •  МАТРИЦА ВВОДА АКТИВНА"
+
     subprocess.Popen([
-        "notify-send",
-        "-a", "cyber-kb",
-        "-i", ICON_PATH,
-        "-h", "string:x-canonical-private-synchronous:kb-layout",
-        f"◈ РАСКЛАДКА // {code}",
-        f"Активный ввод: {full}"
+        "notify-send", "-a", "cyber-kb",
+        "-h", "string:x-canonical-private-synchronous:cyber-kb",
+        "-i", icon_p,
+        title, body
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-def listen_loop():
-    last_code, _ = query_main_keyboard()
-    if not last_code:
-        last_code = "EN"
-    try:
-        open(STATE_FILE, "w").write(last_code)
-    except Exception:
-        pass
+try:
+    devs = json.loads(subprocess.check_output(["hyprctl", "devices", "-j"], text=True, stderr=subprocess.DEVNULL))
+    for k in devs.get("keyboards", []):
+        if k.get("main"):
+            c, _ = norm_layout(k.get("active_keymap", "EN"))
+            open(STATE_FILE, "w").write(c)
+            break
+except Exception:
+    open(STATE_FILE, "w").write("EN")
 
-    sock_path = find_hypr_socket2()
-    if not sock_path:
-        time.sleep(1.5)
-        return
+sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
+xdg = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{UID}")
+sock_candidates = [
+    os.path.join(xdg, "hypr", sig, ".socket2.sock"),
+    f"/tmp/hypr/{sig}/.socket2.sock",
+]
+sock_path = next((p for p in sock_candidates if os.path.exists(p)), None)
+if not sock_path:
+    sys.exit(0)
 
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-        s.connect(sock_path)
-        s.setblocking(False)
-        buf = ""
-        while True:
-            r, _, _ = select.select([s], [], [], 2.0)
-            if not r:
-                continue
-            chunk = s.recv(8192).decode("utf-8", errors="ignore")
-            if not chunk:
-                break
-            buf += chunk
-            saw_layout = False
-            event_layout = None
-            while "\n" in buf:
-                line, buf = buf.split("\n", 1)
-                if line.startswith("activelayout>>"):
-                    saw_layout = True
-                    parts = line.split(">>", 1)[1].split(",", 1)
-                    if len(parts) == 2 and parts[1].strip():
-                        dev_name = parts[0].lower()
-                        if not any(x in dev_name for x in ("power", "video", "sleep", "wireless hotkeys", "wmi")):
-                            event_layout = parts[1].strip()
-
-            if saw_layout:
-                # Дожидаемся окончания пакета событий от виртуальных устройств ноутбука (35 мс)
-                time.sleep(0.035)
-                try:
-                    extra = s.recv(8192).decode("utf-8", errors="ignore")
-                    if extra:
-                        buf += extra
-                        while "\n" in buf:
-                            line, buf = buf.split("\n", 1)
-                            if line.startswith("activelayout>>"):
-                                parts = line.split(">>", 1)[1].split(",", 1)
-                                if len(parts) == 2 and parts[1].strip():
-                                    dev_name = parts[0].lower()
-                                    if not any(x in dev_name for x in ("power", "video", "sleep", "wireless hotkeys", "wmi")):
-                                        event_layout = parts[1].strip()
-                except BlockingIOError:
-                    pass
-
-                code, full = query_main_keyboard()
-                if not code and event_layout:
-                    code, full = parse_layout(event_layout)
-                if code and code != last_code:
-                    last_code = code
-                    send_kb_notify(code, full)
-
-if __name__ == "__main__":
+last_code = ""
+with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+    s.connect(sock_path)
+    buf = ""
     while True:
-        try:
-            listen_loop()
-        except Exception:
-            time.sleep(1.5)
+        chunk = s.recv(4096)
+        if not chunk:
+            break
+        buf += chunk.decode("utf-8", errors="ignore")
+        while "\n" in buf:
+            line, buf = buf.split("\n", 1)
+            if line.startswith("activelayout>>"):
+                parts = line.split(">>", 1)[1].split(",")
+                if len(parts) >= 2:
+                    code, full = norm_layout(parts[1].strip())
+                    if code != last_code:
+                        last_code = code
+                        send_kb_notify(code, full)

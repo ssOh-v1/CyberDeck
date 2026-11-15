@@ -926,6 +926,55 @@ def apply_backend(theme_id, restart_hub=True):
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     subprocess.run(["sudo", "-n", "/usr/local/bin/cyber-theme-sys-sync", HOME, p_hex, a_hex, cur_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Индивидуальный вид окна уведомлений и OSD раскладки в Mako под каждый из 5 миров
+    lay = t.get("layout", "cyberdeck")
+    if lay == "dungeon":
+        kb_rad, kb_bsize, kb_anchor = 3, 2, "top-center"
+    elif lay == "forest":
+        kb_rad, kb_bsize, kb_anchor = 22, 1, "top-right"
+    elif lay == "impasto":
+        kb_rad, kb_bsize, kb_anchor = 10, 2, "top-right"
+    elif lay == "gamedev":
+        kb_rad, kb_bsize, kb_anchor = 5, 1, "bottom-right"
+    else:
+        kb_rad, kb_bsize, kb_anchor = 12, 2, "top-right"
+
+    mako_cfg = f"""font=Noto Sans Bold 11
+markup=1
+icons=1
+background-color={bg_hex}f5
+text-color={t['fg']}
+border-color={p_hex}
+border-size={kb_bsize}
+border-radius={int(t['radius'])}
+padding=12,16
+margin=18
+width=350
+height=115
+max-icon-size=44
+icon-path={HOME}/.config/hypr/assets/ui:{HOME}/.local/share/icons/CyberDeck-Icons
+default-timeout=2500
+ignore-timeout=1
+layer=overlay
+anchor=top-right
+
+[urgency=high]
+border-color=#ff6b6b
+default-timeout=4000
+
+[app-name=cyber-kb]
+background-color={bg_hex}fa
+text-color={t['fg']}
+border-color={a_hex}
+border-size={kb_bsize}
+border-radius={kb_rad}
+anchor={kb_anchor}
+default-timeout=1350
+width=330
+padding=11,15
+"""
+    open(os.path.join(HOME, ".config/mako/config"), "w", encoding="utf-8").write(mako_cfg)
+
     subprocess.run(["makoctl", "reload"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     if restart_hub:
@@ -957,7 +1006,6 @@ def apply_backend(theme_id, restart_hub=True):
             time.sleep(0.05)
 
 def show_menu():
-    # Закрываем любой зависший экземпляр rofi, чтобы меню открывалось с первого клика
     subprocess.run(["pkill", "-x", "rofi"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     cur = load_current()
     lines, id_map = [], {}
@@ -971,12 +1019,10 @@ def show_menu():
     if os.path.isfile(ROFI_WIFI):
         cmd += ["-theme", ROFI_WIFI]
 
-    proc = subprocess.run(cmd, input="
-".join(lines), text=True, capture_output=True)
+    nl = chr(10)
+    proc = subprocess.run(cmd, input=nl.join(lines), text=True, capture_output=True)
     if proc.returncode != 0 and os.path.isfile(ROFI_WIFI):
-        # Fallback на случай ошибки темы Rofi
-        proc = subprocess.run(["rofi", "-dmenu", "-i", "-p", "◈ ВЫБОР МИРА"], input="
-".join(lines), text=True, capture_output=True)
+        proc = subprocess.run(["rofi", "-dmenu", "-i", "-p", "◈ ВЫБОР МИРА"], input=nl.join(lines), text=True, capture_output=True)
 
     ch = proc.stdout.strip()
     if proc.returncode == 0 and ch in id_map:
