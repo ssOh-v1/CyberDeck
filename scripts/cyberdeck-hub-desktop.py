@@ -5,12 +5,13 @@ try:
 except Exception:
     pass
 
-import os, sys, re, glob, json, subprocess, datetime, importlib.util
+import os, sys, re, glob, json, calendar, subprocess, datetime, importlib.util
 
 HOME = os.path.expanduser("~")
 UID = os.getuid()
 CFG_DIR = os.path.join(HOME, ".config/cyberdeck")
 CACHE_DIR = os.path.join(HOME, ".cache/cyberdeck")
+NOTES_FILE = os.path.join(CFG_DIR, "studio_notes.txt")
 
 os.environ["XCURSOR_THEME"] = "GameDev-Cursor-Grey"
 os.environ["XCURSOR_SIZE"] = "28"
@@ -21,7 +22,7 @@ os.environ["GTK_THEME"] = "Adwaita:dark"
 import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gtk, Gdk, GLib, Gtk4LayerShell
+from gi.repository import Gtk, Gdk, GLib, Pango, Gtk4LayerShell
 import cairo
 
 os.environ.pop("LD_PRELOAD", None)
@@ -45,14 +46,19 @@ _spec = importlib.util.spec_from_file_location("cyber_bg_helper", os.path.join(H
 cyber_bg = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(cyber_bg)
 
+RU_MONTHS = [
+    "", "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ",
+    "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"
+]
+
 def load_css():
     p = os.path.join(CFG_DIR, "active_hub.css")
     if os.path.isfile(p):
         try: return open(p, "r", encoding="utf-8").read()
         except Exception: pass
-    return "window { background-color: #0d1117; color: #e6edf3; }"
+    return "window { background-color: #121316; color: #d4d8de; }"
 
-def ui_svg(name, sz=16):
+def ui_svg(name, sz=14):
     p = os.path.join(UI_ICONS, name)
     img = Gtk.Image.new_from_file(p) if os.path.isfile(p) else Gtk.Image.new_from_icon_name("applications-system-symbolic")
     img.set_pixel_size(sz)
@@ -66,17 +72,19 @@ def resolve_cyber_svg(spec, fallback_glyph):
     if "firefox" in low: candidates.append("firefox")
     elif any(x in low for x in ("foot", "kitty", "alacritty", "terminal")): candidates.append("foot")
     elif any(x in low for x in ("code", "vscodium", "zed", "unity", "godot")): candidates.append("code")
+    elif any(x in low for x in ("thunar", "nautilus", "dolphin", "files", "folder")): candidates.append("folder")
     elif any(x in low for x in ("telegram", "ayugram")): candidates.append("telegram")
     elif any(x in low for x in ("discord", "vesktop", "legcord")): candidates.append("discord")
+    elif "steam" in low: candidates.append("steam")
     candidates.append(fallback_glyph)
     for c in candidates:
         if c and os.path.isfile(os.path.join(theme_apps, f"{c}.svg")):
             return os.path.join(theme_apps, f"{c}.svg")
-    return None
+    return os.path.join(theme_apps, "default.svg") if os.path.isfile(os.path.join(theme_apps, "default.svg")) else None
 
-def make_cyber_icon_widget(icon_spec, fallback_glyph="applications-development-symbolic", size=22):
+def make_cyber_icon_widget(icon_spec, fallback_glyph="default", size=20):
     svg_path = resolve_cyber_svg(icon_spec, fallback_glyph)
-    img = Gtk.Image.new_from_file(svg_path) if svg_path else (Gtk.Image.new_from_file(icon_spec) if (icon_spec and os.path.isfile(icon_spec)) else Gtk.Image.new_from_icon_name(icon_spec or fallback_glyph))
+    img = Gtk.Image.new_from_file(svg_path) if svg_path else Gtk.Image.new_from_icon_name(icon_spec or "application-x-executable")
     img.set_pixel_size(size)
     return img
 
@@ -99,7 +107,7 @@ def read_ram_info():
         info = {l.split(":")[0].strip(): int(l.split(":")[1].strip().split()[0]) for l in open("/proc/meminfo")}
         tot = info.get("MemTotal", 1)
         used = tot - info.get("MemAvailable", 0)
-        return f"{used/1048576.0:.1f}/{tot/1048576.0:.0f}G", min(1.0, max(0.0, used / tot))
+        return f"{used/1048576.0:.1f} / {tot/1048576.0:.0f} GB", min(1.0, max(0.0, used / tot))
     except Exception: return "--", 0.0
 
 def read_battery():
@@ -113,10 +121,40 @@ def scan_dev_ports():
             parts = ln.split()
             if len(parts) > 3 and parts[3] == "0A":
                 p = int(parts[1].split(":")[1], 16)
-                if p in (3000, 4000, 5000, 5173, 8000, 8080, 8888, 9000) and f":{p}" not in ports:
+                if p in (3000, 4000, 5000, 5173, 7860, 8000, 8080, 8888, 11434) and f":{p}" not in ports:
                     ports.append(f":{p}")
     except Exception: pass
-    return " ".join(ports[:4]) if ports else "нет активных портов"
+    return " ".join(ports[:4]) if ports else "нет активных"
+
+def read_git_projects_status():
+    rows = []
+    candidates = [os.path.join(HOME, "CyberDeck")]
+    for d in sorted(glob.glob(os.path.join(HOME, "*"))):
+        if os.path.isdir(os.path.join(d, ".git")) and d not in candidates:
+            candidates.append(d)
+    for repo in candidates[:3]:
+        if not os.path.isdir(os.path.join(repo, ".git")): continue
+        name = os.path.basename(repo)
+        try:
+            br = subprocess.check_output(["git", "-C", repo, "symbolic-ref", "--short", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
+            chg = len(subprocess.check_output(["git", "-C", repo, "status", "--porcelain"], text=True, stderr=subprocess.DEVNULL).splitlines())
+            st = f"изм: {chg}" if chg > 0 else "чисто"
+            rows.append(f"▸ {name[:13]:<13} [{br}] • {st}")
+        except Exception: pass
+    return "\n".join(rows) if rows else "▸ Репозитории Git готовы"
+
+def read_music_status():
+    try:
+        status = subprocess.check_output(["playerctl", "status"], text=True, stderr=subprocess.DEVNULL, timeout=0.6).strip()
+        title  = subprocess.check_output(["playerctl", "metadata", "xesam:title"], text=True, stderr=subprocess.DEVNULL, timeout=0.6).strip()
+        artist = subprocess.check_output(["playerctl", "metadata", "xesam:artist"], text=True, stderr=subprocess.DEVNULL, timeout=0.6).strip()
+        player = subprocess.check_output(["playerctl", "-l"], text=True, stderr=subprocess.DEVNULL, timeout=0.6).splitlines()[0].split(".")[0]
+        if title:
+            icon_st = "▶" if status == "Playing" else "⏸"
+            return f"{icon_st} {title[:26]}", f"{artist[:24] or 'Медиаплеер'}  •  [{player.upper()}]", status == "Playing"
+    except Exception:
+        pass
+    return "⏹ Нет активного трека", "Запустите музыку в браузере или плеере", False
 
 def load_pinned():
     try: return set(json.load(open(PIN_FILE, encoding="utf-8"))) if os.path.isfile(PIN_FILE) else set()
@@ -152,6 +190,13 @@ class GameDevStudioHub(Gtk.Application):
         self.last_pin_mtime = 0
         self.prev_idle, self.prev_total = read_cpu_stat()
         self.last_ws_sig = None
+        self.notes_buf = None
+
+        now = datetime.date.today()
+        self.cal_year = now.year
+        self.cal_month = now.month
+        self.cal_title_lbl = None
+        self.cal_grid = None
 
         self.bg_surface = None
         if os.path.isfile(BG_PNG):
@@ -169,10 +214,10 @@ class GameDevStudioHub(Gtk.Application):
             cr.paint()
         cr.restore()
 
-    def make_sliders_pair(self, width_px=46):
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6); box.set_valign(Gtk.Align.CENTER)
+    def make_sliders_pair(self, width_px=44):
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5); box.set_valign(Gtk.Align.CENTER)
         bri_cap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); bri_cap.add_css_class("audio-capsule")
-        bri_btn = Gtk.Button(); bri_btn.add_css_class("audio-icon-btn"); bri_btn.set_child(ui_svg("sun.svg", 15))
+        bri_btn = Gtk.Button(); bri_btn.add_css_class("audio-icon-btn"); bri_btn.set_child(ui_svg("sun.svg", 14))
         bri_btn.connect("clicked", self.on_bri_icon_clicked); bri_cap.append(bri_btn)
         cur_b = self.get_current_bri()
         self.bri_pct_lbl = Gtk.Label(label=f"{int(cur_b)}%"); self.bri_pct_lbl.add_css_class("vol-pct")
@@ -182,7 +227,7 @@ class GameDevStudioHub(Gtk.Application):
         bri_cap.append(self.bri_scale); bri_cap.append(self.bri_pct_lbl); box.append(bri_cap)
 
         audio_cap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); audio_cap.add_css_class("audio-capsule")
-        audio_btn = Gtk.Button(); audio_btn.add_css_class("audio-icon-btn"); audio_btn.set_child(ui_svg("audio.svg", 15))
+        audio_btn = Gtk.Button(); audio_btn.add_css_class("audio-icon-btn"); audio_btn.set_child(ui_svg("audio.svg", 14))
         audio_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-audio-menu")); audio_cap.append(audio_btn)
         cur_v = self.get_current_vol()
         self.vol_pct_lbl = Gtk.Label(label=f"{int(cur_v)}%"); self.vol_pct_lbl.add_css_class("vol-pct")
@@ -195,11 +240,71 @@ class GameDevStudioHub(Gtk.Application):
     def make_sys_power_capsule(self):
         sys_cap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2); sys_cap.add_css_class("power-capsule")
         btop_b = Gtk.Button(label="BTOP"); btop_b.add_css_class("icon-act-btn"); btop_b.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-tool btop")); sys_cap.append(btop_b)
-        lock_b = Gtk.Button(); lock_b.add_css_class("icon-act-btn"); lock_b.set_child(ui_svg("lock.svg", 15)); lock_b.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-lock")); sys_cap.append(lock_b)
+        lock_b = Gtk.Button(); lock_b.add_css_class("icon-act-btn"); lock_b.set_child(ui_svg("lock.svg", 14)); lock_b.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-lock")); sys_cap.append(lock_b)
         sddm_b = Gtk.Button(label="SDDM"); sddm_b.add_css_class("danger-act-btn"); sddm_b.connect("clicked", lambda _b: self.spawn_raw("hyprctl dispatch exit")); sys_cap.append(sddm_b)
-        reb_b = Gtk.Button(); reb_b.add_css_class("icon-act-btn"); reb_b.set_child(ui_svg("reboot.svg", 15)); reb_b.connect("clicked", lambda _b: self.spawn_raw("systemctl reboot")); sys_cap.append(reb_b)
-        off_b = Gtk.Button(); off_b.add_css_class("danger-act-btn"); off_b.set_child(ui_svg("power.svg", 15)); off_b.connect("clicked", lambda _b: self.spawn_raw("systemctl poweroff")); sys_cap.append(off_b)
+        reb_b = Gtk.Button(); reb_b.add_css_class("icon-act-btn"); reb_b.set_child(ui_svg("reboot.svg", 14)); reb_b.connect("clicked", lambda _b: self.spawn_raw("systemctl reboot")); sys_cap.append(reb_b)
+        off_b = Gtk.Button(); off_b.add_css_class("danger-act-btn"); off_b.set_child(ui_svg("power.svg", 14)); off_b.connect("clicked", lambda _b: self.spawn_raw("systemctl poweroff")); sys_cap.append(off_b)
         return sys_cap
+
+    # --- ВИДЖЕТ КАЛЕНДАРЯ ---
+    def rebuild_calendar_grid(self):
+        if not self.cal_grid or not self.cal_title_lbl: return
+        self.cal_title_lbl.set_label(f"📅 {RU_MONTHS[self.cal_month]} {self.cal_year}")
+        while True:
+            ch = self.cal_grid.get_first_child()
+            if ch is None: break
+            self.cal_grid.remove(ch)
+
+        for col_i, dow in enumerate(("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")):
+            lbl = Gtk.Label(label=dow); lbl.add_css_class("cal-dow")
+            self.cal_grid.attach(lbl, col_i, 0, 1, 1)
+
+        today = datetime.date.today()
+        cal = calendar.Calendar(firstweekday=0)
+        for row_i, week in enumerate(cal.monthdayscalendar(self.cal_year, self.cal_month), start=1):
+            for col_i, day_num in enumerate(week):
+                if day_num == 0:
+                    lbl = Gtk.Label(label=" ")
+                    lbl.add_css_class("cal-day")
+                else:
+                    lbl = Gtk.Label(label=f"{day_num:2d}")
+                    is_today = (day_num == today.day and self.cal_month == today.month and self.cal_year == today.year)
+                    lbl.add_css_class("cal-today" if is_today else "cal-day")
+                self.cal_grid.attach(lbl, col_i, row_i, 1, 1)
+
+    def on_cal_shift(self, delta):
+        if delta == 0:
+            t = datetime.date.today()
+            self.cal_year, self.cal_month = t.year, t.month
+        else:
+            m = self.cal_month + delta
+            if m < 1:
+                self.cal_month = 12; self.cal_year -= 1
+            elif m > 12:
+                self.cal_month = 1; self.cal_year += 1
+            else:
+                self.cal_month = m
+        self.rebuild_calendar_grid()
+
+    # --- ВИДЖЕТ ЗАМЕТОК ---
+    def on_copy_notes(self, _b):
+        if not self.notes_buf: return
+        txt = self.notes_buf.get_text(self.notes_buf.get_start_iter(), self.notes_buf.get_end_iter(), False).strip()
+        if txt:
+            subprocess.run(["wl-copy"], input=txt, text=True, stderr=subprocess.DEVNULL)
+            self.spawn_raw("notify-send -a cyber-kb '📝 ЗАМЕТКИ' 'Текст скопирован в буфер обмена'")
+
+    def on_add_todo_item(self, _b):
+        if not self.notes_buf: return
+        end_it = self.notes_buf.get_end_iter()
+        self.notes_buf.insert(end_it, "\n[ ] Новая задача...")
+
+    def on_ai_quick_ask(self, entry):
+        q = entry.get_text().strip()
+        if not q: return
+        subprocess.run(["wl-copy"], input=q, text=True, stderr=subprocess.DEVNULL)
+        entry.set_text("")
+        self.spawn_raw("notify-send -a cyber-kb '🧠 AI STUDIO' 'Запрос скопирован в буфер • Открываю Gemini' && firefox https://gemini.google.com")
 
     def do_activate(self):
         settings = Gtk.Settings.get_default()
@@ -207,6 +312,7 @@ class GameDevStudioHub(Gtk.Application):
             settings.set_property("gtk-application-prefer-dark-theme", True)
             settings.set_property("gtk-cursor-theme-name", "GameDev-Cursor-Grey")
             settings.set_property("gtk-cursor-theme-size", 28)
+            settings.set_property("gtk-icon-theme-name", "CyberDeck-Icons")
 
         prov = Gtk.CssProvider()
         prov.load_from_string(load_css())
@@ -230,36 +336,38 @@ class GameDevStudioHub(Gtk.Application):
         bg_area.set_draw_func(self.on_draw_background)
         overlay.set_child(bg_area)
 
-        root_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        root_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         root_box.add_css_class("hub-overlay")
         root_box.set_hexpand(True); root_box.set_vexpand(True)
 
-        # 1. Верхний тулбар среды разработки игр (без кнопок других тем!)
+        # ======================================================================
+        # 1. ВЕРХНИЙ ТУЛБАР СТУДИИ
+        # ======================================================================
         bar = Gtk.CenterBox(); bar.add_css_class("ide-toolbar"); bar.set_vexpand(False)
         lz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        lz.append(Gtk.Label(label="🎮 GAMEDEV // STUDIO", css_classes=["panel-header"]))
+        lz.append(Gtk.Label(label="▣ STUDIO // WORKSPACE", css_classes=["panel-header"]))
         self.ws_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4); lz.append(self.ws_box)
-        nb = Gtk.Button(label="+ Scene"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(nb)
-        self.bg_menu_btn = Gtk.Button(label="📦 Nodes [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
+        nb = Gtk.Button(label="+ Стол"); nb.add_css_class("ws-new-btn"); nb.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws")); lz.append(nb)
+        self.bg_menu_btn = Gtk.Button(label="📦 Фон [0]"); self.bg_menu_btn.add_css_class("ws-new-btn"); self.bg_menu_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-bg-menu")); lz.append(self.bg_menu_btn)
         pin_b = Gtk.Button(label="📌 Док"); pin_b.add_css_class("ctrl-pill"); pin_b.connect("clicked", lambda _b: self.spawn_raw("/usr/bin/python3 ~/.local/bin/cyber-pin-menu")); lz.append(pin_b)
         bar.set_start_widget(lz)
 
         play_c = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        b_play = Gtk.Button(label="▶ Play / Перфоманс"); b_play.add_css_class("ide-play-btn")
-        b_play.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-power performance; ~/.local/bin/launch-free-ws foot"))
-        b_bld = Gtk.Button(label="🔨 Папка проектов"); b_bld.add_css_class("ide-build-btn")
-        b_bld.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/launch-free-ws ~/.local/bin/cyber-fm ~"))
-        b_prof = Gtk.Button(label="📊 Btop"); b_prof.add_css_class("ctrl-pill")
-        b_prof.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-tool btop"))
+        for bl, bc, bcls in [
+            ("▶ Терминал", "foot", "ide-play-btn"),
+            ("📁 Проводник", "~/.local/bin/cyber-fm ~", "ide-build-btn"),
+            ("◈ Поверх окон", "~/.local/bin/hyprwork-pin-window", "ctrl-pill"),
+        ]:
+            b = Gtk.Button(label=bl); b.add_css_class(bcls); b.connect("clicked", lambda _b, c=bc: self.spawn_raw(c)); play_c.append(b)
         self.pwr_btn = Gtk.Button(); self.pwr_btn.add_css_class("ctrl-pill"); self.pwr_btn.connect("clicked", self.on_toggle_power); self.update_pwr_label()
-        for w in (b_play, b_bld, b_prof, self.pwr_btn): play_c.append(w)
+        play_c.append(self.pwr_btn)
         bar.set_center_widget(play_c)
 
-        rz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        self.wifi_btn = Gtk.Button(); self.wifi_btn.add_css_class("wifi-btn"); self.wifi_btn.set_child(ui_svg("wifi-high.svg", 15))
+        rz = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        self.wifi_btn = Gtk.Button(); self.wifi_btn.add_css_class("wifi-btn"); self.wifi_btn.set_child(ui_svg("wifi-high.svg", 14))
         self.wifi_btn.connect("clicked", lambda _b: self.spawn_raw("~/.local/bin/cyber-wifi-menu")); rz.append(self.wifi_btn)
         self.kb_btn = Gtk.Button(label="EN"); self.kb_btn.add_css_class("kb-btn"); self.kb_btn.connect("clicked", lambda _b: self.spawn_raw("hyprctl switchxkblayout all next")); rz.append(self.kb_btn)
-        rz.append(self.make_sliders_pair(46))
+        rz.append(self.make_sliders_pair(44))
         rz.append(self.make_sys_power_capsule())
         cbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6); cbox.add_css_class("clock-pill")
         self.clock_lbl = Gtk.Label(label="00:00", css_classes=["clock-time"]); cbox.append(self.clock_lbl)
@@ -267,23 +375,155 @@ class GameDevStudioHub(Gtk.Application):
         bar.set_end_widget(rz)
         root_box.append(bar)
 
-        # 2. Открытый центральный 2D Viewport + компактный Инспектор телеметрии справа внизу
-        mid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL); mid.set_vexpand(True); mid.set_hexpand(True)
+        # ======================================================================
+        # 2. БОКОВЫЕ КОЛОНКИ ВИДЖЕТОВ (СЛЕВА: КАЛЕНДАРЬ + ИИ + КОД/ИГРЫ | СПРАВА: МУЗЫКА + ЗАМЕТКИ + РЕСУРСЫ)
+        # ======================================================================
+        mid = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+        mid.set_vexpand(True); mid.set_hexpand(True)
+
+        # -------------------- ЛЕВАЯ КОЛОНКА ВИДЖЕТОВ --------------------
+        left_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        left_col.set_size_request(310, -1); left_col.set_valign(Gtk.Align.FILL)
+
+        # ВИДЖЕТ 1: КАЛЕНДАРЬ
+        cal_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        cal_card.add_css_class("ide-panel")
+        cal_hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        self.cal_title_lbl = Gtk.Label(label="📅 КАЛЕНДАРЬ", xalign=0, hexpand=True, css_classes=["panel-header"])
+        cal_hdr.append(self.cal_title_lbl)
+        for sym_c, d_m in [("◀", -1), ("●", 0), ("▶", 1)]:
+            cb = Gtk.Button(label=sym_c); cb.add_css_class("studio-btn")
+            cb.connect("clicked", lambda _b, d=d_m: self.on_cal_shift(d))
+            cal_hdr.append(cb)
+        cal_card.append(cal_hdr)
+
+        self.cal_grid = Gtk.Grid()
+        self.cal_grid.set_column_spacing(6); self.cal_grid.set_row_spacing(3)
+        self.cal_grid.set_halign(Gtk.Align.CENTER)
+        cal_card.append(self.cal_grid)
+        self.rebuild_calendar_grid()
+        left_col.append(cal_card)
+
+        # ВИДЖЕТ 2: НЕЙРОСЕТИ (AI & LLM STUDIO)
+        ai_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        ai_card.add_css_class("ide-panel")
+        ai_card.append(Gtk.Label(label="🧠 НЕЙРОСЕТИ // AI STUDIO", xalign=0, css_classes=["panel-header"]))
+
+        for row_items in [
+            [("Gemini", "firefox https://gemini.google.com"), ("ChatGPT", "firefox https://chatgpt.com"), ("Claude", "firefox https://claude.ai")],
+            [("DeepSeek", "firefox https://chat.deepseek.com"), ("HuggingFace", "firefox https://huggingface.co"), ("Local LLM", "foot -e sh -c 'ollama list 2>/dev/null || echo \"Ollama CLI\"; exec bash'")],
+        ]:
+            rbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+            for albl, acmd in row_items:
+                ab = Gtk.Button(label=albl); ab.add_css_class("ai-chip"); ab.set_hexpand(True)
+                ab.connect("clicked", lambda _b, c=acmd: self.spawn_raw(c))
+                rbox.append(ab)
+            ai_card.append(rbox)
+
+        ai_ent = Gtk.Entry(); ai_ent.add_css_class("search-entry")
+        ai_ent.set_placeholder_text("Быстрый промпт (Enter -> буфер + ИИ)...")
+        ai_ent.connect("activate", self.on_ai_quick_ask)
+        ai_card.append(ai_ent)
+        left_col.append(ai_card)
+
+        # ВИДЖЕТ 3: РАЗРАБОТКА ИГР И КОД (GAMEDEV & CODE PIPELINE)
+        dev_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        dev_card.add_css_class("ide-panel"); dev_card.set_vexpand(True)
+        dev_card.append(Gtk.Label(label="🎮 GAMEDEV & CODE // ПРОЕКТЫ", xalign=0, css_classes=["panel-header"]))
+        self.git_lbl = Gtk.Label(label=read_git_projects_status(), xalign=0, css_classes=["panel-sub"])
+        dev_card.append(self.git_lbl)
+        self.ports_lbl = Gtk.Label(label=f"Локальные порты: {scan_dev_ports()}", xalign=0, css_classes=["panel-muted"])
+        dev_card.append(self.ports_lbl)
+
+        for row_dev in [
+            [("⌨ Код / IDE", "code || codium || zed || foot"), ("▶ Pygame Тест", "foot -e sh -c 'python3 -c \"import pygame; print(pygame.ver)\" 2>/dev/null; exec bash'"), ("🐍 Python", "foot -e python3")],
+            [("🖼 Спрайты", "~/.local/bin/cyber-fm ~/Pictures"), ("🎨 Пипетка", "~/.local/bin/cyber-tool pick"), ("📷 Скриншот", "~/.local/bin/cyber-tool shot")],
+        ]:
+            dbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+            for dlbl, dcmd in row_dev:
+                db = Gtk.Button(label=dlbl); db.add_css_class("studio-btn"); db.set_hexpand(True)
+                db.connect("clicked", lambda _b, c=dcmd: self.spawn_raw(c))
+                dbox.append(db)
+            dev_card.append(dbox)
+
+        left_col.append(dev_card)
+        mid.append(left_col)
+
+        # Центральное открытое пространство рабочего стола
         sp = Gtk.Box(); sp.set_hexpand(True); mid.append(sp)
 
-        insp = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        insp.add_css_class("ide-panel"); insp.set_size_request(290, -1)
-        insp.set_valign(Gtk.Align.END); insp.set_halign(Gtk.Align.END)
-        insp.append(Gtk.Label(label="🔍 INSPECTOR // TELEMETRY", xalign=0, css_classes=["panel-header"]))
+        # -------------------- ПРАВАЯ КОЛОНКА ВИДЖЕТОВ --------------------
+        right_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        right_col.set_size_request(310, -1); right_col.set_valign(Gtk.Align.FILL)
+
+        # ВИДЖЕТ 4: МУЗЫКАЛЬНЫЙ ПЛЕЕР (MEDIA STUDIO // MPRIS)
+        mus_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        mus_card.add_css_class("ide-panel")
+        mus_card.append(Gtk.Label(label="🎵 МУЗЫКА // MEDIA PLAYER", xalign=0, css_classes=["panel-header"]))
+
+        t_str, a_str, _ = read_music_status()
+        self.track_lbl = Gtk.Label(label=t_str, xalign=0, css_classes=["track-title"])
+        self.track_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        self.artist_lbl = Gtk.Label(label=a_str, xalign=0, css_classes=["track-artist"])
+        self.artist_lbl.set_ellipsize(Pango.EllipsizeMode.END)
+        mus_card.append(self.track_lbl); mus_card.append(self.artist_lbl)
+
+        m_ctrl = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        for mlbl, mcmd in [
+            ("⏮ Пред", "playerctl previous"),
+            ("⏯ Пуск/Пауза", "playerctl play-pause"),
+            ("⏭ След", "playerctl next"),
+            ("🎧 Звук", "~/.local/bin/cyber-audio-menu"),
+        ]:
+            mb = Gtk.Button(label=mlbl); mb.add_css_class("studio-btn"); mb.set_hexpand(True)
+            mb.connect("clicked", lambda _b, c=mcmd: (self.spawn_raw(c), GLib.timeout_add(300, self.refresh_music)))
+            m_ctrl.append(mb)
+        mus_card.append(m_ctrl)
+        right_col.append(mus_card)
+
+        # ВИДЖЕТ 5: ЗАМЕТКИ (STUDIO NOTES // АВТОСОХРАНЕНИЕ)
+        notes_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        notes_card.add_css_class("ide-panel"); notes_card.set_vexpand(True)
+        notes_card.append(Gtk.Label(label="📝 ЗАМЕТКИ // БЛОКНОТ СТУДИИ", xalign=0, css_classes=["panel-header"]))
+
+        n_sc = Gtk.ScrolledWindow(); n_sc.set_vexpand(True)
+        ntv = Gtk.TextView(); ntv.add_css_class("prompt-view"); ntv.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.notes_buf = ntv.get_buffer()
+        if os.path.isfile(NOTES_FILE):
+            try: self.notes_buf.set_text(open(NOTES_FILE, "r", encoding="utf-8").read())
+            except Exception: pass
+        else:
+            self.notes_buf.set_text("[x] Настроить серое окружение студии\n[ ] Доработать механики в игре на Pygame\n[ ] Подготовить зачёты по программированию\n")
+        self.notes_buf.connect("changed", lambda b: open(NOTES_FILE, "w", encoding="utf-8").write(b.get_text(b.get_start_iter(), b.get_end_iter(), False)))
+        n_sc.set_child(ntv); notes_card.append(n_sc)
+
+        n_act = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        b_todo = Gtk.Button(label="➕ Задача"); b_todo.add_css_class("studio-btn"); b_todo.set_hexpand(True); b_todo.connect("clicked", self.on_add_todo_item)
+        b_ncp  = Gtk.Button(label="📋 Копировать"); b_ncp.add_css_class("studio-btn"); b_ncp.set_hexpand(True); b_ncp.connect("clicked", self.on_copy_notes)
+        b_ncl  = Gtk.Button(label="🗑"); b_ncl.add_css_class("studio-btn"); b_ncl.connect("clicked", lambda _b: self.notes_buf.set_text(""))
+        n_act.append(b_todo); n_act.append(b_ncp); n_act.append(b_ncl)
+        notes_card.append(n_act)
+        right_col.append(notes_card)
+
+        # ВИДЖЕТ 6: СИСТЕМНЫЙ ИНСПЕКТОР РЕСУРСОВ
+        insp = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        insp.add_css_class("ide-panel")
+        insp.append(Gtk.Label(label="🔍 МОНИТОР РЕСУРСОВ // TELEMETRY", xalign=0, css_classes=["panel-header"]))
         self.cpu_lbl = Gtk.Label(label="CPU: 0%", xalign=0, css_classes=["panel-sub"]); self.cpu_bar = Gtk.ProgressBar()
         self.ram_lbl = Gtk.Label(label="RAM: --", xalign=0, css_classes=["panel-sub"]); self.ram_bar = Gtk.ProgressBar(); self.ram_bar.add_css_class("gauge-cyan")
         self.bat_lbl = Gtk.Label(label="PWR: --", xalign=0, css_classes=["panel-sub"]); self.bat_bar = Gtk.ProgressBar(); self.bat_bar.add_css_class("bat-good")
-        self.ports_lbl = Gtk.Label(label=f"Ports: {scan_dev_ports()}", xalign=0, css_classes=["panel-sub"])
-        for w in (self.cpu_lbl, self.cpu_bar, self.ram_lbl, self.ram_bar, self.bat_lbl, self.bat_bar, self.ports_lbl): insp.append(w)
-        mid.append(insp)
+        for w in (self.cpu_lbl, self.cpu_bar, self.ram_lbl, self.ram_bar, self.bat_lbl, self.bat_bar): insp.append(w)
+        b_purge = Gtk.Button(label="⚡ Сбросить кэш ОЗУ (Drop Caches)"); b_purge.add_css_class("studio-btn")
+        b_purge.connect("clicked", lambda _b: self.spawn_raw("sudo -n /usr/local/bin/cyber-power-hw purge-ram && notify-send -a cyber-kb '▣ STUDIO' 'Кэш ОЗУ освобождён'"))
+        insp.append(b_purge)
+        right_col.append(insp)
+
+        mid.append(right_col)
         root_box.append(mid)
 
-        # 3. Нижний док ТОЛЬКО для закреплённых программ
+        # ======================================================================
+        # 3. НИЖНИЙ ДОК (ТОЛЬКО ЗАКРЕПЛЁННЫЕ ПРОГРАММЫ С НОВЫМИ СЕРЫМИ ИКОНКАМИ)
+        # ======================================================================
         dock = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         dock.add_css_class("bottom-dock"); dock.set_halign(Gtk.Align.CENTER); dock.set_vexpand(False)
         self.dock_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -293,8 +533,15 @@ class GameDevStudioHub(Gtk.Application):
         overlay.add_overlay(root_box); win.set_child(overlay)
         self.populate_dock(); self.refresh_workspaces(); self.refresh_status()
         GLib.timeout_add(1200, self.refresh_workspaces)
+        GLib.timeout_add(1500, self.refresh_music)
         GLib.timeout_add_seconds(3, self.refresh_status)
         win.present()
+
+    def refresh_music(self):
+        t_str, a_str, _ = read_music_status()
+        if self.track_lbl.get_label() != t_str: self.track_lbl.set_label(t_str)
+        if self.artist_lbl.get_label() != a_str: self.artist_lbl.set_label(a_str)
+        return True
 
     def populate_dock(self):
         items = discover_work_apps()
@@ -314,10 +561,10 @@ class GameDevStudioHub(Gtk.Application):
                 db = Gtk.Button(); db.add_css_class("dock-item")
                 db.set_tooltip_text(f"{name} (ЛКМ: запустить • ПКМ: открепить)")
                 hb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-                hb.append(make_cyber_icon_widget(icon_spec, "applications-development-symbolic", 22))
+                hb.append(make_cyber_icon_widget(icon_spec, "default", 20))
                 hb.append(Gtk.Label(label=name[:18]))
                 db.set_child(hb)
-                db.connect("clicked", lambda _b, c=cmd: self.spawn_raw(f"$HOME/.local/bin/launch-free-ws {c}"))
+                db.connect("clicked", lambda _b, c=cmd: self.spawn_raw(c))
                 rc = Gtk.GestureClick.new(); rc.set_button(3)
                 rc.connect("pressed", lambda _g, _n, _x, _y, nm=name: self.toggle_pin(nm))
                 db.add_controller(rc)
@@ -343,7 +590,7 @@ class GameDevStudioHub(Gtk.Application):
         try:
             bg_list = cyber_bg.get_bg_and_open_items()
             cnt = sum(i.get("count", 1) for i in bg_list)
-            lbl_bg = f"📦 Nodes [{cnt}]"
+            lbl_bg = f"📦 Фон [{cnt}]"
             if self.bg_menu_btn.get_label() != lbl_bg:
                 self.bg_menu_btn.set_label(lbl_bg)
 
@@ -438,7 +685,8 @@ class GameDevStudioHub(Gtk.Application):
         self.bat_lbl.set_label("AC: 100%" if not binfo.get("present") else f"BAT: {pct}%")
         self.bat_bar.set_fraction(min(1.0, max(0.0, pct / 100.0)))
 
-        self.ports_lbl.set_label(f"Ports: {scan_dev_ports()}")
+        self.ports_lbl.set_label(f"Локальные порты: {scan_dev_ports()}")
+        self.git_lbl.set_label(read_git_projects_status())
         self.update_pwr_label()
         return True
 

@@ -4,81 +4,48 @@
     "type": "file",
     "source": "~/.config/fastfetch/cyber_logo.txt",
     "color": {
-      "1": "38;2;34;184;207",
-      "2": "38;2;76;110;245",
-      "3": "38;2;229;236;255"
+      "1": "38;2;165;172;184",
+      "2": "38;2;95;100;110",
+      "3": "38;2;225;228;234"
     },
-    "padding": {
-      "top": 1,
-      "left": 2,
-      "right": 3
-    }
+    "padding": { "top": 1, "left": 2, "right": 4 }
   },
   "display": {
-    "separator": "  ⟫  ",
+    "separator": "   ",
     "color": {
-      "keys": "38;2;102;217;232",
-      "title": "38;2;229;236;255"
+      "keys": "38;2;150;156;166",
+      "title": "38;2;220;224;230"
+    },
+    "bar": {
+      "charElapsed": "■",
+      "charTotal": "･",
+      "width": 14
     }
   },
   "modules": [
     {
       "type": "custom",
-      "format": "\u001b[38;2;76;110;245m╭──────────── \u001b[38;2;34;184;207m◈ CYBER DECK TELEMETRY\u001b[38;2;76;110;245m ────────────╮\u001b[0m"
+      "format": "\u001b[48;2;36;39;46m\u001b[1;38;2;225;228;234m  ▣ STUDIO WORKSTATION  \u001b[0m \u001b[38;2;120;126;136m// GAMEDEV & AI ENVIRONMENT\u001b[0m"
     },
+    "break",
+    { "type": "os",       "key": "  ▪ Система   " },
+    { "type": "kernel",   "key": "  ▪ Ядро      " },
+    { "type": "wm",       "key": "  ▪ Композитор" },
+    { "type": "terminal", "key": "  ▪ Терминал  " },
     {
       "type": "command",
-      "key": "◈ OPERATOR",
-      "text": "printf 'CYBER-NODE // %s@%s' \"$USER\" \"$(uname -n)\""
+      "key": "  ▪ Стек кода ",
+      "text": "printf 'Python %s  •  Git %s' \"$(python3 -V 2>/dev/null | awk '{print $2}')\" \"$(git --version 2>/dev/null | awk '{print $3}')\""
     },
-    {
-      "type": "os",
-      "key": "◈ SYSTEM  "
-    },
-    {
-      "type": "kernel",
-      "key": "◈ KERNEL  "
-    },
-    {
-      "type": "wm",
-      "key": "◈ ENGINE  "
-    },
-    {
-      "type": "terminal",
-      "key": "◈ CONSOLE "
-    },
-    {
-      "type": "cpu",
-      "key": "◈ CPU     "
-    },
-    {
-      "type": "gpu",
-      "key": "◈ GPU     "
-    },
-    {
-      "type": "memory",
-      "key": "◈ MEMORY  "
-    },
-    {
-      "type": "battery",
-      "key": "◈ POWER   "
-    },
-    {
-      "type": "cursor",
-      "key": "◈ CURSOR  "
-    },
-    {
-      "type": "icons",
-      "key": "◈ ICONS   "
-    },
+    "break",
+    { "type": "cpu",      "key": "  ▪ Процессор " },
+    { "type": "gpu",      "key": "  ▪ Графика   " },
+    { "type": "memory",   "key": "  ▪ Память ОЗУ" },
+    { "type": "disk",     "key": "  ▪ Накопитель", "folders": "/" },
+    "break",
     {
       "type": "custom",
-      "format": "\u001b[38;2;76;110;245m╰────────────────────────────────────────────────╯\u001b[0m"
-    },
-    {
-      "type": "colors",
-      "symbol": "circle",
-      "paddingLeft": 2
+      "format": "  \u001b[38;2;70;75;84m■■■■\u001b[0m \u001b[38;2;105;112;122m■■■■\u001b[0m \u001b[38;2;145;152;162m■■■■\u001b[0m \u001b[38;2;185;192;202m■■■■\u001b[0m \u001b[38;2;225;228;234m■■■■\u001b[0m"
     }
   ]
 }
