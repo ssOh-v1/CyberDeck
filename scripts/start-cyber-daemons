@@ -34,3 +34,8 @@ LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" nohup /usr/bin/python3 "$HOME/.loca
         sleep 1.5
     done
 ) &
+
+# 5. Фоновый менеджер буфера обмена (текст + скриншоты)
+pkill -f "wl-paste.*cliphist" 2>/dev/null || true
+nohup wl-paste --type text  --watch cliphist store >/dev/null 2>&1 &
+nohup wl-paste --type image --watch cliphist store >/dev/null 2>&1 &

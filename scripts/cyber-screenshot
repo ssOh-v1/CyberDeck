@@ -1,0 +1,19 @@
+#!/bin/bash
+unset LD_PRELOAD
+MODE="${1:-region}"
+SHOT_DIR="$HOME/Pictures/Screenshots"
+mkdir -p "$SHOT_DIR"
+FILE="$SHOT_DIR/shot_$(date +'%Y-%m-%d_%H-%M-%S').png"
+
+if [ "$MODE" = "full" ]; then
+    grim "$FILE" || exit 1
+else
+    GEOM=$(slurp -d -b 12131688 -c 9ea4b0ff -s 282c3444 -w 2) || exit 0
+    [ -z "$GEOM" ] && exit 0
+    grim -g "$GEOM" "$FILE" || exit 1
+fi
+
+if [ -s "$FILE" ]; then
+    wl-copy --type image/png < "$FILE"
+    notify-send -a cyber-kb -i "$FILE" "▣ СКРИНШОТ" "Скопирован в буфер обмена и сохранён в Screenshots"
+fi
