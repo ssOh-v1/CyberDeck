@@ -1,107 +1,19 @@
-#!/usr/bin/python3
-import os, sys, subprocess
+#!/bin/bash
+unset LD_PRELOAD
 
-os.environ.pop("LD_PRELOAD", None)
-HOME = os.path.expanduser("~")
-ROFI_T = os.path.join(HOME, ".config/hypr/cyber_wifi.rasi")
+if [ "$1" = "--wipe" ]; then
+    cliphist wipe 2>/dev/null || true
+    wl-copy --clear 2>/dev/null || true
+    rm -rf "/tmp/studio_clip_thumbs_${UID}"
+    notify-send -a cyber-kb "󰅌 БУФЕР ОБМЕНА" "История буфера полностью очищена"
+    exit 0
+fi
 
-def notify(title, body):
-    subprocess.Popen(["notify-send", "-a", "cyber-kb", title, body],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# Если окно буфера уже открыто — закрываем его (удобный toggle по SUPER+V)
+if pgrep -f "cyber-clipboard\.py" >/dev/null 2>&1; then
+    pkill -TERM -f "cyber-clipboard\.py" 2>/dev/null || true
+    rm -f "/tmp/studio_clipboard_${UID}.pid"
+    exit 0
+fi
 
-def wipe_all():
-    subprocess.run(["cliphist", "wipe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run(["wl-copy", "--clear"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    notify("󰅌 БУФЕР ОБМЕНА", "История буфера полностью очищена")
-
-def get_entries():
-    p = subprocess.run(["cliphist", "list"], capture_output=True, text=True)
-    if p.returncode != 0:
-        return []
-    return [ln for ln in p.stdout.splitlines() if ln.strip()]
-
-def format_entry(raw_line):
-    parts = raw_line.split("\t", 1)
-    idx = parts[0]
-    body = parts[1].strip() if len(parts) > 1 else raw_line
-    if body.startswith("[[ binary data"):
-        return f"󰋩  [Изображение #{idx}]  {body.strip('[] ')}"
-    preview = " ".join(body.split())[:72]
-    return f"󰅌  {preview}"
-
-def delete_entry(raw_line):
-    subprocess.run(["cliphist", "delete"], input=raw_line + "\n", text=True,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-def copy_entry(raw_line):
-    dec = subprocess.run(["cliphist", "decode"], input=raw_line.encode("utf-8"), capture_output=True)
-    if dec.returncode != 0:
-        return
-    cmd = ["wl-copy"]
-    low = raw_line.lower()
-    if "[[ binary data" in low and "png" in low:
-        cmd += ["--type", "image/png"]
-    elif "[[ binary data" in low and ("jpg" in low or "jpeg" in low):
-        cmd += ["--type", "image/jpeg"]
-    subprocess.run(cmd, input=dec.stdout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-def run_rofi(prompt, lines, allow_del_key=True):
-    cmd = ["rofi", "-dmenu", "-i", "-p", prompt, "-format", "i"]
-    if allow_del_key:
-        cmd += ["-kb-remove-char-forward", "", "-kb-custom-1", "Delete"]
-    if os.path.isfile(ROFI_T):
-        cmd += ["-theme", ROFI_T]
-    p = subprocess.run(cmd, input="\n".join(lines), text=True, capture_output=True)
-    sel_idx = int(p.stdout.strip()) if p.stdout.strip().isdigit() else -1
-    return p.returncode, sel_idx
-
-def delete_mode():
-    while True:
-        entries = get_entries()
-        if not entries:
-            notify("󰅌 БУФЕР ОБМЕНА", "Буфер обмена пуст")
-            return
-        display = ["◀  Назад к буферу обмена"] + [f"✕  {format_entry(e)}" for e in entries]
-        rc, idx = run_rofi("🗑 КЛИКНИТЕ НА ОБЪЕКТ ДЛЯ УДАЛЕНИЯ", display, allow_del_key=False)
-        if rc != 0 or idx <= 0:
-            return
-        delete_entry(entries[idx - 1])
-
-def main():
-    if "--wipe" in sys.argv:
-        wipe_all()
-        return
-
-    while True:
-        entries = get_entries()
-        if not entries:
-            notify("󰅌 БУФЕР ОБМЕНА", "История буфера пуста")
-            return
-
-        header = [
-            "🗑  Удалить выбранный объект...",
-            "🔥  Очистить весь буфер обмена",
-        ]
-        display = header + [format_entry(e) for e in entries]
-        rc, idx = run_rofi("󰅌 БУФЕР ОБМЕНА (Enter: копировать • Del: удалить)", display, allow_del_key=True)
-
-        if rc == 10:  # Нажата клавиша Delete на выделенном элементе
-            if idx >= len(header):
-                delete_entry(entries[idx - len(header)])
-                continue
-            return
-        if rc != 0 or idx < 0:
-            return
-
-        if idx == 0:
-            delete_mode()
-            continue
-        elif idx == 1:
-            wipe_all()
-            return
-        else:
-            copy_entry(entries[idx - len(header)])
-            return
-
-if __name__ == "__main__":
-    main()
+LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so" nohup /usr/bin/python3 "$HOME/.local/bin/cyber-clipboard.py" >/tmp/cyber-clipboard.err 2>&1 &
