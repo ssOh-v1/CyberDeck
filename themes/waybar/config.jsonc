@@ -27,7 +27,6 @@
     "custom/power-mode",
     "hyprland/language",
     "battery",
-    "custom/clipboard",
     "custom/notifications",
     "clock",
     "custom/lock",
@@ -150,11 +149,5 @@
     "on-click-right": "systemctl reboot",
     "on-click-middle": "hyprctl dispatch exit",
     "tooltip": false
-  },
-  "custom/clipboard": {
-    "format": "󰅌",
-    "tooltip": false,
-    "on-click": "~/.local/bin/cyber-clipboard",
-    "on-click-right": "~/.local/bin/cyber-clipboard --wipe"
   }
 }
