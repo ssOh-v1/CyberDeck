@@ -1,6 +1,11 @@
 #!/bin/bash
 sleep 1
-dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP 2>/dev/null || true
-systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP 2>/dev/null || true
+dbus-update-activation-environment --systemd \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP \
+    HYPRLAND_INSTANCE_SIGNATURE PATH QT_QPA_PLATFORM=wayland 2>/dev/null || true
+systemctl --user import-environment \
+    WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE XDG_SESSION_DESKTOP \
+    HYPRLAND_INSTANCE_SIGNATURE PATH 2>/dev/null || true
+systemctl --user set-environment QT_QPA_PLATFORM=wayland 2>/dev/null || true
 systemctl --user stop xdg-desktop-portal-gnome xdg-desktop-portal-wlr 2>/dev/null || true
 systemctl --user restart pipewire wireplumber xdg-desktop-portal-hyprland xdg-desktop-portal 2>/dev/null || true
